@@ -1,0 +1,10 @@
+.git
+.venv
+.tmp
+outputs
+frontend/node_modules
+frontend/.vite-cache
+backend/**/__pycache__
+backend/static
+*.docx
+*.xlsx
