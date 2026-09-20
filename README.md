@@ -31,6 +31,24 @@ Chưa có đăng nhập, danh mục, nhập kho, xuất kho, kiểm kê, báo c�
 
 ## 2. Chạy dự án
 
+Team lấy bản nền từ nhánh `dev1`. Nếu chưa có repository:
+
+```sh
+git clone --branch dev1 https://github.com/wtd-vg/school-food-inventory-management.git
+cd school-food-inventory-management
+```
+
+Nếu đã clone, đảm bảo đã lưu công việc trên nhánh riêng và `git status` không còn thay đổi dở dang, rồi:
+
+```sh
+git fetch origin
+git switch dev1
+git pull --ff-only origin dev1
+```
+
+Nếu chưa có nhánh local `dev1`, thay lệnh switch bằng `git switch --track origin/dev1`.
+Khi nhận task, tạo nhánh `feat/SFxx-ten-ngan` từ `dev1` mới nhất và mở PR về `dev1` để TV1 duyệt.
+
 Cài Docker Desktop, mở PowerShell tại thư mục dự án rồi chạy:
 
 ```powershell

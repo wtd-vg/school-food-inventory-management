@@ -142,7 +142,7 @@ Lỗi ứng dụng dùng {"message":"...","errors":{"quantity":"..."}}. 400: JSO
 
 ### Tránh sửa đè file của nhau
 
-TV1 điều phối models.py, migration và settings.py. TV2/TV4 hẹn thứ tự sửa views.py, urls.py; người sau lấy main mới sau khi PR trước đã merge. TV3 điều phối App.tsx, TV5 tạo component riêng. TV4/TV5 chia vùng test; chỉ tách test_stock.py khi tests.py dài và có nhu cầu thật.
+TV1 điều phối models.py, migration và settings.py. TV2/TV4 hẹn thứ tự sửa views.py, urls.py; người sau lấy dev1 mới sau khi PR trước đã merge. TV3 điều phối App.tsx, TV5 tạo component riêng. TV4/TV5 chia vùng test; chỉ tách test_stock.py khi tests.py dài và có nhu cầu thật.
 
 ### Một task được tính xong khi nào
 
@@ -207,14 +207,14 @@ docker compose exec backend python manage.py migrate
 
 ```sh
 git status
-git switch main
-git pull --ff-only
+git switch dev1
+git pull --ff-only origin dev1
 git switch -c feat/SF08-category
 ```
 
 Thực hiện các lệnh này khi không còn thay đổi dở dang. Nếu đang sửa file, báo TV1 trước khi đổi branch.
 
-Sau khi test: dùng git add với đúng file của task, git diff --cached để kiểm tra rồi git commit -m "feat: SF08 category list". Push branch khi team đã có remote GitHub. Pull request ghi mục tiêu, cách chạy, bằng chứng và điều chưa làm. Repo hiện có thay đổi chưa commit; TV1 cần chốt bản nền trước khi team tạo branch, không tự reset hoặc ghi đè file.
+Sau khi test: dùng git add với đúng file của task, git diff --cached để kiểm tra rồi git commit -m "feat: SF08 category list". Push nhánh task lên origin và mở pull request về dev1. Pull request ghi mục tiêu, cách chạy, bằng chứng và điều chưa làm. Theo quyết định ngày 20/09/2026, team dùng dev1 làm bản nền chung; TV1 review trước khi merge. Xem README nếu mới clone hoặc chưa có nhánh dev1 trên máy; không tự reset hoặc ghi đè công việc dở dang.
 
 ### Một vài lỗi thường gặp
 

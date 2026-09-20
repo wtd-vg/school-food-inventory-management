@@ -1,0 +1,28 @@
+# Secret và cấu hình riêng của từng máy
+.env
+
+# Python tạo tự động
+.venv/
+__pycache__/
+*.py[cod]
+
+# Node tạo tự động
+frontend/node_modules/
+frontend/dist/
+frontend/.vite-cache/
+
+# Cache và file tạm
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tmp/
+
+# Editor và hệ điều hành
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# File khóa tạm khi mở tài liệu Office
+~$*.docx
+~$*.xlsx
