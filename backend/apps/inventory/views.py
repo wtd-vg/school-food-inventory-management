@@ -16,3 +16,7 @@ def hello(request):
             "database": "PostgreSQL đã kết nối." if database_result == 1 else "Có lỗi.",
         }
     )
+def categories (request):
+    return JsonResponse(
+        {"results":[{"id":1,"code":"GAO","name":"Gạo","is_active":true}]}
+    )
