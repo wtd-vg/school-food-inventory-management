@@ -2,6 +2,7 @@
 
 from django.db import connection
 from django.http import JsonResponse
+from .models import Category
 
 
 def hello(request):
@@ -17,6 +18,14 @@ def hello(request):
         }
     )
 def categories (request):
-    return JsonResponse(
-        {"results":[{"id":1,"code":"GAO","name":"Gạo","is_active":true}]}
-    )
+    list_category = Category.objects.all()
+
+    results = []
+    for cat in list_category:
+        results.append({
+            "id":cat.id,
+            "code":cat.code,
+            "name":cat.name,
+            "is_active":cat.is_active
+        })
+    return JsonResponse({"results": results})
