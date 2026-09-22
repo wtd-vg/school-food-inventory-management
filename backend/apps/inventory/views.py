@@ -2,6 +2,7 @@
 
 from django.db import connection
 from django.http import JsonResponse
+from .models import Category
 
 
 def hello(request):
@@ -16,3 +17,15 @@ def hello(request):
             "database": "PostgreSQL đã kết nối." if database_result == 1 else "Có lỗi.",
         }
     )
+def categories (request):
+    list_category = Category.objects.all()
+
+    results = []
+    for cat in list_category:
+        results.append({
+            "id":cat.id,
+            "code":cat.code,
+            "name":cat.name,
+            "is_active":cat.is_active
+        })
+    return JsonResponse({"results": results})
