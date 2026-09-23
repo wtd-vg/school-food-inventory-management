@@ -3,8 +3,6 @@ import json
 from django.db import connection, IntegrityError
 from django.http import JsonResponse
 from .models import Category, FoodItem, Supplier
-
-
 def hello(request):
     """Kiểm tra Django và PostgreSQL."""
     with connection.cursor() as cursor:
