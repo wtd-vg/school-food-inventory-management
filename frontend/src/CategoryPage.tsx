@@ -84,17 +84,29 @@ export const CategoryPage: React.FC = () => {
     }
   };
 
-  // --- HÀM XỬ LÝ XÓA DANH MỤC (DELETE) ---
-  const handleDeleteCategory = async (id: number | string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa danh mục này không?')) return;
-    
+  // --- HÀM XỬ LÝ CHUYỂN TRẠNG THÁI DANH MỤC (PATCH is_active theo chuẩn không hard delete) ---
+  const handleToggleActive = async (cat: Category) => {
+    if (!cat.id) return;
+    const currentActive = cat.is_active === true || cat.status === 'active' || cat.status === 'Hoạt động';
+    const nextActive = !currentActive;
+    const actionText = nextActive ? 'kích hoạt lại' : 'ngừng sử dụng';
+
+    if (!window.confirm(`Bạn có chắc chắn muốn ${actionText} danh mục "${cat.name}"?`)) return;
+
     try {
-      const response = await fetch(`/api/categories/${id}/`, {
-        method: 'DELETE',
+      const response = await fetch(`/api/categories/${cat.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          is_active: nextActive,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Xóa thất bại từ server');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || errData.detail || 'Cập nhật trạng thái thất bại');
       }
 
       fetchCategories();
@@ -234,10 +246,11 @@ export const CategoryPage: React.FC = () => {
                   </td>
                   <td>
                     <button 
-                      className="btn-action-delete"
-                      onClick={() => cat.id && handleDeleteCategory(cat.id)}
+                      className={isActive ? "btn-action-delete" : "btn-action-activate"}
+                      style={!isActive ? { color: '#059669', background: 'none', border: 'none', fontWeight: 600, fontSize: '13px', cursor: 'pointer' } : undefined}
+                      onClick={() => handleToggleActive(cat)}
                     >
-                      Xóa
+                      {isActive ? 'Ngừng dùng' : 'Kích hoạt'}
                     </button>
                   </td>
                 </tr>
