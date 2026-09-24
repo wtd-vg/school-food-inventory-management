@@ -3,6 +3,7 @@ import json
 from django.db import connection, IntegrityError
 from django.http import JsonResponse
 from .models import Category, FoodItem, Supplier
+from .auth_views import inventory_permission_required
 def hello(request):
     """Kiểm tra Django và PostgreSQL."""
     with connection.cursor() as cursor:
@@ -21,10 +22,9 @@ def hello(request):
     )
 
 
+@inventory_permission_required
 def categories(request):
-    # =========================
     # GET /api/categories/
-    # =========================
     if request.method == "GET":
         list_category = Category.objects.all()
 
@@ -42,9 +42,7 @@ def categories(request):
             "results": results
         })
 
-    # =========================
     # POST /api/categories/
-    # =========================
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -90,15 +88,14 @@ def categories(request):
             status=201
         )
 
-    # =========================
     # Method không được phép
-    # =========================
     return JsonResponse(
         {"error": "Method not allowed"},
         status=405
     )
 
 
+@inventory_permission_required
 def category_detail(request, category_id):
     # Tìm Category
     try:
@@ -109,9 +106,7 @@ def category_detail(request, category_id):
             status=404
         )
 
-    # =========================
     # PATCH /api/categories/<id>/
-    # =========================
     if request.method == "PATCH":
         try:
             data = json.loads(request.body)
@@ -180,9 +175,7 @@ def category_detail(request, category_id):
             "is_active": category.is_active
         })
 
-    # =========================
     # DELETE bị cấm
-    # =========================
     if request.method == "DELETE":
         return JsonResponse(
             {
@@ -195,6 +188,7 @@ def category_detail(request, category_id):
         {"error": "Method not allowed"},
         status=405
     )
+@inventory_permission_required
 def foods(request):
     # GET /api/foods/
     if request.method == "GET":
@@ -244,25 +238,25 @@ def foods(request):
         if "code" in data and not isinstance(data["code"], str):
             return JsonResponse(
                 {"error": "code must be a string"},
-                    status=400
-    )
+                status=400
+            )
 
         if "name" in data and not isinstance(data["name"], str):
             return JsonResponse(
                 {"error": "name must be a string"},
-                    status=400
-    )
+                status=400
+            )
 
         if "unit" in data and not isinstance(data["unit"], str):
             return JsonResponse(
                 {"error": "unit must be a string"},
-                    status=400
-    )
+                status=400
+            )
         if not isinstance(data["category_id"], int):
             return JsonResponse(
                 {"error": "category_id must be an integer"},
-                    status=400
-    )
+                status=400
+            )
 
         if missing_fields:
             return JsonResponse(
@@ -334,6 +328,7 @@ def foods(request):
         {"error": "Method not allowed"},
         status=405
     )
+@inventory_permission_required
 def food_detail(request, food_id):
     try:
         food = FoodItem.objects.get(id=food_id)
@@ -430,10 +425,9 @@ def food_detail(request, food_id):
         {"error": "Method not allowed"},
         status=405
     )
+@inventory_permission_required
 def suppliers(request):
-    # =========================
     # GET /api/suppliers/
-    # =========================
     if request.method == "GET":
         supplier_list = Supplier.objects.all()
 
@@ -444,6 +438,7 @@ def suppliers(request):
                 "id": supplier.id,
                 "code": supplier.code,
                 "name": supplier.name,
+                "phone": supplier.phone,
                 "is_active": supplier.is_active,
             })
 
@@ -451,9 +446,7 @@ def suppliers(request):
             "results": results
         })
 
-    # =========================
     # POST /api/suppliers/
-    # =========================
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -470,18 +463,17 @@ def suppliers(request):
         allowed_fields = {
             "code",
             "name",
-            "category_id",
-            "unit",
+            "phone",
             "is_active"
         }
 
         invalid_fields = set(data.keys()) - allowed_fields
 
         if invalid_fields:
-                return JsonResponse(
+            return JsonResponse(
                 {"error": "Invalid fields","fields": list(invalid_fields)},
-        status=400
-    )
+                status=400
+            )
         # Kiểm tra dữ liệu bắt buộc
         if not data.get("code") or not data.get("name"):
             return JsonResponse(
@@ -495,6 +487,7 @@ def suppliers(request):
             supplier = Supplier.objects.create(
                 code=data["code"],
                 name=data["name"],
+                phone=data.get("phone", ""),
                 is_active=data.get("is_active", True)
             )
         except IntegrityError:
@@ -508,14 +501,13 @@ def suppliers(request):
                 "id": supplier.id,
                 "code": supplier.code,
                 "name": supplier.name,
+                "phone": supplier.phone,
                 "is_active": supplier.is_active,
             },
             status=201
         )
 
-    # =========================
     # DELETE bị cấm
-    # =========================
     if request.method == "DELETE":
         return JsonResponse(
             {"error": "DELETE is not allowed"},
@@ -526,6 +518,7 @@ def suppliers(request):
         {"error": "Method not allowed"},
         status=405
     )
+@inventory_permission_required
 def supplier_detail(request, supplier_id):
     try:
         supplier = Supplier.objects.get(id=supplier_id)
@@ -535,9 +528,7 @@ def supplier_detail(request, supplier_id):
             status=404
         )
 
-    # =========================
     # PATCH
-    # =========================
     if request.method == "PATCH":
         try:
             data = json.loads(request.body)
@@ -550,6 +541,7 @@ def supplier_detail(request, supplier_id):
         allowed_fields = {
             "code",
             "name",
+            "phone",
             "is_active"
         }
 
@@ -570,6 +562,9 @@ def supplier_detail(request, supplier_id):
         if "name" in data:
             supplier.name = data["name"]
 
+        if "phone" in data:
+            supplier.phone = data["phone"]
+
         if "is_active" in data:
             supplier.is_active = data["is_active"]
 
@@ -585,12 +580,11 @@ def supplier_detail(request, supplier_id):
             "id": supplier.id,
             "code": supplier.code,
             "name": supplier.name,
+            "phone": supplier.phone,
             "is_active": supplier.is_active,
         })
 
-    # =========================
     # DELETE bị cấm
-    # =========================
     if request.method == "DELETE":
         return JsonResponse(
             {"error": "DELETE is not allowed"},

@@ -38,6 +38,6 @@ class Supplier(models.Model):
     code = models.CharField(max_length=32, unique=True)
     name = models.CharField(max_length=120)
     is_active = models.BooleanField(default=True)
-
+    phone = models.CharField(max_length=32, blank=True, default="")
     def __str__(self):
         return f"{self.code} - {self.name}"
