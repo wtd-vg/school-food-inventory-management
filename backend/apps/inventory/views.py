@@ -1,5 +1,5 @@
 import json
-
+from django.views.decorators.csrf import csrf_exempt
 from django.db import connection, IntegrityError
 from django.http import JsonResponse
 from .models import Category, FoodItem, Supplier
@@ -20,7 +20,7 @@ def hello(request):
         }
     )
 
-
+@csrf_exempt
 def categories(request):
     # GET /api/categories/
     if request.method == "GET":
