@@ -1,5 +1,5 @@
 import json
-
+from django.views.decorators.csrf import csrf_exempt
 from django.db import connection, IntegrityError
 from django.http import JsonResponse
 from .models import Category, FoodItem, Supplier
@@ -20,11 +20,9 @@ def hello(request):
         }
     )
 
-
+@csrf_exempt
 def categories(request):
-    # =========================
     # GET /api/categories/
-    # =========================
     if request.method == "GET":
         list_category = Category.objects.all()
 
@@ -42,9 +40,7 @@ def categories(request):
             "results": results
         })
 
-    # =========================
     # POST /api/categories/
-    # =========================
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -66,20 +62,15 @@ def categories(request):
                 status=400
             )
 
-        try:
-            category = Category.objects.create(
-                code=code,
-                name=name,
-                is_active=data.get("is_active", True)
-            )
-        except IntegrityError:
-            return JsonResponse(
-                {
-                    "error": "code already exists"
-                },
-                status=400
-            )
+        if Category.objects.filter(code=code).exists():
+            return JsonResponse({"error": "Mã danh mục đã tồn tại"}, status=400)
 
+        # 2. An toàn rồi mới lưu xuống DB
+        category = Category.objects.create(
+            code=code,
+            name=name,
+            is_active=data.get("is_active", True)
+        )
         return JsonResponse(
             {
                 "id": category.id,
@@ -90,9 +81,7 @@ def categories(request):
             status=201
         )
 
-    # =========================
     # Method không được phép
-    # =========================
     return JsonResponse(
         {"error": "Method not allowed"},
         status=405
@@ -109,9 +98,7 @@ def category_detail(request, category_id):
             status=404
         )
 
-    # =========================
     # PATCH /api/categories/<id>/
-    # =========================
     if request.method == "PATCH":
         try:
             data = json.loads(request.body)
@@ -180,9 +167,7 @@ def category_detail(request, category_id):
             "is_active": category.is_active
         })
 
-    # =========================
     # DELETE bị cấm
-    # =========================
     if request.method == "DELETE":
         return JsonResponse(
             {
@@ -431,9 +416,7 @@ def food_detail(request, food_id):
         status=405
     )
 def suppliers(request):
-    # =========================
     # GET /api/suppliers/
-    # =========================
     if request.method == "GET":
         supplier_list = Supplier.objects.all()
 
@@ -451,9 +434,7 @@ def suppliers(request):
             "results": results
         })
 
-    # =========================
     # POST /api/suppliers/
-    # =========================
     if request.method == "POST":
         try:
             data = json.loads(request.body)
@@ -513,9 +494,7 @@ def suppliers(request):
             status=201
         )
 
-    # =========================
     # DELETE bị cấm
-    # =========================
     if request.method == "DELETE":
         return JsonResponse(
             {"error": "DELETE is not allowed"},
@@ -535,9 +514,7 @@ def supplier_detail(request, supplier_id):
             status=404
         )
 
-    # =========================
     # PATCH
-    # =========================
     if request.method == "PATCH":
         try:
             data = json.loads(request.body)
@@ -588,9 +565,7 @@ def supplier_detail(request, supplier_id):
             "is_active": supplier.is_active,
         })
 
-    # =========================
     # DELETE bị cấm
-    # =========================
     if request.method == "DELETE":
         return JsonResponse(
             {"error": "DELETE is not allowed"},
