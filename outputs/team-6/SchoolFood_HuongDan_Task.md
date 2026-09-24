@@ -277,8 +277,6 @@ Kiểm tra: AC04; login sai, logout, viewer ghi; CSRF thiếu/đúng.
 
 Bằng chứng: Request mẫu và log test quyền; demo cho cả team trước tích hợp.
 
-### SF14 Danh mục đầy đủ và API ghi
-
 Người làm TV2 | Reviewer TV4 | Cần xong trước: SF13
 
 File cần mở: inventory/models.py; views.py; urls.py; migrations/
