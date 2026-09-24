@@ -24,7 +24,7 @@ def hello(request):
 def categories(request):
     # GET /api/categories/
     if request.method == "GET":
-        list_category = Category.objects.filter(is_active=True)
+        list_category = Category.objects.all()
 
         results = []
 
