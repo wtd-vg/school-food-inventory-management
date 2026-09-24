@@ -29,7 +29,6 @@ class FoodItem(models.Model):
         decimal_places=2,
         default=0
     )
-    
     stock_version = models.IntegerField(default=0)
 
     def __str__(self):
