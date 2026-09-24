@@ -1,5 +1,11 @@
 from django.urls import path
 
+from apps.inventory.auth_views import (
+    get_csrf,
+    login_view,
+    logout_view,
+    me_view,
+)
 from apps.inventory.views import (
     hello,
     categories,
@@ -11,7 +17,14 @@ from apps.inventory.views import (
 )
 
 urlpatterns = [
+    # API kiểm tra kết nối skeleton
     path("hello/", hello, name="hello"),
+
+    # SF13: Xác thực và phân quyền session
+    path("auth/csrf/", get_csrf, name="auth_csrf"),
+    path("auth/login/", login_view, name="auth_login"),
+    path("auth/me/", me_view, name="auth_me"),
+    path("auth/logout/", logout_view, name="auth_logout"),
 
     # GET + POST
     path("categories/", categories, name="categories"),
