@@ -10,9 +10,11 @@ Trình duyệt → React → Django → PostgreSQL
 
 ## Tài liệu dành cho team 6 người
 
-Bắt đầu bằng [hướng dẫn chung](outputs/team-6/SchoolFood_HuongDan_Chung.md),
+Bắt đầu bằng [hướng dẫn chung](outputs/team-6/SchoolFood_HuongDan_Chung.md) và [Quy chuẩn Git & Workflow](GIT_WORKFLOW.md),
 sau đó mở [checklist TV1–TV6](outputs/team-6/SchoolFood_Checklist_6_ThanhVien.xlsx)
 và tra mã SF của mình trong [hướng dẫn từng task](outputs/team-6/SchoolFood_HuongDan_Task.md).
+
+Mọi thành viên **bắt buộc đọc [Quy chuẩn Git](GIT_WORKFLOW.md)** trước khi code để tránh commit file rác/venv và nhầm lẫn nhánh.
 
 Ngày đầu chỉ làm SF01–SF06, mỗi người một task làm quen.
 Các model/API trong tài liệu là kế hoạch phát triển dần, chưa có trong code.
