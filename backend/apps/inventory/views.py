@@ -188,6 +188,10 @@ def foods(request):
                 status=400,
             )
 
+        # Tương thích linh hoạt: chấp nhận cả category_id hoặc category
+        if "category_id" not in data and "category" in data:
+            data["category_id"] = data["category"]
+
         # 2. Kiểm tra trường bắt buộc trước để tránh KeyError
         required_fields = ["code", "name", "category_id", "unit"]
         missing_fields = [f for f in required_fields if f not in data]
@@ -276,6 +280,10 @@ def food_detail(request, food_id):
                 {"error": "Stock fields cannot be modified directly"},
                 status=400,
             )
+
+        if "category_id" not in data and "category" in data:
+            data["category_id"] = data["category"]
+            del data["category"]
 
         allowed_fields = {"code", "name", "category_id", "unit", "is_active"}
         invalid_fields = set(data.keys()) - allowed_fields
