@@ -1,7 +1,64 @@
-import React from 'react';
-import CategoryPage from './CategoryPage';
+import React, { useState, useEffect } from 'react';
+import { LoginPage } from './LoginPage';
+import { CategoryPage } from './CategoryPage';
+import FoodPage from './FoodPage';
+import { fetchApi } from './utils/api';
 
-export function App() {
+type Screen = 'LOGIN' | 'CATEGORIES' | 'FOODS';
+
+export const App: React.FC = () => {
+  const [currentScreen, setCurrentScreen] = useState<Screen>('LOGIN');
+  const [isViewer, setIsViewer] = useState(false); 
+  const [currentUser, setCurrentUser] = useState<string>('');
+
+  const checkAuth = async () => {
+    try {
+      const res = await fetchApi('/api/auth/me/');
+      if (res.ok) {
+        const data = await res.json();
+        setIsViewer(data.role === 'viewer');
+        setCurrentUser(data.username || '');
+        setCurrentScreen('CATEGORIES');
+      } else {
+        setIsViewer(false);
+        setCurrentUser('');
+        setCurrentScreen('LOGIN');
+      }
+    } catch {
+      setIsViewer(false);
+      setCurrentUser('');
+      setCurrentScreen('LOGIN');
+    }
+  };
+
+  useEffect(() => {
+    // Lắng nghe sự kiện hết hạn session để tự động văng ra login
+    const handleSessionExpired = () => {
+      setIsViewer(false);
+      setCurrentUser('');
+      setCurrentScreen('LOGIN');
+    };
+    window.addEventListener('session-expired', handleSessionExpired);
+    
+    // Kiểm tra đăng nhập khi vừa mở web
+    checkAuth();
+
+    return () => window.removeEventListener('session-expired', handleSessionExpired);
+  }, []);
+
+  const handleLogout = async () => {
+    await fetchApi('/api/auth/logout/', { method: 'POST' });
+    setIsViewer(false);
+    setCurrentUser('');
+    setCurrentScreen('LOGIN');
+  };
+
+  // Nếu chưa đăng nhập, chỉ hiển thị giao diện Login
+  if (currentScreen === 'LOGIN') {
+    return <LoginPage onLoginSuccess={checkAuth} />;
+  }
+
+  // Nếu đã đăng nhập, hiển thị giao diện chính
   return (
     <div className="school-app">
       <style>{`
@@ -10,11 +67,20 @@ export function App() {
         .top-navbar { background-color: #0b1329; height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; color: #ffffff; }
         .brand-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 18px; }
         .logo-icon { font-size: 20px; }
-        .nav-menu { display: flex; gap: 12px; }
+        .nav-menu { display: flex; gap: 12px; align-items: center; }
         .nav-item { color: #94a3b8; text-decoration: none; font-size: 13px; padding: 6px 14px; border-radius: 20px; }
         .nav-item.active { background-color: #ffffff; color: #0f172a; font-weight: 600; }
         .sub-header { background-color: #064e3b; color: #ffffff; padding: 10px 24px; font-size: 13px; font-weight: 500; }
         .main-content { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+        
+        /* CSS cho menu chuyển tab nội bộ */
+        .tab-menu { display: flex; gap: 24px; margin-bottom: 24px; border-bottom: 1px solid #cbd5e1; }
+        .tab-item { padding-bottom: 12px; font-weight: 600; font-size: 14px; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab-item.active { color: #059669; border-bottom-color: #059669; }
+        .btn-logout { background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 16px; }
+        .btn-logout:hover { background: #1e293b; color: white; }
+
+        /* Các class CSS dùng bên trong Page */
         .card-container { background: #ffffff; border-radius: 12px; padding: 28px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
         .card-title { font-size: 22px; font-weight: 700; color: #0f172a; }
@@ -55,15 +121,48 @@ export function App() {
           <a href="#" className="nav-item">Điều hành</a>
           <a href="#" className="nav-item active">Bếp ăn & Kho</a>
           <a href="#" className="nav-item">Kế toán</a>
+          {currentUser && (
+            <span style={{ fontSize: '12px', color: '#cbd5e1', marginLeft: '8px' }}>
+              👤 {currentUser} <span style={{ 
+                backgroundColor: isViewer ? '#475569' : '#059669', 
+                padding: '2px 8px', 
+                borderRadius: '10px', 
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#fff' 
+              }}>
+                {isViewer ? 'Viewer (Chỉ xem)' : 'Admin/Manager (Đầy đủ)'}
+              </span>
+            </span>
+          )}
+          <button onClick={handleLogout} className="btn-logout">Đăng xuất</button>
         </nav>
       </header>
 
       <div className="sub-header">
-        🥗 Quản lý kho bếp — Danh mục thực phẩm & nguyên liệu
+        🥗 Quản lý kho bếp — {currentScreen === 'CATEGORIES' ? 'Danh mục' : 'Thực phẩm & Nguyên liệu'}
       </div>
 
       <main className="main-content">
-        <CategoryPage />
+        {/* Menu Tab chuyển đổi màn hình */}
+        <div className="tab-menu">
+          <div 
+            className={`tab-item ${currentScreen === 'CATEGORIES' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('CATEGORIES')}
+          >
+            Danh mục thực phẩm
+          </div>
+          <div 
+            className={`tab-item ${currentScreen === 'FOODS' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('FOODS')}
+          >
+            Quản lý Thực phẩm
+          </div>
+        </div>
+
+        {/* Nội dung thay đổi dựa trên State */}
+        {currentScreen === 'CATEGORIES' && <CategoryPage isViewer={isViewer} />}
+        {currentScreen === 'FOODS' && <FoodPage isViewer={isViewer} />}
       </main>
     </div>
   );
