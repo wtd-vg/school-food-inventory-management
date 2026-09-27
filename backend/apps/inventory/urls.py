@@ -1,5 +1,11 @@
 from django.urls import path
 
+from apps.inventory.auth_views import (
+    get_csrf,
+    login_view,
+    logout_view,
+    me_view,
+)
 from apps.inventory.views import (
     hello,
     categories,
@@ -8,10 +14,20 @@ from apps.inventory.views import (
     food_detail,
     suppliers,
     supplier_detail,
+    stocktakes,
+    stocktake_items,
+    stocktake_post
 )
 
 urlpatterns = [
+    # API kim tra kt n`i skeleton
     path("hello/", hello, name="hello"),
+
+    # SF13: XAc thc vA phAn quy?n session
+    path("auth/csrf/", get_csrf, name="auth_csrf"),
+    path("auth/login/", login_view, name="auth_login"),
+    path("auth/me/", me_view, name="auth_me"),
+    path("auth/logout/", logout_view, name="auth_logout"),
 
     # GET + POST
     path("categories/", categories, name="categories"),
@@ -36,4 +52,15 @@ urlpatterns = [
         supplier_detail,
         name="supplier_detail",
     ),
+
+    # SF32: Kiểm kê
+    path("stocktakes/", stocktakes, name="stocktakes"),
+    path("stocktake-items/<int:item_id>/", stocktake_items, name="stocktake_items"),
+    path("stocktakes/<int:stocktake_id>/post/", stocktake_post, name="stocktake_post"),
 ]
+
+from apps.inventory.views import reports_stock, reports_transactions
+urlpatterns.extend([
+    path('reports/stock/', reports_stock, name='reports_stock'),
+    path('reports/transactions/', reports_transactions, name='reports_transactions'),
+])
