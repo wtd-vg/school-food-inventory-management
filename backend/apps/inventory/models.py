@@ -148,3 +148,37 @@ class StockTakeItem(models.Model):
     snapshot_version = models.IntegerField()
     counted_qty = models.DecimalField(max_digits=14, decimal_places=3, null=True, blank=True)
     variance = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+class Issue(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Nháp"
+        POSTED = "posted", "Đã chốt"
+
+    code = models.CharField(max_length=32, unique=True)
+    date = models.DateField()
+    note = models.TextField(blank=True, default="")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="issues_created"
+    )
+    posted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"Issue #{self.pk} - {self.code} ({self.status})"
+
+
+class IssueLine(models.Model):
+    issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name="lines")
+    food = models.ForeignKey(FoodItem, on_delete=models.PROTECT, related_name="issue_lines")
+    quantity = models.DecimalField(
+        max_digits=14, decimal_places=3, validators=[MinValueValidator(Decimal("0.001"))]
+    )
+    unit_cost = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(fields=["issue", "food"], name="issue_line_unique_food"),
+        ]

@@ -2,7 +2,8 @@
 
 from datetime import date as CalendarDate, datetime
 from decimal import Decimal, InvalidOperation
-
+from django.utils import timezone
+from .models import Receipt, ReceiptLine, FoodItem, InventoryLedger, Issue, IssueLine
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
@@ -150,3 +151,145 @@ def post_stocktake(stocktake_id):
     st.status = 'posted'
     st.save(update_fields=['status'])
     return st
+@transaction.atomic
+def post_receipt(receipt_id):
+    """
+    SF20: Chốt phiếu nhập
+    - Lock receipt (status draft)
+    - Lock FoodItems theo ID tăng dần tránh deadlock
+    - Tính bình quân gia quyền: new_avg = (old_qty*old_cost + in_qty*in_price) / new_qty
+    - Tăng quantity, tăng stock_version
+    - Ghi InventoryLedger loại 'IN'
+    - Chốt posted và cập nhật posted_at (bắt buộc theo CheckConstraint)
+    """
+    try:
+        receipt = Receipt.objects.select_for_update(nowait=True).get(id=receipt_id)
+    except Exception:
+        raise ValidationError("Phiếu nhập đang được xử lý bởi tiến trình khác.")
+
+    if receipt.status != Receipt.Status.DRAFT:
+        raise ValidationError("Chỉ có thể chốt phiếu nhập ở trạng thái nháp.")
+
+    lines = list(receipt.lines.select_related("food").all())
+    if not lines:
+        raise ValidationError("Phiếu nhập không có dòng hàng nào.")
+
+    # Sắp xếp food_id tăng dần để tránh Deadlock
+    food_ids = sorted([line.food_id for line in lines])
+    foods_map = {f.id: f for f in FoodItem.objects.filter(id__in=food_ids).select_for_update()}
+
+    for line in lines:
+        food = foods_map.get(line.food_id)
+        if not food:
+            raise ValidationError(f"Thực phẩm ID {line.food_id} không tồn tại.")
+        if not food.is_active:
+            raise ValidationError(f"Thực phẩm {food.name} đang bị khóa.")
+
+        qty_in = Decimal(str(line.quantity))
+        price_in = Decimal(str(line.unit_price))
+
+        if qty_in <= Decimal("0") or price_in <= Decimal("0"):
+            raise ValidationError("Số lượng và đơn giá nhập phải lớn hơn 0.")
+
+        old_qty = Decimal(str(food.quantity or 0))
+        old_cost = Decimal(str(food.avg_cost or 0))
+
+        new_qty = old_qty + qty_in
+        # Công thức bình quân gia quyền
+        new_avg_cost = ((old_qty * old_cost) + (qty_in * price_in)) / new_qty
+
+        # Cập nhật FoodItem
+        food.quantity = new_qty
+        food.avg_cost = round(new_avg_cost, 2)
+        food.stock_version += 1
+        food.save(update_fields=["quantity", "avg_cost", "stock_version"])
+
+        # Ghi sổ InventoryLedger
+        InventoryLedger.objects.create(
+            food=food,
+            transaction_type="IN",
+            quantity_change=qty_in,
+            cost=food.avg_cost,
+            reference=f"Receipt #{receipt.id}"
+        )
+
+    receipt.status = Receipt.Status.POSTED
+    receipt.posted_at = timezone.now()  # Bắt buộc để không bị lỗi CheckConstraint
+    receipt.save(update_fields=["status", "posted_at"])
+    return receipt
+
+
+# =========================================================================
+# SF26: CHỐT XUẤT KHO & CHỐNG ÂM KHO
+# =========================================================================
+@transaction.atomic
+def post_issue(issue_id):
+    """
+    SF26: Chốt phiếu xuất
+    - Lock issue (status draft)
+    - Lock FoodItems theo ID tăng dần
+    - Validation: Bất kỳ mặt hàng nào thiếu tồn kho -> Từ chối toàn bộ phiếu
+    - Cập nhật: Trừ quantity, tăng stock_version, GIỮ NGUYÊN avg_cost
+    - Ghi InventoryLedger loại 'OUT'
+    - Đổi status sang posted
+    """
+    try:
+        issue = Issue.objects.select_for_update(nowait=True).get(id=issue_id)
+    except Exception:
+        raise ValidationError("Phiếu xuất đang được xử lý bởi tiến trình khác.")
+
+    if issue.status != Issue.Status.DRAFT:
+        raise ValidationError("Chỉ có thể chốt phiếu xuất ở trạng thái nháp.")
+
+    lines = list(issue.lines.select_related("food").all())
+    if not lines:
+        raise ValidationError("Phiếu xuất không có dòng hàng nào.")
+
+    food_ids = sorted([line.food_id for line in lines])
+    foods_map = {f.id: f for f in FoodItem.objects.filter(id__in=food_ids).select_for_update()}
+
+    # 1. Validation kiểm tra chống xuất âm toàn bộ danh sách
+    for line in lines:
+        food = foods_map.get(line.food_id)
+        if not food:
+            raise ValidationError(f"Thực phẩm ID {line.food_id} không tồn tại.")
+
+        qty_out = Decimal(str(line.quantity))
+        if qty_out <= Decimal("0"):
+            raise ValidationError("Số lượng xuất phải lớn hơn 0.")
+
+        current_qty = Decimal(str(food.quantity or 0))
+        if current_qty < qty_out:
+            raise ValidationError(
+                f"Không đủ tồn kho cho '{food.name}'. Tồn kho: {current_qty}, yêu cầu xuất: {qty_out}."
+            )
+
+    # 2. Trừ tồn kho và ghi sổ
+    for line in lines:
+        food = foods_map[line.food_id]
+        qty_out = Decimal(str(line.quantity))
+        current_cost = Decimal(str(food.avg_cost or 0))
+
+        # Snapshot giá vốn tại thời điểm xuất
+        line.unit_cost = current_cost
+        line.save(update_fields=["unit_cost"])
+
+        # Trừ số lượng, GIỮ NGUYÊN avg_cost
+        food.quantity = Decimal(str(food.quantity)) - qty_out
+        food.stock_version += 1
+        food.save(update_fields=["quantity", "stock_version"])
+
+        # Ghi sổ cái
+        InventoryLedger.objects.create(
+            food=food,
+            transaction_type="OUT",
+            quantity_change=-qty_out,
+            cost=current_cost,
+            reference=f"Issue #{issue.id}"
+        )
+
+    issue.status = Issue.Status.POSTED
+    issue.posted_at = timezone.now()
+    issue.save(update_fields=["status", "posted_at"])
+    return issue
+
