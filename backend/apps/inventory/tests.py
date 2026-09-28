@@ -1,3 +1,4 @@
+from decimal import Decimal
 """Các bài kiểm thử cho app inventory, bao gồm skeleton và SF13 xác thực/phân quyền."""
 
 import json
@@ -5,7 +6,7 @@ from django.contrib.auth.models import Group, User
 from django.db import IntegrityError
 from django.middleware.csrf import get_token
 from django.test import Client, TestCase
-from .models import Category
+from .models import Category, FoodItem, StockTake, StockTakeItem, InventoryLedger
 
 
 class HelloApiTest(TestCase):
@@ -242,3 +243,175 @@ class AuthAndPermissionTest(TestCase):
             HTTP_X_CSRFTOKEN=new_csrf_token,
         )
         self.assertEqual(success_post.status_code, 201)
+
+class StockTakeTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.manager_user = User.objects.create_superuser(
+            username="test_mgr", password="pwd"
+        )
+        # Create permissions/groups if necessary, or just force_login
+        
+        self.cat = Category.objects.create(code="CAT1", name="Category 1")
+        self.food1 = FoodItem.objects.create(
+            code="F1", name="Food 1", category=self.cat, unit="kg",
+            quantity=80, avg_cost=10, stock_version=1
+        )
+        self.food2 = FoodItem.objects.create(
+            code="F2", name="Food 2", category=self.cat, unit="kg",
+            quantity=50, avg_cost=5, stock_version=1
+        )
+
+    def test_stocktake_flow_ac15_to_ac17(self):
+        from .models import StockTake, StockTakeItem, InventoryLedger
+        client = Client()
+        client.force_login(self.manager_user)
+
+        # 1. POST draft stocktake
+        res1 = client.post(
+            "/api/stocktakes/",
+            data=json.dumps({"food_ids": [self.food1.id, self.food2.id]}),
+            content_type="application/json"
+        )
+        self.assertEqual(res1.status_code, 201)
+        st_id = res1.json()["id"]
+
+        st = StockTake.objects.get(id=st_id)
+        items = list(st.items.order_by('food_id'))
+        self.assertEqual(len(items), 2)
+        item1 = items[0]  # food1
+        item2 = items[1]  # food2
+
+        # 2. PATCH items (counted_qty)
+        # Food1: 80 -> 77 (variance -3)
+        res_patch1 = client.patch(
+            f"/api/stocktake-items/{item1.id}/",
+            data=json.dumps({"counted_qty": 77}),
+            content_type="application/json"
+        )
+        self.assertEqual(res_patch1.status_code, 200)
+
+        # Food2: 50 -> 50 (variance 0)
+        res_patch2 = client.patch(
+            f"/api/stocktake-items/{item2.id}/",
+            data=json.dumps({"counted_qty": 50}),
+            content_type="application/json"
+        )
+        self.assertEqual(res_patch2.status_code, 200)
+
+        # 3. POST post stocktake
+        res_post = client.post(f"/api/stocktakes/{st_id}/post/")
+        self.assertEqual(res_post.status_code, 200)
+
+        # 4. Check results
+        self.food1.refresh_from_db()
+        self.assertEqual(self.food1.quantity, 77)
+        self.assertEqual(self.food1.stock_version, 2)
+        
+        self.food2.refresh_from_db()
+        self.assertEqual(self.food2.quantity, 50)
+        self.assertEqual(self.food2.stock_version, 2)
+
+        # Ledger check: food1 has ledger (variance -3), food2 has NO ledger (variance 0)
+        ledgers1 = InventoryLedger.objects.filter(food=self.food1)
+        self.assertEqual(ledgers1.count(), 1)
+        self.assertEqual(ledgers1[0].quantity_change, -3)
+
+        ledgers2 = InventoryLedger.objects.filter(food=self.food2)
+        self.assertEqual(ledgers2.count(), 0)
+
+    def test_stocktake_outdated_snapshot_returns_409(self):
+        client = Client()
+        client.force_login(self.manager_user)
+
+        res1 = client.post(
+            "/api/stocktakes/",
+            data=json.dumps({"food_ids": [self.food1.id]}),
+            content_type="application/json"
+        )
+        st_id = res1.json()["id"]
+        
+        from .models import StockTake
+        item = StockTake.objects.get(id=st_id).items.first()
+        
+        client.patch(
+            f"/api/stocktake-items/{item.id}/",
+            data=json.dumps({"counted_qty": 75}),
+            content_type="application/json"
+        )
+
+        # HACK: Someone else changes stock version before we post
+        self.food1.stock_version = 99
+        self.food1.save()
+
+        # Try to post -> should fail with 409
+        res_post = client.post(f"/api/stocktakes/{st_id}/post/")
+        self.assertEqual(res_post.status_code, 409)
+
+    def test_stocktake_double_post_returns_400(self):
+        client = Client()
+        client.force_login(self.manager_user)
+
+        res1 = client.post(
+            "/api/stocktakes/",
+            data=json.dumps({"food_ids": [self.food1.id]}),
+            content_type="application/json"
+        )
+        st_id = res1.json()["id"]
+        from .models import StockTake
+        item = StockTake.objects.get(id=st_id).items.first()
+        client.patch(
+            f"/api/stocktake-items/{item.id}/",
+            data=json.dumps({"counted_qty": 75}),
+            content_type="application/json"
+        )
+
+        # First post
+        res_post1 = client.post(f"/api/stocktakes/{st_id}/post/")
+        self.assertEqual(res_post1.status_code, 200)
+
+        # Second post
+        res_post2 = client.post(f"/api/stocktakes/{st_id}/post/")
+        self.assertEqual(res_post2.status_code, 400)
+class ReportTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.manager_user = User.objects.create_superuser(
+            username="report_mgr", password="pwd"
+        )
+        self.viewer_user = User.objects.create_user(
+            username="report_viewer", password="pwd"
+        )
+        self.cat = Category.objects.create(code="CAT_RPT", name="Report Cat")
+        self.food = FoodItem.objects.create(
+            code="F_RPT", name="Food Report", category=self.cat, unit="kg",
+            quantity=Decimal("10.5"), avg_cost=Decimal("20.0")
+        )
+        InventoryLedger.objects.create(
+            food=self.food, transaction_type="IN",
+            quantity_change=Decimal("10.5"), cost=Decimal("20.0")
+        )
+
+    def test_reports_stock(self):
+        client = Client()
+        client.force_login(self.manager_user)
+        res = client.get("/api/reports/stock/")
+        self.assertEqual(res.status_code, 200)
+        results = res.json()["results"]
+        self.assertGreaterEqual(len(results), 1)
+        item = next(f for f in results if f["id"] == self.food.id)
+        self.assertEqual(item["transaction_count"], 1)
+        self.assertEqual(item["stock_value"], 210.0) # 10.5 * 20.0
+
+    def test_reports_transactions_filter(self):
+        client = Client()
+        client.force_login(self.manager_user)
+        res = client.get(f"/api/reports/transactions/?food={self.food.id}&from=2020-01-01")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.json()["results"]), 1)
+
+    def test_viewer_can_get_reports(self):
+        client = Client()
+        client.force_login(self.viewer_user)
+        res1 = client.get("/api/reports/stock/")
+        self.assertEqual(res1.status_code, 200)
