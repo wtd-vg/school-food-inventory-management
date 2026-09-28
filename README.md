@@ -66,6 +66,15 @@ docker compose exec backend python manage.py migrate
 
 Mở `http://localhost:5173`.
 
+PostgreSQL trong Docker được công bố tại `localhost:5433` để tránh trùng cổng
+5432 với PostgreSQL hoặc container khác trên máy. Có thể đổi bằng
+`POSTGRES_HOST_PORT` trong `.env`. Backend chạy trong Docker vẫn kết nối
+`db:5432`; nếu chạy backend ngoài Docker để dùng database này, đặt `DB_PORT=5433`.
+
+API backend trong Docker được công bố tại `http://localhost:8001` (đổi bằng
+`BACKEND_HOST_PORT` trong `.env`). Frontend trong Docker gọi API qua
+`http://backend:8000`; cổng nội bộ này không đổi theo cổng host.
+
 Nếu mọi thứ đúng, trang sẽ hiển thị:
 
 ```text
