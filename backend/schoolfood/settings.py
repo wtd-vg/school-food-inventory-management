@@ -81,7 +81,7 @@ if database_url:
 
 # SF38: Protect production DB from test runner
 if "test" in sys.argv:
-    DATABASES["default"]["NAME"] = "test_schoolfood_local"
+    DATABASES["default"]["TEST"] = {"NAME": "test_schoolfood_local"}
 
 # Skeleton chưa làm form đăng ký nên chưa cần password validator.
 AUTH_PASSWORD_VALIDATORS: list[dict[str, str]] = []
