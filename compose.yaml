@@ -8,7 +8,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-schoolfood}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-schoolfood}
     ports:
-      - "5432:5432"
+      # Cổng máy host khác PostgreSQL local; container vẫn dùng db:5432.
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     # Docker dùng lệnh này để biết PostgreSQL đã sẵn sàng nhận kết nối.
@@ -18,7 +19,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # Django cung cấp API tại http://localhost:8000.
+  # Django cung cấp API tại http://localhost:8001 mặc định.
   backend:
     build:
       context: .
@@ -34,7 +35,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${BACKEND_HOST_PORT:-8001}:8000"
     volumes:
       - ./backend:/app
 
@@ -43,6 +44,8 @@ services:
     build:
       context: .
       target: frontend
+    environment:
+      VITE_BACKEND_URL: http://backend:8000
     depends_on:
       - backend
     ports:

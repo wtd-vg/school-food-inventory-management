@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fetchApi } from './utils/api';
 
 export interface Category {
   id?: number | string;
@@ -8,7 +9,11 @@ export interface Category {
   status?: string;
 }
 
-export const CategoryPage: React.FC = () => {
+interface CategoryPageProps {
+  isViewer?: boolean;
+}
+
+export const CategoryPage: React.FC<CategoryPageProps> = ({ isViewer = false }) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,27 +21,30 @@ export const CategoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // --- STATE CHO MODAL THÊM MỚI (Bao gồm cả Trạng thái) ---
+  // --- STATE CHO MODAL TẠO / SỬA ---
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [newCode, setNewCode] = useState<string>('');
-  const [newName, setNewName] = useState<string>('');
-  const [newStatus, setNewStatus] = useState<string>('active'); // Mặc định là Hoạt động
+  const [modalMode, setModalMode] = useState<'CREATE' | 'EDIT'>('CREATE');
+  const [editingId, setEditingId] = useState<number | string | null>(null);
+  const [formCode, setFormCode] = useState<string>('');
+  const [formName, setFormName] = useState<string>('');
+  const [formStatus, setFormStatus] = useState<string>('active');
+  const [fieldErrors, setFieldErrors] = useState<{ code?: string; name?: string; general?: string }>({});
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Hàm tải danh sách
+  // Hàm tải danh sách danh mục
   const fetchCategories = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/categories/');
+      const response = await fetchApi('/api/categories/');
       if (!response.ok) {
-        throw new Error('Lỗi kết nối Backend: ' + response.status);
+        throw new Error('Lỗi kết nối máy chủ: ' + response.status);
       }
       const data = await response.json();
       const list = Array.isArray(data) ? data : data.results || [];
       setCategories(list);
     } catch (err: any) {
-      setError(err.message || 'Không thể kết nối Backend');
+      setError(err.message || 'Không thể kết nối máy chủ');
     } finally {
       setLoading(false);
     }
@@ -46,45 +54,102 @@ export const CategoryPage: React.FC = () => {
     fetchCategories();
   }, []);
 
-  // --- HÀM XỬ LÝ GỬI API THÊM MỚI (POST) ---
-  const handleCreateCategory = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setModalMode('CREATE');
+    setEditingId(null);
+    setFormCode('');
+    setFormName('');
+    setFormStatus('active');
+    setFieldErrors({});
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (cat: Category) => {
+    setModalMode('EDIT');
+    setEditingId(cat.id || null);
+    setFormCode(cat.code || '');
+    setFormName(cat.name || '');
+    const isActive = cat.is_active === true || cat.status === 'active' || cat.status === 'Hoạt động';
+    setFormStatus(isActive ? 'active' : 'locked');
+    setFieldErrors({});
+    setIsModalOpen(true);
+  };
+
+  // --- HÀM XỬ LÝ LƯU DANH MỤC (TẠO MỚI / SỬA) ---
+  const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
+
+    const newFieldErrors: { code?: string; name?: string } = {};
+    if (!formCode.trim()) newFieldErrors.code = 'Mã danh mục không được để trống.';
+    if (!formName.trim()) newFieldErrors.name = 'Tên danh mục không được để trống.';
+
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors);
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // Chuyển đổi trạng thái từ giao diện sang giá trị boolean is_active của Django
-      const isActiveValue = newStatus === 'active';
+      const isActiveValue = formStatus === 'active';
 
-      const response = await fetch('/api/categories/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code: newCode,
-          name: newName,
-          is_active: isActiveValue,
-        }),
-      });
+      if (modalMode === 'CREATE') {
+        const response = await fetchApi('/api/categories/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: formCode.trim().toUpperCase(),
+            name: formName.trim(),
+            is_active: isActiveValue,
+          }),
+        });
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Thêm mới thất bại. Vui lòng kiểm tra lại!');
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData.error || errData.detail || errData.message || 'Thêm mới thất bại.';
+          if (errMsg.toLowerCase().includes('already exists') || errMsg.toLowerCase().includes('trùng')) {
+            setFieldErrors({ code: 'Mã danh mục đã tồn tại trong hệ thống.' });
+          } else {
+            setFieldErrors({ general: errMsg });
+          }
+          return;
+        }
+      } else {
+        // EDIT: PATCH /api/categories/<id>/
+        const response = await fetchApi(`/api/categories/${editingId}/`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code: formCode.trim().toUpperCase(),
+            name: formName.trim(),
+            is_active: isActiveValue,
+          }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData.error || errData.detail || errData.message || 'Cập nhật thất bại.';
+          if (errMsg.toLowerCase().includes('already exists') || errMsg.toLowerCase().includes('trùng')) {
+            setFieldErrors({ code: 'Mã danh mục đã tồn tại trong hệ thống.' });
+          } else if (errMsg.includes('referenced by FoodItem')) {
+            setFieldErrors({ general: 'Không thể tạm khóa danh mục vì đang có thực phẩm liên kết!' });
+          } else {
+            setFieldErrors({ general: errMsg });
+          }
+          return;
+        }
       }
 
-      // Đóng modal, reset form và làm mới lại bảng dữ liệu
       setIsModalOpen(false);
-      setNewCode('');
-      setNewName('');
-      setNewStatus('active');
       fetchCategories();
     } catch (err: any) {
-      alert(err.message);
+      setFieldErrors({ general: err.message || 'Lỗi kết nối đến máy chủ.' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // --- HÀM XỬ LÝ CHUYỂN TRẠNG THÁI DANH MỤC (PATCH is_active theo chuẩn không hard delete) ---
+  // --- HÀM XỬ LÝ CHUYỂN TRẠNG THÁI DANH MỤC (PATCH) ---
   const handleToggleActive = async (cat: Category) => {
     if (!cat.id) return;
     const currentActive = cat.is_active === true || cat.status === 'active' || cat.status === 'Hoạt động';
@@ -94,11 +159,9 @@ export const CategoryPage: React.FC = () => {
     if (!window.confirm(`Bạn có chắc chắn muốn ${actionText} danh mục "${cat.name}"?`)) return;
 
     try {
-      const response = await fetch(`/api/categories/${cat.id}/`, {
+      const response = await fetchApi(`/api/categories/${cat.id}/`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           is_active: nextActive,
         }),
@@ -106,12 +169,18 @@ export const CategoryPage: React.FC = () => {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || errData.detail || 'Cập nhật trạng thái thất bại');
+        const errMsg = errData.error || errData.detail || errData.message || 'Cập nhật trạng thái thất bại';
+        if (errMsg.includes('referenced by FoodItem')) {
+          alert('Không thể ngừng sử dụng danh mục vì đang có thực phẩm liên kết tới danh mục này!');
+        } else {
+          alert(errMsg);
+        }
+        return;
       }
 
       fetchCategories();
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || 'Lỗi khi cập nhật trạng thái');
     }
   };
 
@@ -148,12 +217,14 @@ export const CategoryPage: React.FC = () => {
             Quản lý các nhóm thực phẩm và nguyên liệu trong kho bếp.
           </p>
         </div>
-        <button 
-          className="btn-add"
-          onClick={() => setIsModalOpen(true)}
-        >
-          + Thêm mới
-        </button>
+        {!isViewer && (
+          <button 
+            className="btn-add"
+            onClick={openCreateModal}
+          >
+            + Thêm danh mục
+          </button>
+        )}
       </div>
 
       <div className="stats-grid">
@@ -199,18 +270,17 @@ export const CategoryPage: React.FC = () => {
         </div>
       )}
 
-      {!loading && error && (
+      {error && !loading && (
         <div className="state-box state-error">
-          <p>⚠️ {error}</p>
-          <button onClick={fetchCategories} className="btn-retry">
-            🔄 Thử lại
-          </button>
+          ❌ {error}
+          <br />
+          <button className="btn-retry" onClick={fetchCategories}>Thử lại</button>
         </div>
       )}
 
       {!loading && !error && filteredCategories.length === 0 && (
         <div className="state-box state-empty">
-          📭 Không tìm thấy danh mục nào.
+          Không tìm thấy danh mục nào phù hợp.
         </div>
       )}
 
@@ -221,7 +291,7 @@ export const CategoryPage: React.FC = () => {
               <th>MÃ</th>
               <th>TÊN DANH MỤC</th>
               <th>TRẠNG THÁI</th>
-              <th>HÀNH ĐỘNG</th>
+              {!isViewer && <th>HÀNH ĐỘNG</th>}
             </tr>
           </thead>
           <tbody>
@@ -244,15 +314,34 @@ export const CategoryPage: React.FC = () => {
                       </span>
                     )}
                   </td>
-                  <td>
-                    <button 
-                      className={isActive ? "btn-action-delete" : "btn-action-activate"}
-                      style={!isActive ? { color: '#059669', background: 'none', border: 'none', fontWeight: 600, fontSize: '13px', cursor: 'pointer' } : undefined}
-                      onClick={() => handleToggleActive(cat)}
-                    >
-                      {isActive ? 'Ngừng dùng' : 'Kích hoạt'}
-                    </button>
-                  </td>
+                  {!isViewer && (
+                    <td>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#0284c7',
+                            fontWeight: 600,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            padding: '2px 6px',
+                          }}
+                          onClick={() => openEditModal(cat)}
+                        >
+                          Sửa
+                        </button>
+                        <span style={{ color: '#cbd5e1' }}>|</span>
+                        <button 
+                          className={isActive ? "btn-action-delete" : "btn-action-activate"}
+                          style={!isActive ? { color: '#059669', background: 'none', border: 'none', fontWeight: 600, fontSize: '13px', cursor: 'pointer' } : undefined}
+                          onClick={() => handleToggleActive(cat)}
+                        >
+                          {isActive ? 'Ngừng dùng' : 'Kích hoạt'}
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -260,7 +349,7 @@ export const CategoryPage: React.FC = () => {
         </table>
       )}
 
-      {/* --- MODAL FORM THÊM MỚI DANH MỤC (ĐÃ CÓ TRẠNG THÁI) --- */}
+      {/* MODAL FORM TẠO MỚI / CHỈNH SỬA DANH MỤC */}
       {isModalOpen && (
         <div style={{
           position: 'fixed',
@@ -279,44 +368,92 @@ export const CategoryPage: React.FC = () => {
             boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
           }}>
             <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', fontWeight: 'bold' }}>
-              Thêm danh mục mới
+              {modalMode === 'CREATE' ? 'Thêm danh mục mới' : 'Chỉnh sửa danh mục'}
             </h3>
-            <form onSubmit={handleCreateCategory}>
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '14px', marginBottom: '6px', color: '#374151', fontWeight: 500 }}>
-                  Mã danh mục
+
+            {fieldErrors.general && (
+              <div style={{
+                padding: '8px 12px',
+                backgroundColor: '#fef2f2',
+                color: '#b91c1c',
+                borderRadius: '6px',
+                fontSize: '13px',
+                marginBottom: '14px',
+              }}>
+                ⚠️ {fieldErrors.general}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveCategory}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '13px', marginBottom: '6px', color: '#374151', fontWeight: 500 }}>
+                  Mã danh mục (*)
                 </label>
                 <input 
                   type="text" 
-                  value={newCode}
-                  onChange={(e) => setNewCode(e.target.value)}
-                  placeholder="Ví dụ: CAT01"
+                  value={formCode}
+                  onChange={(e) => {
+                    setFormCode(e.target.value);
+                    if (fieldErrors.code) setFieldErrors(prev => ({ ...prev, code: '' }));
+                  }}
+                  placeholder="Ví dụ: RAU_CU"
                   required
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '6px', boxSizing: 'border-box' }}
+                  disabled={submitting}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${fieldErrors.code ? '#dc2626' : '#d1d5db'}`,
+                    borderRadius: '6px',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    textTransform: 'uppercase'
+                  }}
                 />
+                {fieldErrors.code && (
+                  <span style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px', display: 'block' }}>
+                    {fieldErrors.code}
+                  </span>
+                )}
               </div>
 
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '14px', marginBottom: '6px', color: '#374151', fontWeight: 500 }}>
-                  Tên danh mục
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '13px', marginBottom: '6px', color: '#374151', fontWeight: 500 }}>
+                  Tên danh mục (*)
                 </label>
                 <input 
                   type="text" 
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Ví dụ: Thực phẩm tươi sống"
+                  value={formName}
+                  onChange={(e) => {
+                    setFormName(e.target.value);
+                    if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: '' }));
+                  }}
+                  placeholder="Ví dụ: Rau củ quả tươi"
                   required
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '6px', boxSizing: 'border-box' }}
+                  disabled={submitting}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${fieldErrors.name ? '#dc2626' : '#d1d5db'}`,
+                    borderRadius: '6px',
+                    boxSizing: 'border-box',
+                    outline: 'none'
+                  }}
                 />
+                {fieldErrors.name && (
+                  <span style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px', display: 'block' }}>
+                    {fieldErrors.name}
+                  </span>
+                )}
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '14px', marginBottom: '6px', color: '#374151', fontWeight: 500 }}>
+                <label style={{ display: 'block', fontSize: '13px', marginBottom: '6px', color: '#374151', fontWeight: 500 }}>
                   Trạng thái
                 </label>
                 <select 
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
+                  value={formStatus}
+                  onChange={(e) => setFormStatus(e.target.value)}
+                  disabled={submitting}
                   style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '6px', backgroundColor: '#fff', boxSizing: 'border-box' }}
                 >
                   <option value="active">Hoạt động</option>
@@ -328,6 +465,7 @@ export const CategoryPage: React.FC = () => {
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)}
+                  disabled={submitting}
                   style={{ padding: '10px 16px', border: '1px solid #d1d5db', background: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
                 >
                   Hủy
@@ -335,7 +473,16 @@ export const CategoryPage: React.FC = () => {
                 <button 
                   type="submit" 
                   disabled={submitting}
-                  style={{ padding: '10px 16px', background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+                  style={{
+                    padding: '10px 16px',
+                    background: '#059669',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    fontWeight: 500,
+                    opacity: submitting ? 0.7 : 1
+                  }}
                 >
                   {submitting ? 'Đang lưu...' : 'Lưu vào CSDL'}
                 </button>
