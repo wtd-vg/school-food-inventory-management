@@ -401,7 +401,7 @@ class ReportTests(TestCase):
         self.assertGreaterEqual(len(results), 1)
         item = next(f for f in results if f["id"] == self.food.id)
         self.assertEqual(item["transaction_count"], 1)
-        self.assertEqual(item["stock_value"], 210.0) # 10.5 * 20.0
+        self.assertEqual(float(item["stock_value"]), 210.0) # 10.5 * 20.0
 
     def test_reports_transactions_filter(self):
         client = Client()

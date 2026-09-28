@@ -559,6 +559,7 @@ def stocktake_post(request, stocktake_id):
 from django.db.models import Count
 from decimal import Decimal
 from django.utils.dateparse import parse_date
+from django.utils.timezone import make_aware
 import datetime
 
 @inventory_permission_required
@@ -598,13 +599,13 @@ def reports_transactions(request):
         if date_from:
             parsed_from = parse_date(date_from)
             if parsed_from:
-                ledgers = ledgers.filter(created_at__gte=datetime.datetime.combine(parsed_from, datetime.time.min))
+                ledgers = ledgers.filter(created_at__gte=make_aware(datetime.datetime.combine(parsed_from, datetime.time.min)))
                 
         date_to = request.GET.get('to')
         if date_to:
             parsed_to = parse_date(date_to)
             if parsed_to:
-                ledgers = ledgers.filter(created_at__lte=datetime.datetime.combine(parsed_to, datetime.time.max))
+                ledgers = ledgers.filter(created_at__lte=make_aware(datetime.datetime.combine(parsed_to, datetime.time.max)))
                 
         ledgers = ledgers.order_by('id')
         
