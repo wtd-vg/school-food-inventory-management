@@ -1,8 +1,11 @@
+from django.core.exceptions import ValidationError
+from .models import StockTake, StockTakeItem
+from .services import create_stocktake, update_stocktake_item, post_stocktake
 import json
 
 from django.db import connection, IntegrityError
 from django.http import JsonResponse
-from .models import Category, FoodItem, Supplier
+from .models import Category, FoodItem, Supplier, InventoryLedger
 from .auth_views import inventory_permission_required
 
 
@@ -72,6 +75,12 @@ def categories(request):
         except IntegrityError:
             return JsonResponse({"error": "code already exists"}, status=400)
 
+        # 2. An toàn rồi mới lưu xuống DB
+        #category = Category.objects.create(
+           # code=code,
+           # name=name,
+           # is_active=data.get("is_active", True)
+       # )
         return JsonResponse(
             {
                 "id": category.id,
@@ -482,4 +491,133 @@ def supplier_detail(request, supplier_id):
     if request.method == "DELETE":
         return JsonResponse({"error": "DELETE is not allowed"}, status=405)
 
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@inventory_permission_required
+def stocktakes(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+            
+        food_ids = data.get("food_ids", [])
+        if not isinstance(food_ids, list) or not food_ids:
+            return JsonResponse({"error": "food_ids list is required"}, status=400)
+            
+        try:
+            st = create_stocktake(food_ids)
+            return JsonResponse({"id": st.id, "status": st.status}, status=201)
+        except ValidationError as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@inventory_permission_required
+def stocktake_items(request, item_id):
+    if request.method == "PATCH":
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+            
+        counted_qty = data.get("counted_qty")
+        if counted_qty is None:
+            return JsonResponse({"error": "counted_qty is required"}, status=400)
+            
+        try:
+            item = update_stocktake_item(item_id, counted_qty)
+            return JsonResponse({
+                "id": item.id,
+                "counted_qty": float(item.counted_qty),
+                "variance": float(item.variance)
+            }, status=200)
+        except ValidationError as e:
+            return JsonResponse({"error": str(e)}, status=400)
+        except StockTakeItem.DoesNotExist:
+            return JsonResponse({"error": "Item not found"}, status=404)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@inventory_permission_required
+def stocktake_post(request, stocktake_id):
+    if request.method == "POST":
+        try:
+            st = post_stocktake(stocktake_id)
+            return JsonResponse({"id": st.id, "status": st.status}, status=200)
+        except ValueError as e:
+            return JsonResponse({"error": str(e)}, status=409)
+        except ValidationError as e:
+            return JsonResponse({"error": str(e)}, status=400)
+        except StockTake.DoesNotExist:
+            return JsonResponse({"error": "StockTake not found"}, status=404)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+from django.db.models import Count
+from decimal import Decimal
+from django.utils.dateparse import parse_date
+import datetime
+
+@inventory_permission_required
+def reports_stock(request):
+    if request.method == "GET":
+        foods = FoodItem.objects.select_related('category').annotate(
+            transaction_count=Count('ledger_entries')
+        ).order_by('id')
+        
+        results = []
+        for f in foods:
+            stock_value = round(f.quantity * f.avg_cost, 2)
+            results.append({
+                "id": f.id,
+                "code": f.code,
+                "name": f.name,
+                "category_name": f.category.name if f.category else "",
+                "unit": f.unit,
+                "quantity": str(f.quantity),
+                "avg_cost": str(f.avg_cost),
+                "stock_value": str(stock_value),
+                "transaction_count": f.transaction_count
+            })
+        return JsonResponse({"results": results})
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@inventory_permission_required
+def reports_transactions(request):
+    if request.method == "GET":
+        ledgers = InventoryLedger.objects.all()
+        
+        food_id = request.GET.get('food')
+        if food_id:
+            ledgers = ledgers.filter(food_id=food_id)
+            
+        date_from = request.GET.get('from')
+        if date_from:
+            parsed_from = parse_date(date_from)
+            if parsed_from:
+                ledgers = ledgers.filter(created_at__gte=datetime.datetime.combine(parsed_from, datetime.time.min))
+                
+        date_to = request.GET.get('to')
+        if date_to:
+            parsed_to = parse_date(date_to)
+            if parsed_to:
+                ledgers = ledgers.filter(created_at__lte=datetime.datetime.combine(parsed_to, datetime.time.max))
+                
+        ledgers = ledgers.order_by('id')
+        
+        results = []
+        for l in ledgers:
+            results.append({
+                "id": l.id,
+                "food_id": l.food_id,
+                "transaction_type": l.transaction_type,
+                "quantity_change": str(l.quantity_change),
+                "cost": str(l.cost),
+                "reference": l.reference,
+                "created_at": l.created_at.isoformat()
+            })
+        return JsonResponse({"results": results})
     return JsonResponse({"error": "Method not allowed"}, status=405)

@@ -66,6 +66,23 @@ DATABASES = {
     }
 }
 
+import urllib.parse
+import sys
+
+# SF38: Parse DATABASE_URL for staging/cloud
+database_url = os.getenv("DATABASE_URL")
+if database_url:
+    parsed_db = urllib.parse.urlparse(database_url)
+    DATABASES["default"]["NAME"] = parsed_db.path.lstrip("/")
+    DATABASES["default"]["USER"] = parsed_db.username
+    DATABASES["default"]["PASSWORD"] = parsed_db.password
+    DATABASES["default"]["HOST"] = parsed_db.hostname
+    DATABASES["default"]["PORT"] = parsed_db.port
+
+# SF38: Protect production DB from test runner
+if "test" in sys.argv:
+    DATABASES["default"]["NAME"] = "test_schoolfood_local"
+
 # Skeleton chưa làm form đăng ký nên chưa cần password validator.
 AUTH_PASSWORD_VALIDATORS: list[dict[str, str]] = []
 
@@ -89,3 +106,17 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
+
+# SF40: Production checks
+DEBUG = os.getenv("DEBUG", "True").lower() == "true"
+SECRET_KEY = os.getenv("SECRET_KEY", "hí_ộ_đầu_trâu_ngu_lom_hí_ộ_đầu_trâu_ngu_lom_hí_ộ_đầu_trâu_ngu_lom")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "True").lower() == "true"
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
