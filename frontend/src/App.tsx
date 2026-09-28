@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { LoginPage } from './LoginPage';
 import { CategoryPage } from './CategoryPage';
 import FoodPage from './FoodPage';
+import { ReportPage } from './ReportPage';
 import { fetchApi } from './utils/api';
 
-type Screen = 'LOGIN' | 'CATEGORIES' | 'FOODS';
+type Screen = 'LOGIN' | 'CATEGORIES' | 'FOODS' | 'REPORTS';
 
 export const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('LOGIN');
@@ -140,7 +141,11 @@ export const App: React.FC = () => {
       </header>
 
       <div className="sub-header">
-        🥗 Quản lý kho bếp — {currentScreen === 'CATEGORIES' ? 'Danh mục' : 'Thực phẩm & Nguyên liệu'}
+        🥗 Quản lý kho bếp — {
+          currentScreen === 'CATEGORIES' ? 'Danh mục' :
+          currentScreen === 'FOODS' ? 'Thực phẩm & Nguyên liệu' :
+          'Báo cáo tồn kho & Sổ giao dịch'
+        }
       </div>
 
       <main className="main-content">
@@ -158,11 +163,18 @@ export const App: React.FC = () => {
           >
             Quản lý Thực phẩm
           </div>
+          <div 
+            className={`tab-item ${currentScreen === 'REPORTS' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('REPORTS')}
+          >
+            Báo cáo tồn & Lịch sử
+          </div>
         </div>
 
         {/* Nội dung thay đổi dựa trên State */}
         {currentScreen === 'CATEGORIES' && <CategoryPage isViewer={isViewer} />}
         {currentScreen === 'FOODS' && <FoodPage isViewer={isViewer} />}
+        {currentScreen === 'REPORTS' && <ReportPage isViewer={isViewer} />}
       </main>
     </div>
   );
