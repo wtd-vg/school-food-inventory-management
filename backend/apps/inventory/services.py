@@ -1,9 +1,9 @@
 """Tạo nháp SF19. Contract post_receipt được bàn giao cho SF20 trong architecture.md."""
 
 from datetime import date as CalendarDate, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.utils import timezone
-from .models import Receipt, ReceiptLine, FoodItem, InventoryLedger, Issue, IssueLine
+from .models import Receipt, ReceiptLine, FoodItem, InventoryLedger, Issue, IssueLine, StockTransaction
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
@@ -203,6 +203,18 @@ def post_receipt(receipt_id):
         food.avg_cost = round(new_avg_cost, 2)
         food.stock_version += 1
         food.save(update_fields=["quantity", "avg_cost", "stock_version"])
+
+        # Ghi StockTransaction để thỏa mãn constraint trigger sf19_check_receipt
+        StockTransaction.objects.create(
+            receipt_line=line,
+            food=food,
+            type=StockTransaction.Type.IN,
+            quantity_delta=qty_in,
+            unit_cost=price_in,
+            value_delta=(qty_in * price_in).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            date=receipt.date,
+            created_by=receipt.created_by,
+        )
 
         # Ghi sổ InventoryLedger
         InventoryLedger.objects.create(
