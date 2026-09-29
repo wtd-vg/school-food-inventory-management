@@ -1,63 +1,30 @@
-# Task on progress
+# Tiến độ SchoolFood
 
-Last updated: 2026-09-20
+Cập nhật 29/09/2026. Khảo sát code nền `94c733a` trên dev1; thay đổi tài liệu trên `docs/g2-lunch-plan`. Không đồng nghĩa remote đã được fetch mới hoặc task đã nghiệm thu.
 
-## Mục tiêu duy nhất
+## Đã xác nhận bằng đọc code
 
-Để mọi thành viên tự chạy và giải thích được:
+- Có auth/danh mục, SF19 model/trigger/service nháp/test, kiểm kê/API báo cáo/ReportPage.
+- Chưa thấy post_receipt, model/service xuất và bộ API/UI nhập–xuất đầy đủ trong bản khảo sát.
+- Hai nguồn ledger đang tách: StockTransaction (SF19) và InventoryLedger (kiểm kê/báo cáo).
+- Có cấu hình deploy/backup, chưa xác nhận môi trường deploy hoặc restore thực tế.
 
-```text
-React → Django → PostgreSQL
-```
+## Đợt tài liệu G2 đã được duyệt
 
-## Đã làm
+- [x] Khảo sát code và thống nhất phạm vi toàn bộ SF43–SF72.
+- [x] Soạn README, architecture, codex, AGENTS và đồng bộ quy chuẩn Git.
+- [x] Soạn kế hoạch G2, thẻ task và case AC23–AC47.
+- [x] Kiểm tra workbook và kỹ thuật; unit test có 1 lỗi sẵn có cần xử lý ở nền, không đánh dấu cả bộ đạt.
+- [ ] Reviewer của team kiểm tra bộ tài liệu; chưa tự đánh dấu thay TV6.
 
-- SF07: đã chuẩn bị contract Category, phạm vi file của TV1–TV6 và thứ tự branch/merge trong `architecture.md`. Chưa nghiệm thu SF07 vì chưa có xác nhận đủ sáu người qua M0 và TV2/TV3/TV6 đã đọc thống nhất.
-- Kiểm tra ngày 20/09/2026: Django `manage.py check`, TypeScript và Vite build (`--configLoader runner`) đều đạt. Máy hiện tại chưa có lệnh Docker, chưa xác nhận Compose và test tích hợp PostgreSQL.
+## Mở việc tiếp theo
 
-- Soạn bộ tài liệu hiện hành cho TV1 leader và TV2–TV6 trong `outputs/team-6/`.
-- Có hướng dẫn chung và thẻ hướng dẫn SF01–SF42 dạng Markdown (`.md`), checklist Excel với 22 case nghiệm thu.
-- 36 task thuộc bản local, 6 task deploy/domain để sau. Mỗi người bắt đầu bằng một task M0.
-- Chưa đánh dấu task nào của team hoàn tất; tên thật và hạn dự kiến chờ team điền. Code ứng dụng không đổi trong lượt tài liệu.
-- Đã chuyển hai hướng dẫn từ Word sang Markdown theo yêu cầu, giữ đủ 42 task và cập nhật liên kết. Hai bản Word vừa tạo được chuyển vào `.tmp/team-pack/retired-docx/` để tránh trùng trong thư mục tài liệu hiện hành; có thể khôi phục nếu cần.
-- Checklist Excel giữ nguyên: đã kiểm tra cả 3 sheet; thử công thức tiến độ với đủ/thiếu review, bằng chứng và task phụ thuộc rồi khôi phục trạng thái ban đầu. Kiểm tra công thức bằng Artifact Tool, chưa xác nhận tính lại trong Microsoft Excel. Ghi chú “thẻ SF trong Word” ở sheet Team là tên định dạng cũ; tra thẻ trong file Markdown hiện hành.
+TV1 chuẩn bị kế hoạch triển khai SF43; song song review BASE01–05 ở G2.0. Chỉ mở G2.3–5 khi nền kho được nghiệm thu. Chi tiết [kế hoạch](outputs/team-6/GiaiDoan2_KeHoach.md), [task](outputs/team-6/SchoolFood_HuongDan_Task.md), [checklist](SchoolFood_Checklist_6_ThanhVien.xlsx).
 
-- Tạo Docker Compose với ba service: `db`, `backend`, `frontend`.
-- Tạo API mẫu `GET /api/hello/`.
-- Tạo một trang React gọi API mẫu.
-- Tạo một test Django cho API mẫu.
-- Bỏ các phần làm quá sớm: auth, Swagger, DRF, UI library, router, CI, Render, Neon và production hardening.
-- Viết lại README để giải thích từng file và vòng đời một request.
+Task mới đang “Chưa làm”; deadline/tên thành viên thật chờ team điền. Không chuyển các SF cũ thành hoàn tất chỉ dựa vào việc có code hoặc báo cáo lịch sử.
 
-## Cần xác nhận
+## Kiểm chứng
 
-- [ ] Cài Docker Desktop.
-- [ ] Chạy `docker compose up --build`.
-- [ ] Chạy migration.
-- [ ] Mở trang React và thấy PostgreSQL đã kết nối.
-- [ ] Chạy test Django.
-- [ ] Mỗi thành viên giải thích được vòng request trong README.
+Check, migration check, TypeScript và Vite build đạt. Unit test PostgreSQL riêng: **43/44 đạt**; test_reports_stock mong số 210.0 nhưng API trả chuỗi "210.00". Có cảnh báo timezone ở lọc báo cáo. SF34/BASE04 cần chốt contract và xử lý, chưa sửa code trong lượt tài liệu.
 
-## Sau khi hoàn thành
-
-Nghiệm thu SF07, sau đó mở SF08 để TV2 làm feature nhỏ đầu tiên: `Category`.
-
-## SF07 Đang chờ xác nhận
-
-- [x] Ghi ví dụ `GET /api/categories/`: `results`, `id`, `code`, `name`, `is_active`; thống nhất thứ tự và danh sách rỗng.
-- [x] Chốt M1 chỉ đọc; dữ liệu thử tạo bằng Django shell trong SF08.
-- [x] Phân file và thứ tự: SF08 trước, SF09/SF10 có thể song song, tiếp SF11 rồi SF12.
-- [ ] Có bằng chứng SF01–SF06: từng người tự chạy và giải thích được skeleton.
-- [ ] TV2 và TV3 đọc contract, giải thích được ví dụ response; TV6 review SF07.
-- [x] Chủ dự án duyệt đưa skeleton, checklist và cập nhật SF07 lên `dev1`; hướng dẫn team clone/pull và mở PR về `dev1` đã cập nhật.
-
-Bằng chứng SF07: mục “SF07 Thống nhất Category và chia việc M1” trong `architecture.md`. Category chưa được triển khai; xác nhận M0 và review của team vẫn còn chờ. Commit tài liệu trước đó là `2353d51` trên `dev1`. Bản nền và các cập nhật hiện tại được bàn giao bằng commit tiếp theo trên cùng nhánh; xem lịch sử Git để xác nhận commit và trạng thái đồng bộ remote.
-
-## Chưa làm
-
-- đăng nhập và phân quyền;
-- nhập kho, xuất kho, kiểm kê và báo cáo;
-- CI;
-- Neon, Render và domain thật.
-
-Những phần này được hoãn, không bị hủy. Team sẽ thêm từng phần khi có nhu cầu và hiểu rõ lý do.
+Kết quả, giới hạn và ảnh checklist tại [báo cáo kiểm tra](outputs/team-6/evidence/G2_Documentation_QA.md). Không dùng các kiểm tra này để xác nhận SF43–SF72 đã triển khai.
