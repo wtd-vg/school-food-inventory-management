@@ -80,3 +80,13 @@ urlpatterns.extend([
     path('reports/stock/', reports_stock, name='reports_stock'),
     path('reports/transactions/', reports_transactions, name='reports_transactions'),
 ])
+
+from apps.inventory.class_views import class_list, class_detail
+from apps.inventory.recipe_views import dish_list, dish_detail
+
+urlpatterns.extend([
+    path('classes/', class_list, name='classes'),
+    path('classes/<int:class_id>/', class_detail, name='class_detail'),
+    path('dishes/', dish_list, name='dishes'),
+    path('dishes/<int:dish_id>/', dish_detail, name='dish_detail'),
+])

@@ -182,3 +182,31 @@ class IssueLine(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["issue", "food"], name="issue_line_unique_food"),
         ]
+class SchoolClass(models.Model):
+    code = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+class Dish(models.Model):
+    code = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+class RecipeComponent(models.Model):
+    dish = models.ForeignKey(Dish, on_delete=models.CASCADE, related_name="components")
+    food = models.ForeignKey("FoodItem", on_delete=models.PROTECT, related_name="recipe_components")
+    quantity = models.DecimalField(
+        max_digits=14, decimal_places=3, validators=[MinValueValidator(Decimal("0.001"))]
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["dish", "food"], name="recipe_component_unique_food"),
+        ]
+
