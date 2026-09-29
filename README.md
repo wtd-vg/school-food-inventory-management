@@ -1,218 +1,75 @@
-# SchoolFood — khung cơ bản cho team
+# SchoolFood — quản lý kho và bữa trưa trường học
 
-Đây là skeleton để học và phát triển dần, chưa phải sản phẩm hoàn chỉnh.
+SchoolFood đang phát triển với React + TypeScript + Vite, Django và PostgreSQL. Bản local đã có đăng nhập, danh mục, cấu trúc phiếu nhập, kiểm kê và báo cáo; chưa hoàn thiện toàn bộ luồng nhập–xuất. Giai đoạn 2 bổ sung số suất, thực đơn, nhu cầu nguyên liệu, đặt/nhận hàng và đối chiếu bữa trưa.
 
-Mục tiêu duy nhất hiện tại là hiểu được luồng:
+## Bắt đầu theo vai trò
 
-```text
-Trình duyệt → React → Django → PostgreSQL
-```
+- Thành viên: đọc [hướng dẫn chung](outputs/team-6/SchoolFood_HuongDan_Chung.md), [task được giao](outputs/team-6/SchoolFood_HuongDan_Task.md) và [quy chuẩn Git](GIT_WORKFLOW.md).
+- Leader/reviewer: xem [tiến độ](task_on_progress.md), [kiến trúc](architecture.md), [kế hoạch G2](outputs/team-6/GiaiDoan2_KeHoach.md) và [checklist](SchoolFood_Checklist_6_ThanhVien.xlsx).
 
-## Tài liệu dành cho team 6 người
+## Hiện trạng tại 94c733a (khảo sát 29/09/2026)
 
-Bắt đầu bằng [hướng dẫn chung](outputs/team-6/SchoolFood_HuongDan_Chung.md) và [Quy chuẩn Git & Workflow](GIT_WORKFLOW.md),
-sau đó mở [checklist TV1–TV6](outputs/team-6/SchoolFood_Checklist_6_ThanhVien.xlsx)
-và tra mã SF của mình trong [hướng dẫn từng task](outputs/team-6/SchoolFood_HuongDan_Task.md).
+| Chức năng | Có trong code | Việc còn lại |
+| --- | --- | --- |
+| Auth/danh mục | Session/CSRF, manager/viewer, Category/Food/Supplier API; UI login/category/food | Kiểm tra hồi quy và UI Supplier |
+| Nhập | Model Receipt/Line/StockTransaction, service tạo nháp, trigger/test | Chốt nhập, API/UI đầy đủ |
+| Xuất | Contract trong tài liệu | Model/service/API/UI và nghiệm thu |
+| Kiểm kê/báo cáo | Model/API, ReportPage | Thống nhất ledger với SF19; nghiệm thu tích hợp |
+| G2 bữa trưa | Kế hoạch SF43–SF72 | Chưa triển khai |
+| Deploy | Một phần cấu hình và script | Chưa xác nhận môi trường triển khai hoặc khôi phục |
 
-Mọi thành viên **bắt buộc đọc [Quy chuẩn Git](GIT_WORKFLOW.md)** trước khi code để tránh commit file rác/venv và nhầm lẫn nhánh.
+“Có code” khác “đã nghiệm thu”. Kết quả chạy mới nhất ở [tiến độ](task_on_progress.md). Không dùng README này để tự đánh dấu task hoàn tất.
 
-Ngày đầu chỉ làm SF01–SF06, mỗi người một task làm quen.
-Các model/API trong tài liệu là kế hoạch phát triển dần, chưa có trong code.
-Bộ trong `outputs/team-6/` là bản hiện hành; `outputs/project-foundation-update/` là bản cũ để tham khảo.
+## Chạy local bằng Docker
 
-## 1. Những gì đang có
-
-- `db`: PostgreSQL lưu dữ liệu.
-- `backend`: Django cung cấp API.
-- `frontend`: React hiển thị giao diện.
-- Docker Compose khởi động cả ba phần bằng một lệnh.
-- Một API mẫu kiểm tra kết nối database.
-- Một trang React gọi API mẫu và hiển thị kết quả.
-
-Chưa có đăng nhập, danh mục, nhập kho, xuất kho, kiểm kê, báo cáo hoặc deploy. Team sẽ thêm từng phần sau khi hiểu skeleton.
-
-## 2. Chạy dự án
-
-Team lấy bản nền từ nhánh `dev1`. Nếu chưa có repository:
-
-```sh
-git clone --branch dev1 https://github.com/wtd-vg/school-food-inventory-management.git
-cd school-food-inventory-management
-```
-
-Nếu đã clone, đảm bảo đã lưu công việc trên nhánh riêng và `git status` không còn thay đổi dở dang, rồi:
-
-```sh
-git fetch origin
-git switch dev1
-git pull --ff-only origin dev1
-```
-
-Nếu chưa có nhánh local `dev1`, thay lệnh switch bằng `git switch --track origin/dev1`.
-Khi nhận task, tạo nhánh `feat/SFxx-ten-ngan` từ `dev1` mới nhất và mở PR về `dev1` để TV1 duyệt.
-
-Cài Docker Desktop, mở PowerShell tại thư mục dự án rồi chạy:
+Cần Git và Docker Desktop đang chạy. Clone/pull dev1 theo [quy chuẩn Git](GIT_WORKFLOW.md), giữ thay đổi đang làm trên nhánh riêng.
 
 ```powershell
-Copy-Item .env.example .env
-docker compose up --build
-```
-
-Ở terminal khác, tạo các bảng mặc định của Django:
-
-```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+docker compose up --build -d
 docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py createsuperuser
+docker compose exec backend python manage.py seed_demo
 ```
 
-Mở `http://localhost:5173`.
+Chỉ migrate/seed trên DB local đã xác nhận. Seed hiện chỉ tạo/cập nhật ba Category, không tạo người dùng hoặc toàn bộ dữ liệu G2. Superuser dùng cho quản trị local; tài khoản thường được gán group manager/viewer trong Django admin `/admin/`. Không ghi mật khẩu vào repo.
 
-PostgreSQL trong Docker được công bố tại `localhost:5433` để tránh trùng cổng
-5432 với PostgreSQL hoặc container khác trên máy. Có thể đổi bằng
-`POSTGRES_HOST_PORT` trong `.env`. Backend chạy trong Docker vẫn kết nối
-`db:5432`; nếu chạy backend ngoài Docker để dùng database này, đặt `DB_PORT=5433`.
+Mở http://localhost:5173 và đăng nhập. Django ở http://localhost:8001; DB host localhost:5433. Trong Docker, backend dùng db:5432 và Vite gọi backend:8000. Cổng host đổi bằng POSTGRES_HOST_PORT/BACKEND_HOST_PORT trong .env.
 
-API backend trong Docker được công bố tại `http://localhost:8001` (đổi bằng
-`BACKEND_HOST_PORT` trong `.env`). Frontend trong Docker gọi API qua
-`http://backend:8000`; cổng nội bộ này không đổi theo cổng host.
+Chạy frontend ngoài Docker: cài dependency bằng npm ci trong frontend; đặt VITE_BACKEND_URL=http://localhost:8001 khi backend ở Compose. Backend ngoài Docker cần DB_HOST=127.0.0.1, DB_PORT=5433 cùng thông tin DB local tương ứng. Không dùng mặc định backend:8000 từ máy host.
 
-Nếu mọi thứ đúng, trang sẽ hiển thị:
-
-```text
-React đã gọi được Django. PostgreSQL đã kết nối.
-```
-
-Dừng dự án:
+## Kiểm tra
 
 ```powershell
-docker compose down
-```
-
-Lệnh trên không xóa dữ liệu. Đừng thêm `-v` nếu chưa muốn xóa database local.
-
-## 3. Hiểu từng file
-
-### File ở thư mục gốc
-
-| File | Giải thích |
-| --- | --- |
-| `README.md` | File đang đọc; cách hiểu và chạy dự án. |
-| `architecture.md` | Những quyết định kỹ thuật rất ngắn của team. |
-| `task_on_progress.md` | Việc đang làm và bước tiếp theo. |
-| `compose.yaml` | Nói cho Docker biết cần chạy database, backend và frontend. |
-| `Dockerfile` | Nói cho Docker cách tạo môi trường Python và Node. |
-| `.env.example` | Giá trị mẫu cho PostgreSQL local. Copy thành `.env`. |
-| `.gitignore` | Danh sách file local không được đưa lên Git. |
-| `.dockerignore` | Danh sách file không cần copy vào Docker image. |
-
-Thư mục `outputs/` chứa tài liệu, không tham gia chạy ứng dụng. Dùng đúng bộ `team-6` được liên kết ở đầu README.
-
-### Backend
-
-```text
-backend/
-  manage.py
-  requirements.txt
-  schoolfood/
-    settings.py
-    urls.py
-    asgi.py
-    wsgi.py
-  apps/
-    inventory/
-      apps.py
-      urls.py
-      views.py
-      tests.py
-```
-
-- `manage.py`: lệnh điều khiển Django như `migrate`, `test`, `runserver`.
-- `requirements.txt`: hai thư viện Python cần cài: Django và driver PostgreSQL.
-- `settings.py`: cấu hình app, middleware và kết nối database.
-- `schoolfood/urls.py`: đưa mọi URL bắt đầu bằng `/api/` vào app inventory.
-- `asgi.py`, `wsgi.py`: file Django tạo sẵn để server khởi động; chưa cần sửa.
-- `inventory/apps.py`: khai báo app inventory với Django.
-- `inventory/urls.py`: nối `/api/hello/` với hàm `hello`.
-- `inventory/views.py`: chạy `SELECT 1` trên PostgreSQL và trả JSON.
-- `inventory/tests.py`: gọi API mẫu và kiểm tra kết quả.
-- Các file `__init__.py`: đánh dấu thư mục Python; để trống và không cần sửa.
-
-### Frontend
-
-```text
-frontend/
-  index.html
-  package.json
-  package-lock.json
-  tsconfig.json
-  vite.config.ts
-  src/
-    main.tsx
-    App.tsx
-    styles.css
-```
-
-- `index.html`: trang HTML có vị trí để React được gắn vào.
-- `package.json`: lệnh chạy và danh sách thư viện JavaScript.
-- `package-lock.json`: npm tự sinh để mọi máy cài cùng phiên bản; không sửa tay.
-- `tsconfig.json`: cấu hình TypeScript; giai đoạn đầu không cần sửa.
-- `vite.config.ts`: cấu hình server frontend và chuyển `/api` sang Django.
-- `main.tsx`: điểm bắt đầu của React.
-- `App.tsx`: giao diện duy nhất; gọi `/api/hello/` rồi hiển thị kết quả.
-- `styles.css`: CSS tối thiểu cho trang.
-
-## 4. Request chạy như thế nào
-
-Khi trang được mở:
-
-1. `main.tsx` hiển thị component `App`.
-2. `App.tsx` gọi `fetch("/api/hello/")`.
-3. Vite đọc `vite.config.ts` và chuyển request sang Django.
-4. Django đọc `schoolfood/urls.py` rồi `inventory/urls.py`.
-5. Hàm `hello` trong `inventory/views.py` hỏi PostgreSQL bằng `SELECT 1`.
-6. Django trả JSON cho React.
-7. React đưa nội dung JSON lên màn hình.
-
-Đây là vòng cơ bản mà mọi feature sau này đều mở rộng từ đó.
-
-## 5. Các lệnh cần biết
-
-```powershell
-# Khởi động
-docker compose up
-
-# Tạo/cập nhật bảng database
-docker compose exec backend python manage.py migrate
-
-# Chạy test Django
-docker compose exec backend python manage.py test
-
-# Kiểm tra frontend có build được không
+docker compose exec backend python manage.py check
+docker compose exec backend python manage.py makemigrations --check --dry-run
 docker compose exec frontend npm run build
+docker compose logs --tail 100 backend frontend
+```
 
-# Xem log backend
-docker compose logs -f backend
+Unit/integration tests: `python backend/manage.py test apps.inventory --noinput` khi đã cấu hình DB kiểm thử độc lập, hoặc lệnh tương ứng trong container kiểm thử. PostgreSQL bắt buộc vì SF19 có trigger; tài khoản test cần quyền tạo database. Xem hướng dẫn DB test trong [README.md](README.md). Bỏ DATABASE_URL trong process test và đặt rõ DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD; settings hiện chỉ đổi NAME khi thấy lệnh test, chưa bảo vệ host cloud. Không coi build thành công là đã test UI.
 
-# Dừng
+```powershell
 docker compose down
 ```
 
-## 6. Team làm gì tiếp theo
+Lệnh dừng trên giữ volume. Không thêm `-v` nếu cần giữ dữ liệu.
 
-Chỉ sau khi tất cả thành viên tự giải thích được vòng request ở mục 4:
+## Cấu trúc chính
 
-1. Tạo model `Category`.
-2. Chạy migration.
-3. Tạo API liệt kê category.
-4. Hiển thị category trên React.
-5. Viết một test cho API.
+| Đường dẫn | Trách nhiệm |
+| --- | --- |
+| backend/apps/inventory/models.py, migrations/ | Model và schema PostgreSQL |
+| backend/apps/inventory/services.py | Giao dịch nghiệp vụ |
+| backend/apps/inventory/views.py, urls.py, auth_views.py | HTTP, validation, auth/CSRF |
+| backend/apps/inventory/tests.py, test_receipts.py | Test logic/API/ràng buộc/concurrency |
+| frontend/src/App.tsx và các Page | Màn hình và điều hướng hiện tại |
+| frontend/src/utils/api.ts | Session/CSRF và xử lý hết phiên |
+| compose.yaml, Dockerfile | Môi trường local |
+| outputs/team-6/ | Task, checklist, kế hoạch và bằng chứng |
 
-Chưa làm auth, UI library, CI, cloud database, Render hoặc domain. Những phần đó sẽ được thêm khi team thật sự cần và hiểu lý do.
+## Quy trình phát triển
 
-## 7. File local có thể bỏ qua
+Khảo sát → kế hoạch → chủ dự án duyệt → sửa trên nhánh task → tự kiểm tra → review → PR về dev1. Approval đã có giữ nguyên trong phạm vi; không xin lại mỗi thao tác. Không tự commit/push/merge khi chưa có yêu cầu tương ứng. Dữ liệu, mật khẩu, .env, venv, node_modules và log tạm không đưa lên Git.
 
-- `.venv/`: môi trường Python cài trên máy.
-- `frontend/node_modules/`: thư viện JavaScript đã cài.
-- `__pycache__/`, `.ruff_cache/`, `.mypy_cache/`: cache công cụ.
-- `.tmp/`: file QA tạm.
-
-Các thư mục này có thể sinh lại và không chứa nghiệp vụ của dự án.
+Mã SF01–SF42 được giữ. Giai đoạn 2 dùng G2.1–G2.5, SF43–SF72; G2.0 là kiểm tra nền kho, không phải M2 danh mục/auth. Xem checklist để nhận task; task mới đều chưa nghiệm thu.
