@@ -3,9 +3,11 @@ import { LoginPage } from './LoginPage';
 import { CategoryPage } from './CategoryPage';
 import FoodPage from './FoodPage';
 import { ReportPage } from './ReportPage';
+import { ReceiptPage } from './ReceiptPage';
+import { IssuePage } from './IssuePage';
 import { fetchApi } from './utils/api';
 
-type Screen = 'LOGIN' | 'CATEGORIES' | 'FOODS' | 'REPORTS';
+type Screen = 'LOGIN' | 'CATEGORIES' | 'FOODS' | 'RECEIPTS' | 'ISSUES' | 'REPORTS';
 
 export const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('LOGIN');
@@ -72,7 +74,7 @@ export const App: React.FC = () => {
         .nav-item { color: #94a3b8; text-decoration: none; font-size: 13px; padding: 6px 14px; border-radius: 20px; }
         .nav-item.active { background-color: #ffffff; color: #0f172a; font-weight: 600; }
         .sub-header { background-color: #064e3b; color: #ffffff; padding: 10px 24px; font-size: 13px; font-weight: 500; }
-        .main-content { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+        .main-content { max-width: 1180px; margin: 30px auto; padding: 0 20px; }
         
         /* CSS cho menu chuyển tab nội bộ */
         .tab-menu { display: flex; gap: 24px; margin-bottom: 24px; border-bottom: 1px solid #cbd5e1; }
@@ -119,9 +121,7 @@ export const App: React.FC = () => {
           <span className="logo-text">SchoolOS</span>
         </div>
         <nav className="nav-menu">
-          <a href="#" className="nav-item">Điều hành</a>
-          <a href="#" className="nav-item active">Bếp ăn & Kho</a>
-          <a href="#" className="nav-item">Kế toán</a>
+          <span className="nav-item active">Bếp ăn & Kho</span>
           {currentUser && (
             <span style={{ fontSize: '12px', color: '#cbd5e1', marginLeft: '8px' }}>
               👤 {currentUser} <span style={{ 
@@ -144,6 +144,8 @@ export const App: React.FC = () => {
         🥗 Quản lý kho bếp — {
           currentScreen === 'CATEGORIES' ? 'Danh mục' :
           currentScreen === 'FOODS' ? 'Thực phẩm & Nguyên liệu' :
+          currentScreen === 'RECEIPTS' ? 'Nhập kho — Lập & Chốt phiếu nhập' :
+          currentScreen === 'ISSUES' ? 'Xuất kho — Lập & Chốt phiếu xuất' :
           'Báo cáo tồn kho & Sổ giao dịch'
         }
       </div>
@@ -164,6 +166,18 @@ export const App: React.FC = () => {
             Quản lý Thực phẩm
           </div>
           <div 
+            className={`tab-item ${currentScreen === 'RECEIPTS' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('RECEIPTS')}
+          >
+            📥 Nhập kho
+          </div>
+          <div 
+            className={`tab-item ${currentScreen === 'ISSUES' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('ISSUES')}
+          >
+            📤 Xuất kho
+          </div>
+          <div 
             className={`tab-item ${currentScreen === 'REPORTS' ? 'active' : ''}`}
             onClick={() => setCurrentScreen('REPORTS')}
           >
@@ -174,6 +188,8 @@ export const App: React.FC = () => {
         {/* Nội dung thay đổi dựa trên State */}
         {currentScreen === 'CATEGORIES' && <CategoryPage isViewer={isViewer} />}
         {currentScreen === 'FOODS' && <FoodPage isViewer={isViewer} />}
+        {currentScreen === 'RECEIPTS' && <ReceiptPage isViewer={isViewer} />}
+        {currentScreen === 'ISSUES' && <IssuePage isViewer={isViewer} />}
         {currentScreen === 'REPORTS' && <ReportPage isViewer={isViewer} />}
       </main>
     </div>
