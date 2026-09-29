@@ -16,7 +16,13 @@ from apps.inventory.views import (
     supplier_detail,
     stocktakes,
     stocktake_items,
-    stocktake_post
+    stocktake_post,
+    receipts,
+    receipt_detail,
+    receipt_post,
+    issues,
+    issue_detail,
+    issue_post,
 )
 
 urlpatterns = [
@@ -57,6 +63,16 @@ urlpatterns = [
     path("stocktakes/", stocktakes, name="stocktakes"),
     path("stocktake-items/<int:item_id>/", stocktake_items, name="stocktake_items"),
     path("stocktakes/<int:stocktake_id>/post/", stocktake_post, name="stocktake_post"),
+
+    # SF22: Phiếu nhập kho
+    path("receipts/", receipts, name="receipts"),
+    path("receipts/<int:receipt_id>/", receipt_detail, name="receipt_detail"),
+    path("receipts/<int:receipt_id>/post/", receipt_post, name="receipt_post"),
+
+    # SF28: Phiếu xuất kho
+    path("issues/", issues, name="issues"),
+    path("issues/<int:issue_id>/", issue_detail, name="issue_detail"),
+    path("issues/<int:issue_id>/post/", issue_post, name="issue_post"),
 ]
 
 from apps.inventory.views import reports_stock, reports_transactions
