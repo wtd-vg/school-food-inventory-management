@@ -89,6 +89,8 @@ def dish_list(request):
             components_data = data.get("components", [])
             if not isinstance(components_data, list):
                 return JsonResponse({"message": "Components must be a list"}, status=400)
+            if not components_data:
+                return JsonResponse({"message": "Empty recipe"}, status=400)
                 
             with transaction.atomic():
                 dish = Dish.objects.create(code=code, name=name)
@@ -147,7 +149,9 @@ def dish_detail(request, dish_id):
             if "components" in data:
                 components_data = data["components"]
                 if not isinstance(components_data, list):
-                    return JsonResponse({"message": "Components must be a list"}, status=400)
+                    raise ValueError("Components must be a list")
+                if not components_data:
+                    raise ValueError("Empty recipe")
                 
                 dish.components.all().delete()
                 

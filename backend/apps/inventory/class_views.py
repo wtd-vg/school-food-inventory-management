@@ -37,9 +37,17 @@ def class_list(request):
         except json.JSONDecodeError:
             return JsonResponse({"message": "Invalid JSON"}, status=400)
 
-@require_http_methods(["PATCH"])
+@require_http_methods(["GET", "PATCH"])
 @inventory_permission_required
 def class_detail(request, class_id):
+    if request.method == "GET":
+        try:
+            c = SchoolClass.objects.get(id=class_id)
+            return JsonResponse({"id": c.id, "code": c.code, "name": c.name, "is_active": c.is_active})
+        except SchoolClass.DoesNotExist:
+            return JsonResponse({"message": "Class not found"}, status=404)
+
+    # request.method == "PATCH"
     if request.user.groups.filter(name="viewer").exists():
         return JsonResponse({"message": "Permission denied"}, status=403)
         
