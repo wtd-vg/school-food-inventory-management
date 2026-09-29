@@ -1,10 +1,15 @@
-from django.core.exceptions import ValidationError
-from .models import StockTake, StockTakeItem
-from .services import create_stocktake, update_stocktake_item, post_stocktake
+from django.core.exceptions import ValidationError, PermissionDenied
+from .models import StockTake, StockTakeItem, Receipt, ReceiptLine, Issue, IssueLine
+from .services import (
+    create_stocktake, update_stocktake_item, post_stocktake,
+    create_receipt_draft, post_receipt, post_issue
+)
 import json
+from decimal import Decimal, InvalidOperation
 
-from django.db import connection, IntegrityError
+from django.db import connection, IntegrityError, transaction
 from django.http import JsonResponse
+from django.utils import timezone
 from .models import Category, FoodItem, Supplier, InventoryLedger
 from .auth_views import inventory_permission_required
 
@@ -622,3 +627,387 @@ def reports_transactions(request):
             })
         return JsonResponse({"results": results})
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+# =========================================================================
+# SF22: API TẠO NHÁP, XEM VÀ CHỐT NHẬP KHO
+# =========================================================================
+@inventory_permission_required
+def receipts(request):
+    # GET /api/receipts/
+    if request.method == "GET":
+        receipt_list = Receipt.objects.select_related("supplier", "created_by").prefetch_related("lines__food").order_by("-id")
+        results = []
+        for r in receipt_list:
+            total_value = sum((line.quantity * line.unit_price for line in r.lines.all()), Decimal("0.00"))
+            results.append({
+                "id": r.id,
+                "supplier_id": r.supplier_id,
+                "supplier_name": r.supplier.name if r.supplier else "",
+                "date": str(r.date),
+                "note": r.note,
+                "status": r.status.upper(),
+                "posted_at": r.posted_at.isoformat() if r.posted_at else None,
+                "total_value": str(round(total_value, 2)),
+                "lines": [
+                    {
+                        "id": line.id,
+                        "food_id": line.food_id,
+                        "food_name": line.food.name if line.food else "",
+                        "quantity": str(line.quantity),
+                        "unit_price": str(line.unit_price),
+                        "line_total": str(round(line.quantity * line.unit_price, 2)),
+                    }
+                    for line in r.lines.all()
+                ],
+            })
+        return JsonResponse({"results": results})
+
+    # POST /api/receipts/
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        if not isinstance(data, dict):
+            return JsonResponse({"error": "Request body must be a JSON object"}, status=400)
+
+        supplier_id = data.get("supplier_id")
+        if supplier_id is None and "supplier" in data:
+            supplier_id = data["supplier"]
+
+        if isinstance(supplier_id, bool) or not isinstance(supplier_id, int) or supplier_id <= 0:
+            return JsonResponse({"error": "supplier_id must be a positive integer"}, status=400)
+
+        date_val = data.get("date")
+        if not date_val or not isinstance(date_val, str):
+            return JsonResponse({"error": "date is required and must be YYYY-MM-DD"}, status=400)
+
+        note = data.get("note", "")
+        if not isinstance(note, str):
+            return JsonResponse({"error": "note must be a string"}, status=400)
+
+        raw_lines = data.get("lines")
+        if not isinstance(raw_lines, list) or not raw_lines:
+            return JsonResponse({"error": "lines must be a non-empty list"}, status=400)
+
+        norm_lines = []
+        for line in raw_lines:
+            if not isinstance(line, dict):
+                return JsonResponse({"error": "Each line must be an object"}, status=400)
+            food_id = line.get("food_id") if "food_id" in line else line.get("food")
+            if isinstance(food_id, bool) or not isinstance(food_id, int) or food_id <= 0:
+                return JsonResponse({"error": "food_id must be a positive integer"}, status=400)
+            qty = line.get("quantity")
+            price = line.get("unit_price")
+            if qty is None or price is None:
+                return JsonResponse({"error": "quantity and unit_price are required"}, status=400)
+            norm_lines.append({
+                "food_id": food_id,
+                "quantity": str(qty),
+                "unit_price": str(price),
+            })
+
+        try:
+            receipt = create_receipt_draft(
+                supplier_id=supplier_id,
+                date=date_val,
+                lines=norm_lines,
+                user=request.user,
+                note=note,
+            )
+        except ValidationError as e:
+            msg = e.message_dict if hasattr(e, "message_dict") else (e.messages if hasattr(e, "messages") else str(e))
+            return JsonResponse({"error": msg}, status=400)
+        except PermissionDenied as e:
+            return JsonResponse({"error": str(e)}, status=403)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+        total_val = sum((l.quantity * l.unit_price for l in receipt.lines.all()), Decimal("0.00"))
+        return JsonResponse({
+            "id": receipt.id,
+            "supplier_id": receipt.supplier_id,
+            "date": str(receipt.date),
+            "note": receipt.note,
+            "status": receipt.status.upper(),
+            "total_value": str(round(total_val, 2)),
+            "lines": [
+                {
+                    "id": l.id,
+                    "food_id": l.food_id,
+                    "quantity": str(l.quantity),
+                    "unit_price": str(l.unit_price),
+                }
+                for l in receipt.lines.all()
+            ],
+        }, status=201)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@inventory_permission_required
+def receipt_detail(request, receipt_id):
+    try:
+        r = Receipt.objects.select_related("supplier", "created_by").prefetch_related("lines__food").get(id=receipt_id)
+    except Receipt.DoesNotExist:
+        return JsonResponse({"error": "Receipt not found"}, status=404)
+
+    if request.method == "GET":
+        total_value = sum((line.quantity * line.unit_price for line in r.lines.all()), Decimal("0.00"))
+        return JsonResponse({
+            "id": r.id,
+            "supplier_id": r.supplier_id,
+            "supplier_name": r.supplier.name if r.supplier else "",
+            "date": str(r.date),
+            "note": r.note,
+            "status": r.status.upper(),
+            "posted_at": r.posted_at.isoformat() if r.posted_at else None,
+            "total_value": str(round(total_value, 2)),
+            "lines": [
+                {
+                    "id": line.id,
+                    "food_id": line.food_id,
+                    "food_name": line.food.name if line.food else "",
+                    "quantity": str(line.quantity),
+                    "unit_price": str(line.unit_price),
+                    "line_total": str(round(line.quantity * line.unit_price, 2)),
+                }
+                for line in r.lines.all()
+            ],
+        })
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@inventory_permission_required
+def receipt_post(request, receipt_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        receipt = Receipt.objects.get(id=receipt_id)
+    except Receipt.DoesNotExist:
+        return JsonResponse({"error": "Receipt not found"}, status=404)
+
+    if receipt.status != Receipt.Status.DRAFT:
+        return JsonResponse({"error": "Phiếu nhập đã được chốt trước đó hoặc không ở trạng thái nháp."}, status=409)
+
+    try:
+        posted = post_receipt(receipt_id)
+        return JsonResponse({
+            "id": posted.id,
+            "status": posted.status.upper(),
+            "posted_at": posted.posted_at.isoformat() if posted.posted_at else None,
+            "message": "Chốt phiếu nhập thành công."
+        }, status=200)
+    except ValidationError as e:
+        msg = str(e.message_dict if hasattr(e, "message_dict") else (e.messages if hasattr(e, "messages") else str(e)))
+        if "chốt" in msg or "xử lý" in msg or "draft" in msg.lower():
+            return JsonResponse({"error": msg}, status=409)
+        return JsonResponse({"error": msg}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+# =========================================================================
+# SF28: API PHIẾU XUẤT KHO
+# =========================================================================
+@inventory_permission_required
+def issues(request):
+    # GET /api/issues/
+    if request.method == "GET":
+        issue_list = Issue.objects.select_related("created_by").prefetch_related("lines__food").order_by("-id")
+        results = []
+        for iss in issue_list:
+            total_value = sum((line.quantity * line.unit_cost for line in iss.lines.all()), Decimal("0.00"))
+            results.append({
+                "id": iss.id,
+                "code": iss.code,
+                "date": str(iss.date),
+                "note": iss.note,
+                "status": iss.status.upper(),
+                "posted_at": iss.posted_at.isoformat() if iss.posted_at else None,
+                "total_value": str(round(total_value, 2)),
+                "lines": [
+                    {
+                        "id": line.id,
+                        "food_id": line.food_id,
+                        "food_name": line.food.name if line.food else "",
+                        "quantity": str(line.quantity),
+                        "unit_cost": str(line.unit_cost),
+                        "line_total": str(round(line.quantity * line.unit_cost, 2)),
+                    }
+                    for line in iss.lines.all()
+                ],
+            })
+        return JsonResponse({"results": results})
+
+    # POST /api/issues/
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        if not isinstance(data, dict):
+            return JsonResponse({"error": "Request body must be a JSON object"}, status=400)
+
+        date_val = data.get("date")
+        if not date_val or not isinstance(date_val, str):
+            return JsonResponse({"error": "date is required and must be YYYY-MM-DD"}, status=400)
+
+        code = data.get("code")
+        if code and isinstance(code, str):
+            code = code.strip().upper()
+            if Issue.objects.filter(code=code).exists():
+                return JsonResponse({"error": f"Mã phiếu xuất '{code}' đã tồn tại."}, status=409)
+        else:
+            code = f"XK{timezone.now().strftime('%Y%m%d%H%M%S%f')[:17]}"
+
+        note = data.get("note", "")
+        if not isinstance(note, str):
+            return JsonResponse({"error": "note must be a string"}, status=400)
+
+        raw_lines = data.get("lines")
+        if not isinstance(raw_lines, list) or not raw_lines:
+            return JsonResponse({"error": "lines must be a non-empty list"}, status=400)
+
+        validated_lines = []
+        seen_foods = set()
+        for idx, line in enumerate(raw_lines, start=1):
+            if not isinstance(line, dict):
+                return JsonResponse({"error": f"Dòng {idx} phải là một object"}, status=400)
+            food_id = line.get("food_id") if "food_id" in line else line.get("food")
+            if isinstance(food_id, bool) or not isinstance(food_id, int) or food_id <= 0:
+                return JsonResponse({"error": f"food_id tại dòng {idx} không hợp lệ"}, status=400)
+
+            try:
+                food = FoodItem.objects.get(id=food_id)
+            except FoodItem.DoesNotExist:
+                return JsonResponse({"error": f"Thực phẩm ID {food_id} không tồn tại."}, status=400)
+
+            if food_id in seen_foods:
+                return JsonResponse({"error": f"Thực phẩm '{food.name}' bị trùng lặp trong phiếu."}, status=400)
+            seen_foods.add(food_id)
+
+            qty_raw = line.get("quantity")
+            if qty_raw is None or isinstance(qty_raw, bool):
+                return JsonResponse({"error": f"Số lượng tại dòng {idx} là bắt buộc."}, status=400)
+            try:
+                qty_dec = Decimal(str(qty_raw))
+                if not qty_dec.is_finite() or qty_dec <= Decimal("0"):
+                    return JsonResponse({"error": f"Số lượng xuất tại dòng {idx} phải lớn hơn 0."}, status=400)
+            except (InvalidOperation, TypeError):
+                return JsonResponse({"error": f"Số lượng tại dòng {idx} không hợp lệ."}, status=400)
+
+            validated_lines.append({
+                "food": food,
+                "quantity": qty_dec,
+            })
+
+        with transaction.atomic():
+            issue = Issue.objects.create(
+                code=code,
+                date=date_val,
+                note=note.strip(),
+                created_by=request.user,
+                status=Issue.Status.DRAFT,
+            )
+            created_lines = []
+            for item in validated_lines:
+                line_obj = IssueLine.objects.create(
+                    issue=issue,
+                    food=item["food"],
+                    quantity=item["quantity"],
+                    unit_cost=Decimal("0.00"),
+                )
+                created_lines.append(line_obj)
+
+        return JsonResponse({
+            "id": issue.id,
+            "code": issue.code,
+            "date": str(issue.date),
+            "note": issue.note,
+            "status": issue.status.upper(),
+            "total_value": "0.00",
+            "lines": [
+                {
+                    "id": l.id,
+                    "food_id": l.food_id,
+                    "food_name": l.food.name,
+                    "quantity": str(l.quantity),
+                    "unit_cost": str(l.unit_cost),
+                }
+                for l in created_lines
+            ]
+        }, status=201)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@inventory_permission_required
+def issue_detail(request, issue_id):
+    try:
+        iss = Issue.objects.select_related("created_by").prefetch_related("lines__food").get(id=issue_id)
+    except Issue.DoesNotExist:
+        return JsonResponse({"error": "Issue not found"}, status=404)
+
+    if request.method == "GET":
+        total_value = sum((line.quantity * line.unit_cost for line in iss.lines.all()), Decimal("0.00"))
+        return JsonResponse({
+            "id": iss.id,
+            "code": iss.code,
+            "date": str(iss.date),
+            "note": iss.note,
+            "status": iss.status.upper(),
+            "posted_at": iss.posted_at.isoformat() if iss.posted_at else None,
+            "total_value": str(round(total_value, 2)),
+            "lines": [
+                {
+                    "id": line.id,
+                    "food_id": line.food_id,
+                    "food_name": line.food.name if line.food else "",
+                    "quantity": str(line.quantity),
+                    "unit_cost": str(line.unit_cost),
+                    "line_total": str(round(line.quantity * line.unit_cost, 2)),
+                }
+                for line in iss.lines.all()
+            ],
+        })
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@inventory_permission_required
+def issue_post(request, issue_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        issue = Issue.objects.get(id=issue_id)
+    except Issue.DoesNotExist:
+        return JsonResponse({"error": "Phiếu xuất không tồn tại."}, status=404)
+
+    if issue.status != Issue.Status.DRAFT:
+        return JsonResponse({"error": "Phiếu xuất đã được chốt trước đó hoặc không ở trạng thái nháp."}, status=409)
+
+    try:
+        posted = post_issue(issue_id)
+        total_val = sum((l.quantity * l.unit_cost for l in posted.lines.all()), Decimal("0.00"))
+        return JsonResponse({
+            "id": posted.id,
+            "code": posted.code,
+            "status": posted.status.upper(),
+            "posted_at": posted.posted_at.isoformat() if posted.posted_at else None,
+            "total_value": str(round(total_val, 2)),
+            "message": "Chốt phiếu xuất thành công."
+        }, status=200)
+    except ValidationError as e:
+        msg = str(e.message_dict if hasattr(e, "message_dict") else (e.messages if hasattr(e, "messages") else str(e)))
+        if "Không đủ tồn kho" in msg or "chốt" in msg or "xử lý" in msg:
+            return JsonResponse({"error": msg, "message": msg}, status=409)
+        return JsonResponse({"error": msg}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
