@@ -120,12 +120,15 @@ class StockTransaction(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="stock_transactions_created",
     )
     # Sổ kho chung (architecture.md §2): mỗi bút toán trỏ ĐÚNG MỘT dòng chứng từ nguồn.
-    # IN ↔ receipt_line (SF19), OUT ↔ issue_line (SF25).
+    # IN ↔ receipt_line (SF19), OUT ↔ issue_line (SF25), ADJUST ↔ stocktake_item (SF31).
     receipt_line = models.OneToOneField(
         ReceiptLine, on_delete=models.PROTECT, related_name="stock_transaction", null=True, blank=True,
     )
     issue_line = models.OneToOneField(
         "IssueLine", on_delete=models.PROTECT, related_name="stock_transaction", null=True, blank=True,
+    )
+    stocktake_item = models.OneToOneField(
+        "StockTakeItem", on_delete=models.PROTECT, related_name="stock_transaction", null=True, blank=True,
     )
     created_at = models.DateTimeField(auto_now_add=True, null=True)
 
@@ -133,13 +136,15 @@ class StockTransaction(models.Model):
         ordering = ["date", "id"]
         constraints = [
             models.CheckConstraint(
-                condition=(models.Q(receipt_line__isnull=False, issue_line__isnull=True)
-                           | models.Q(receipt_line__isnull=True, issue_line__isnull=False)),
+                condition=(models.Q(receipt_line__isnull=False, issue_line__isnull=True, stocktake_item__isnull=True)
+                           | models.Q(receipt_line__isnull=True, issue_line__isnull=False, stocktake_item__isnull=True)
+                           | models.Q(receipt_line__isnull=True, issue_line__isnull=True, stocktake_item__isnull=False)),
                 name="stock_transaction_one_source",
             ),
             models.CheckConstraint(
                 condition=(models.Q(type="IN", receipt_line__isnull=False)
-                           | models.Q(type="OUT", issue_line__isnull=False)),
+                           | models.Q(type="OUT", issue_line__isnull=False)
+                           | models.Q(type="ADJUST", stocktake_item__isnull=False)),
                 name="stock_transaction_type_matches_source",
             ),
             # Giới hạn hai phía cũng loại NaN của PostgreSQL.
@@ -160,10 +165,27 @@ class StockTransaction(models.Model):
                 ),
                 name="stock_transaction_out_values",
             ),
+            # ADJUST: chênh lệch khác 0, giá trị cùng dấu với lượng; giá vốn = giá lúc snapshot.
+            models.CheckConstraint(
+                condition=~models.Q(type="ADJUST") | (
+                    models.Q(unit_cost__gte=0, unit_cost__lt=Decimal("1000000000000"))
+                    & (models.Q(quantity_delta__gt=0, quantity_delta__lt=Decimal("100000000000"),
+                                value_delta__gte=0, value_delta__lt=Decimal("100000000000000000000000000"))
+                       | models.Q(quantity_delta__lt=0, quantity_delta__gt=Decimal("-100000000000"),
+                                  value_delta__lte=0, value_delta__gt=Decimal("-100000000000000000000000000")))
+                ),
+                name="stock_transaction_adjust_values",
+            ),
         ]
 
 
 class InventoryLedger(models.Model):
+    """LEGACY (SF32/SF34 cũ). Từ SF31 không ghi thêm; sổ kho duy nhất là StockTransaction.
+
+    Giữ bảng để đối chiếu dữ liệu local cũ (`manage.py sf31_ledger_audit`), không xoá khi chưa
+    đối chiếu xong.
+    """
+
     food = models.ForeignKey(FoodItem, on_delete=models.PROTECT, related_name="ledger_entries")
     transaction_type = models.CharField(max_length=32)
     quantity_change = models.DecimalField(max_digits=14, decimal_places=3)
@@ -171,14 +193,42 @@ class InventoryLedger(models.Model):
     reference = models.CharField(max_length=120, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
+
 class StockTake(models.Model):
-    STATUS_CHOICES = [
-        ('draft', 'Draft'),
-        ('posted', 'Posted'),
-    ]
-    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='draft')
+    """SF31: phiếu kiểm kê. Snapshot tồn/version lúc mở; chốt khi version chưa đổi."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Nháp"
+        POSTED = "posted", "Đã chốt"
+
+    STATUS_CHOICES = Status.choices  # giữ tên cũ cho code SF32
+
+    date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
+    note = models.TextField(blank=True, default="")
+    # Nullable chỉ vì dữ liệu local cũ không lưu người lập/chốt; service mới luôn ghi.
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="stocktakes_created",
+        null=True, blank=True,
+    )
+    posted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="stocktakes_posted",
+        null=True, blank=True,
+    )
+    posted_at = models.DateTimeField(null=True, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(status="draft", posted_at__isnull=True)
+                           | models.Q(status="posted", posted_at__isnull=False)),
+                name="stocktake_status_posted_at_valid",
+            ),
+        ]
+
 
 class StockTakeItem(models.Model):
     stock_take = models.ForeignKey(StockTake, on_delete=models.CASCADE, related_name="items")
@@ -186,8 +236,26 @@ class StockTakeItem(models.Model):
     snapshot_qty = models.DecimalField(max_digits=14, decimal_places=3)
     snapshot_cost = models.DecimalField(max_digits=14, decimal_places=2)
     snapshot_version = models.IntegerField()
+    # NULL = chưa đếm; 0 = đếm được 0 (AC17). Hai trạng thái khác nhau.
     counted_qty = models.DecimalField(max_digits=14, decimal_places=3, null=True, blank=True)
     variance = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(fields=["stock_take", "food"], name="stocktake_item_unique_food"),
+            models.CheckConstraint(condition=models.Q(snapshot_qty__gte=0, snapshot_qty__lt=Decimal("100000000000")), name="stocktake_item_snapshot_qty_valid"),
+            models.CheckConstraint(condition=models.Q(snapshot_cost__gte=0, snapshot_cost__lt=Decimal("1000000000000")), name="stocktake_item_snapshot_cost_valid"),
+            models.CheckConstraint(
+                condition=(models.Q(counted_qty__isnull=True, variance=0)
+                           # counted_qty__isnull=False bắt buộc: NULL làm cả biểu thức thành NULL = CHECK cho qua.
+                           | models.Q(counted_qty__isnull=False, counted_qty__gte=0, counted_qty__lt=Decimal("100000000000"),
+                                      variance=models.F("counted_qty") - models.F("snapshot_qty"))),
+                name="stocktake_item_variance_consistent",
+            ),
+        ]
+
+
 class Issue(models.Model):
     """SF25: phiếu xuất. Nháp không đổi tồn; chốt một lần, sau đó chỉ đọc."""
 
