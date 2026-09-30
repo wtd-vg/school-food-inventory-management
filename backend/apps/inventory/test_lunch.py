@@ -154,3 +154,111 @@ class ConfirmedDayTests(LunchFixtures, TransactionTestCase):
             SchoolClass.objects.get(pk=self.a.pk).delete()
         with self.assertRaises((IntegrityError, ProtectedError)):
             LunchDay.objects.get(pk=self.day.pk).delete()
+import json
+from datetime import date
+from django.test import TestCase
+from django.contrib.auth.models import User, Group
+from .models import SchoolClass, LunchDay, ClassMealCount
+
+class MealSF46APITests(TestCase):
+    def setUp(self):
+        self.manager = User.objects.create_user(username="manager", password="pwd")
+        manager_group, _ = Group.objects.get_or_create(name="manager")
+        self.manager.groups.add(manager_group)
+
+        self.viewer = User.objects.create_user(username="viewer", password="pwd")
+        viewer_group, _ = Group.objects.get_or_create(name="viewer")
+        self.viewer.groups.add(viewer_group)
+
+        self.class_1a = SchoolClass.objects.create(code="1A", name="Lớp 1A", enrolled=30)
+        self.class_2b = SchoolClass.objects.create(code="2B", name="Lớp 2B", enrolled=25)
+
+        self.date_str = "2026-10-15"
+
+    def test_get_counts_creates_day(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(f"/api/lunch-days/{self.date_str}/counts/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["date"], self.date_str)
+        self.assertEqual(len(data["lines"]), 2)
+        
+        # Kiểm tra db
+        day = LunchDay.objects.get(date=date(2026, 10, 15))
+        self.assertEqual(day.class_counts.count(), 2)
+
+    def test_put_counts_updates_data(self):
+        self.client.force_login(self.manager)
+        # GET first to create day
+        get_res = self.client.get(f"/api/lunch-days/{self.date_str}/counts/").json()
+        version = get_res["version"]
+
+        put_data = {
+            "version": version,
+            "staff_planned": 5,
+            "lines": [
+                {"class_id": self.class_1a.id, "planned": 28},
+                {"class_id": self.class_2b.id, "planned": 24}
+            ]
+        }
+        response = self.client.put(f"/api/lunch-days/{self.date_str}/counts/", data=json.dumps(put_data), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        day = LunchDay.objects.get(date=date(2026, 10, 15))
+        self.assertEqual(day.staff_planned, 5)
+        self.assertEqual(day.version, version + 1)
+        count_1a = day.class_counts.get(school_class=self.class_1a)
+        self.assertEqual(count_1a.planned, 28)
+
+    def test_lock_and_reopen_planned(self):
+        self.client.force_login(self.manager)
+        self.client.get(f"/api/lunch-days/{self.date_str}/counts/")
+        day = LunchDay.objects.get(date=date(2026, 10, 15))
+        
+        # Nhập đủ dữ liệu bằng PUT endpoint để trigger tự tăng version
+        put_data = {
+            "version": day.version,
+            "staff_planned": 5,
+            "lines": [
+                {"class_id": self.class_1a.id, "planned": 20},
+                {"class_id": self.class_2b.id, "planned": 20}
+            ]
+        }
+        self.client.put(f"/api/lunch-days/{self.date_str}/counts/", data=json.dumps(put_data), content_type="application/json")
+        day.refresh_from_db()
+
+        # Lock
+        lock_data = {"kind": "planned", "version": day.version}
+        response = self.client.post(f"/api/lunch-days/{self.date_str}/lock/", data=json.dumps(lock_data), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        day.refresh_from_db()
+        self.assertIsNotNone(day.planned_confirmed_at)
+
+        # Reopen (lỗi nếu thiếu lý do)
+        reopen_data = {"kind": "planned", "reason": "", "version": day.version}
+        response = self.client.post(f"/api/lunch-days/{self.date_str}/reopen/", data=json.dumps(reopen_data), content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+
+        # Reopen (thành công)
+        reopen_data["reason"] = "Sai số lượng"
+        response = self.client.post(f"/api/lunch-days/{self.date_str}/reopen/", data=json.dumps(reopen_data), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        day.refresh_from_db()
+        self.assertIsNone(day.planned_confirmed_at)
+
+    def test_viewer_permissions(self):
+        self.client.force_login(self.viewer)
+        get_res = self.client.get(f"/api/lunch-days/{self.date_str}/counts/")
+        self.assertEqual(get_res.status_code, 200)
+        
+        # Viewer ko được PUT
+        put_data = {"version": get_res.json()["version"], "staff_planned": 5}
+        put_res = self.client.put(f"/api/lunch-days/{self.date_str}/counts/", data=json.dumps(put_data), content_type="application/json")
+        self.assertEqual(put_res.status_code, 403)
+        
+        # Viewer ko được POST lock
+        lock_res = self.client.post(f"/api/lunch-days/{self.date_str}/lock/", data=json.dumps({}), content_type="application/json")
+        self.assertEqual(lock_res.status_code, 403)
+
