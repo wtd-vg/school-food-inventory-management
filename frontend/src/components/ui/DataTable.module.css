@@ -75,28 +75,119 @@
   color: var(--muted);
 }
 
+/* Tên/mã mở ngăn kéo: chữ đậm màu mực như bản vẽ, gạch chân khi rê chuột hoặc focus. */
 .rowButton {
   display: inline;
   max-width: 100%;
   padding: 0;
   border: none;
   background: none;
-  color: var(--link);
+  color: var(--ink);
   font-weight: 600;
   text-align: left;
-  text-decoration: underline;
+  text-decoration: none;
   text-underline-offset: 3px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.rowButton:hover {
-  color: var(--link-hover);
+.rowButton:hover,
+.rowButton:focus-visible {
+  color: var(--link);
+  text-decoration: underline;
+}
+
+/* Mã chứng từ: dạng link như mã lô trong bản vẽ. */
+.rowLink {
+  composes: rowButton;
+  color: var(--link);
+  text-decoration: underline;
 }
 
 .cellActions {
   display: inline-flex;
   gap: 6px;
   justify-content: flex-end;
+}
+
+/* Điện thoại: mỗi dòng thành một thẻ, ô có nhãn cột (data-label) bên trái, giá trị bên phải. */
+@media (max-width: 767px) {
+  .wrap {
+    overflow-x: visible;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table colgroup,
+  .table thead {
+    display: none;
+  }
+
+  .table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .table tr {
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    background: var(--surface);
+  }
+
+  .table tbody tr:hover td {
+    background: transparent;
+  }
+
+  .table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    height: auto;
+    min-height: 36px;
+    padding: 4px 0;
+    border-bottom: none;
+    text-align: right;
+    white-space: normal;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    flex: none;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .table td:not([data-label])::before {
+    content: none;
+  }
+
+  .table td:empty {
+    display: none;
+  }
+
+  .firstCell {
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid var(--line) !important;
+    margin-bottom: 4px;
+    text-align: left !important;
+    font-size: 16px;
+  }
+
+  .right {
+    text-align: right !important;
+  }
 }

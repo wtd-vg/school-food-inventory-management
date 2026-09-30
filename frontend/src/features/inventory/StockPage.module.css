@@ -1,0 +1,70 @@
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.historyTitle {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.txList {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.tx {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.txMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.txTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.txRef {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.txMeta {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.txValue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.plus {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.minus {
+  color: var(--ink);
+  font-weight: 700;
+}

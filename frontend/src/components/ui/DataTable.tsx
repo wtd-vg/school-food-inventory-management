@@ -28,27 +28,33 @@ export function DataTable<T>({ columns, rows, rowKey, caption, minWidth }: DataT
   const alignCls = (a?: string) => (a === 'right' ? styles.right : a === 'center' ? styles.center : '');
   return (
     <div className={styles.wrap} role="region" aria-label={caption} tabIndex={0}>
-      <table className={styles.table} style={style}>
+      <table className={styles.table} style={style} role="table">
         <caption className="sr-only">{caption}</caption>
         <colgroup>
           {columns.map((c) => (
             <col key={c.key} className={styles.col} style={c.width ? ({ '--w': c.width } as CSSProperties) : undefined} />
           ))}
         </colgroup>
-        <thead>
-          <tr>
+        <thead role="rowgroup">
+          <tr role="row">
             {columns.map((c) => (
-              <th key={c.key} scope="col" className={alignCls(c.align)}>
+              <th key={c.key} scope="col" role="columnheader" className={alignCls(c.align)}>
                 {c.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody role="rowgroup">
           {rows.map((row) => (
-            <tr key={rowKey(row)}>
-              {columns.map((c) => (
-                <td key={c.key} className={[alignCls(c.align), c.wrap ? styles.wrapText : '', c.className ?? ''].join(' ')}>
+            <tr key={rowKey(row)} role="row">
+              {columns.map((c, i) => (
+                <td
+                  key={c.key}
+                  role="cell"
+                  // Trên điện thoại bảng thành thẻ: cột đầu là tiêu đề thẻ, các cột khác có nhãn đi kèm.
+                  data-label={i > 0 && typeof c.header === 'string' ? c.header : undefined}
+                  className={[alignCls(c.align), c.wrap ? styles.wrapText : '', i === 0 ? styles.firstCell : '', c.className ?? ''].join(' ')}
+                >
                   {c.cell(row)}
                 </td>
               ))}

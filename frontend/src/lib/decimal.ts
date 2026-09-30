@@ -77,7 +77,7 @@ export function sum(values: Dec[]): Dec {
  */
 export function normalizeDecimalInput(
   input: string,
-  opts: { maxDp: number; positive?: boolean; allowZero?: boolean; label?: string },
+  opts: { maxDp: number; maxIntDigits?: number; positive?: boolean; allowZero?: boolean; label?: string },
 ): { ok: true; value: string } | { ok: false; error: string } {
   const label = opts.label ?? 'Giá trị';
   if (!input.trim()) return { ok: false, error: `${label} là bắt buộc.` };
@@ -85,6 +85,11 @@ export function normalizeDecimalInput(
   if (!d) return { ok: false, error: `${label} phải là số, ví dụ 12,5.` };
   if (d.s > opts.maxDp) {
     return { ok: false, error: `${label} chỉ được tối đa ${opts.maxDp} chữ số sau dấu phẩy.` };
+  }
+  if (opts.maxIntDigits !== undefined) {
+    const abs = d.v < 0n ? -d.v : d.v;
+    const intDigits = (abs / 10n ** BigInt(d.s)).toString().length;
+    if (intDigits > opts.maxIntDigits) return { ok: false, error: `${label} quá lớn.` };
   }
   if (d.v < 0n) return { ok: false, error: `${label} không được âm.` };
   if (opts.positive && d.v === 0n && !opts.allowZero) {
