@@ -10,7 +10,7 @@ def class_list(request):
     if request.method == "GET":
         classes = SchoolClass.objects.all().order_by("id")
         results = [
-            {"id": c.id, "code": c.code, "name": c.name, "is_active": c.is_active}
+            {"id": c.id, "code": c.code, "name": c.name, "enrolled": c.enrolled, "is_active": c.is_active}
             for c in classes
         ]
         return JsonResponse({"results": results})
@@ -24,6 +24,7 @@ def class_list(request):
             data = json.loads(request.body)
             code = str(data.get("code", "")).strip().upper()
             name = str(data.get("name", "")).strip()
+            enrolled = data.get("enrolled", 0)
             
             if not code or not name:
                 return JsonResponse({"message": "Code and name are required"}, status=400)
@@ -31,8 +32,8 @@ def class_list(request):
             if SchoolClass.objects.filter(code=code).exists():
                 return JsonResponse({"message": "Class code already exists"}, status=409)
                 
-            c = SchoolClass.objects.create(code=code, name=name)
-            return JsonResponse({"id": c.id, "code": c.code, "name": c.name, "is_active": c.is_active}, status=201)
+            c = SchoolClass.objects.create(code=code, name=name, enrolled=enrolled)
+            return JsonResponse({"id": c.id, "code": c.code, "name": c.name, "enrolled": c.enrolled, "is_active": c.is_active}, status=201)
             
         except json.JSONDecodeError:
             return JsonResponse({"message": "Invalid JSON"}, status=400)
@@ -43,7 +44,7 @@ def class_detail(request, class_id):
     if request.method == "GET":
         try:
             c = SchoolClass.objects.get(id=class_id)
-            return JsonResponse({"id": c.id, "code": c.code, "name": c.name, "is_active": c.is_active})
+            return JsonResponse({"id": c.id, "code": c.code, "name": c.name, "enrolled": c.enrolled, "is_active": c.is_active})
         except SchoolClass.DoesNotExist:
             return JsonResponse({"message": "Class not found"}, status=404)
 
@@ -61,13 +62,16 @@ def class_detail(request, class_id):
                 return JsonResponse({"message": "Name cannot be empty"}, status=400)
             c.name = name
             
+        if "enrolled" in data:
+            c.enrolled = int(data["enrolled"])
+
         if "is_active" in data:
             c.is_active = bool(data["is_active"])
             
         c.save()
-        return JsonResponse({"id": c.id, "code": c.code, "name": c.name, "is_active": c.is_active})
+        return JsonResponse({"id": c.id, "code": c.code, "name": c.name, "enrolled": c.enrolled, "is_active": c.is_active})
         
     except SchoolClass.DoesNotExist:
         return JsonResponse({"message": "Class not found"}, status=404)
-    except json.JSONDecodeError:
-        return JsonResponse({"message": "Invalid JSON"}, status=400)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"message": "Invalid data format"}, status=400)
