@@ -118,7 +118,7 @@ function FoodsSection({ foods, categories, onChanged }: { foods: Food[]; categor
     {
       key: 'actions',
       header: <span className="sr-only">Thao tác</span>,
-      width: '10%',
+      width: '64px',
       align: 'right',
       cell: (f) => (
         <IconButton label={`Sửa ${f.name}`} ghost write onClick={() => updateParams({ sua: String(f.id), tao: null })}>
@@ -301,7 +301,7 @@ function CategoriesSection({ categories, foods, onChanged }: { categories: Categ
     {
       key: 'actions',
       header: <span className="sr-only">Thao tác</span>,
-      width: '10%',
+      width: '64px',
       align: 'right',
       cell: (c) => (
         <IconButton label={`Sửa ${c.name}`} ghost write onClick={() => updateParams({ sua: String(c.id), tao: null })}>
