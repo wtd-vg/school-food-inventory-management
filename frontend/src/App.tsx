@@ -6,13 +6,12 @@ import { Skeleton } from './components/ui';
 import { LoginPage } from './features/auth/LoginPage';
 import { NotFoundPage } from './features/common/Pages';
 import { InventoryLayout } from './features/inventory/InventoryLayout';
-import { LegacyFrame } from './legacy/LegacyFrame';
 import { CatalogPage } from './features/inventory/CatalogPage';
 import { IssuesPage } from './features/inventory/IssuesPage';
 import { ReceiptsPage } from './features/inventory/ReceiptsPage';
 import { StockPage } from './features/inventory/StockPage';
 import { StocktakePage } from './features/inventory/StocktakePage';
-import { ReportPage } from './ReportPage';
+import { ReportsPage } from './features/reports/ReportsPage';
 import { ClassesPage } from './features/classes/ClassesPage';
 import { DishesPage } from './features/dishes/DishesPage';
 import { SuppliersPage } from './features/suppliers/SuppliersPage';
@@ -42,7 +41,7 @@ export function App() {
         <Route path="mon-an" element={<DishesPage />} />
         <Route path="lop-hoc" element={<ClassesPage />} />
         <Route path="nha-cung-cap/:id?" element={<SuppliersPage />} />
-        <Route path="bao-cao" element={<LegacyFrame page={ReportPage} />} />
+        <Route path="bao-cao" element={<ReportsPage />} />
         {KitPage ? (
           <Route
             path="_kit"
