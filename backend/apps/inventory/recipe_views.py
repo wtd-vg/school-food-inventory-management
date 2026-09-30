@@ -189,3 +189,159 @@ def dish_detail(request, dish_id):
         return JsonResponse({"message": "Invalid JSON"}, status=400)
     except ValueError as e:
         return JsonResponse({"message": str(e)}, status=400)
+
+from datetime import datetime
+from django.db.models import F
+from django.core.exceptions import ValidationError
+from .models import LunchDay, ClassMealCount, SchoolClass
+from .lunch import open_lunch_day, confirm_counts, reopen_counts, LunchVersionConflict, PLANNED, ACTUAL
+
+def parse_date(date_str):
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        raise ValidationError("Ngày không hợp lệ (YYYY-MM-DD)")
+
+@require_http_methods(["GET", "PUT"])
+@inventory_permission_required
+def lunch_day_counts(request, date_str):
+    try:
+        date = parse_date(date_str)
+    except ValidationError as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+    if request.method == "GET":
+        # Mở ngày nếu chưa có
+        day = open_lunch_day(date)
+        
+        data = {
+            "id": day.id,
+            "date": str(day.date),
+            "version": day.version,
+            "staff_planned": day.staff_planned,
+            "staff_actual": day.staff_actual,
+            "planned_confirmed_at": day.planned_confirmed_at.isoformat() if day.planned_confirmed_at else None,
+            "actual_confirmed_at": day.actual_confirmed_at.isoformat() if day.actual_confirmed_at else None,
+            "lines": []
+        }
+        for count in day.class_counts.select_related("school_class").order_by("school_class__code"):
+            data["lines"].append({
+                "class_id": count.school_class.id,
+                "class_code": count.school_class.code,
+                "enrolled_snapshot": count.enrolled_snapshot,
+                "planned": count.planned,
+                "actual": count.actual,
+            })
+        return JsonResponse(data)
+
+    elif request.method == "PUT":
+        if request.user.groups.filter(name="viewer").exists():
+            return JsonResponse({"error": "Permission denied"}, status=403)
+
+        try:
+            body = json.loads(request.body)
+            expected_version = body.get("version")
+            if expected_version is None:
+                return JsonResponse({"error": "Thiếu version"}, status=400)
+            
+            with transaction.atomic():
+                day = LunchDay.objects.select_for_update(of=("self",)).filter(date=date).first()
+                if not day:
+                    return JsonResponse({"error": "Ngày chưa được mở"}, status=400)
+                if day.version != expected_version:
+                    return JsonResponse({"error": "Dữ liệu đã thay đổi, vui lòng tải lại", "code": "version_conflict"}, status=409)
+
+                # Update fields if provided and not confirmed
+                if "staff_planned" in body:
+                    if day.planned_confirmed_at:
+                        return JsonResponse({"error": "Đã chốt dự kiến, không thể sửa staff_planned"}, status=400)
+                    day.staff_planned = body["staff_planned"]
+                if "staff_actual" in body:
+                    if day.actual_confirmed_at:
+                        return JsonResponse({"error": "Đã chốt thực tế, không thể sửa staff_actual"}, status=400)
+                    day.staff_actual = body["staff_actual"]
+                
+                day.version = F("version") + 1
+                day.save(update_fields=["staff_planned", "staff_actual", "version"])
+
+                lines = body.get("lines", [])
+                for line in lines:
+                    class_id = line.get("class_id")
+                    count = ClassMealCount.objects.filter(lunch_day=day, school_class_id=class_id).first()
+                    if count:
+                        if "planned" in line and not day.planned_confirmed_at:
+                            count.planned = line["planned"]
+                        if "actual" in line and not day.actual_confirmed_at:
+                            count.actual = line["actual"]
+                        count.save(update_fields=["planned", "actual"])
+                        
+            return JsonResponse({"status": "ok"})
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "JSON không hợp lệ"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@inventory_permission_required
+def lunch_day_lock(request, date_str):
+    if request.user.groups.filter(name="viewer").exists():
+        return JsonResponse({"error": "Permission denied"}, status=403)
+        
+    try:
+        date = parse_date(date_str)
+        body = json.loads(request.body)
+        kind = body.get("kind")
+        version = body.get("version")
+        
+        if kind not in (PLANNED, ACTUAL):
+            return JsonResponse({"error": "kind phải là 'planned' hoặc 'actual'"}, status=400)
+        if version is None:
+            return JsonResponse({"error": "Thiếu version"}, status=400)
+            
+        day = LunchDay.objects.filter(date=date).first()
+        if not day:
+            return JsonResponse({"error": "Ngày chưa được mở"}, status=400)
+            
+        confirm_counts(day.id, kind, request.user, version)
+        return JsonResponse({"status": "ok"})
+    except LunchVersionConflict as e:
+        return JsonResponse({"error": str(e), "code": "version_conflict"}, status=409)
+    except ValidationError as e:
+        return JsonResponse({"error": e.message if hasattr(e, 'message') else list(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@inventory_permission_required
+def lunch_day_reopen(request, date_str):
+    if request.user.groups.filter(name="viewer").exists():
+        return JsonResponse({"error": "Permission denied"}, status=403)
+        
+    try:
+        date = parse_date(date_str)
+        body = json.loads(request.body)
+        kind = body.get("kind")
+        reason = body.get("reason", "")
+        version = body.get("version")
+        
+        if not reason.strip():
+            return JsonResponse({"error": "Mở lại bắt buộc phải có lý do"}, status=400)
+        if kind not in (PLANNED, ACTUAL):
+            return JsonResponse({"error": "kind phải là 'planned' hoặc 'actual'"}, status=400)
+        if version is None:
+            return JsonResponse({"error": "Thiếu version"}, status=400)
+            
+        day = LunchDay.objects.filter(date=date).first()
+        if not day:
+            return JsonResponse({"error": "Ngày chưa được mở"}, status=400)
+            
+        reopen_counts(day.id, kind, request.user, reason, version)
+        return JsonResponse({"status": "ok"})
+    except LunchVersionConflict as e:
+        return JsonResponse({"error": str(e), "code": "version_conflict"}, status=409)
+    except ValidationError as e:
+        return JsonResponse({"error": e.message if hasattr(e, 'message') else list(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
