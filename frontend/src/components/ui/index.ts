@@ -23,3 +23,5 @@ export type { SegmentedOption } from './Display';
 export { DataTable, tableText } from './DataTable';
 export type { Column } from './DataTable';
 export { Drawer, Modal, ConfirmDialog, ToastProvider, useToast } from './Overlay';
+export { BarChart, CostBar } from './Chart';
+export type { BarDatum, Segment } from './Chart';

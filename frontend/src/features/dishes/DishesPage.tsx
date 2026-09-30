@@ -127,7 +127,8 @@ export function DishesPage() {
     {
       key: 'actions',
       header: <span className="sr-only">Thao tác</span>,
-      width: '64px',
+      width: '56px',
+      className: tableText.actionCell,
       align: 'right',
       cell: (d) => (
         <IconButton label={`Sửa ${d.name}`} ghost write onClick={() => updateParams({ sua: String(d.id), tao: null })}>
@@ -166,7 +167,7 @@ export function DishesPage() {
               { value: 'all', label: 'Tất cả' },
             ]}
           />
-          <SearchField value={search} onValueChange={setSearch} placeholder="Tìm món hoặc nguyên liệu…" />
+          <SearchField value={search} onValueChange={setSearch} placeholder="Tìm món…" />
         </Toolbar>
         {query.loading ? (
           <Skeleton rows={6} />
