@@ -7,25 +7,17 @@ import { LoginPage } from './features/auth/LoginPage';
 import { ComingSoon, NotFoundPage } from './features/common/Pages';
 import { InventoryLayout } from './features/inventory/InventoryLayout';
 import { LegacyFrame } from './legacy/LegacyFrame';
-import { CategoryPage } from './CategoryPage';
-import FoodPage from './FoodPage';
-import { ReceiptPage } from './ReceiptPage';
-import { IssuePage } from './IssuePage';
+import { CatalogPage } from './features/inventory/CatalogPage';
+import { IssuesPage } from './features/inventory/IssuesPage';
+import { ReceiptsPage } from './features/inventory/ReceiptsPage';
+import { StockPage } from './features/inventory/StockPage';
+import { StocktakePage } from './features/inventory/StocktakePage';
 import { ReportPage } from './ReportPage';
 import { ClassPage } from './ClassPage';
 import { RecipePage } from './RecipePage';
 
 // Trang kit chỉ có trong bản dev; bản build production loại bỏ hoàn toàn.
 const KitPage = import.meta.env.DEV ? lazy(() => import('./features/dev/KitPage')) : null;
-
-function CatalogLegacy() {
-  return (
-    <>
-      <LegacyFrame page={CategoryPage} />
-      <LegacyFrame page={FoodPage} />
-    </>
-  );
-}
 
 export function App() {
   return (
@@ -40,11 +32,11 @@ export function App() {
       >
         <Route index element={<Navigate to="/kho" replace />} />
         <Route path="kho" element={<InventoryLayout />}>
-          <Route index element={<LegacyFrame page={ReportPage} />} />
-          <Route path="phieu-nhap" element={<LegacyFrame page={ReceiptPage} />} />
-          <Route path="phieu-xuat" element={<LegacyFrame page={IssuePage} />} />
-          <Route path="kiem-ke" element={<ComingSoon title="Kiểm kê" />} />
-          <Route path="danh-muc" element={<CatalogLegacy />} />
+          <Route index element={<StockPage />} />
+          <Route path="phieu-nhap" element={<ReceiptsPage />} />
+          <Route path="phieu-xuat" element={<IssuesPage />} />
+          <Route path="kiem-ke" element={<StocktakePage />} />
+          <Route path="danh-muc" element={<CatalogPage />} />
         </Route>
         <Route path="mon-an" element={<LegacyFrame page={RecipePage} />} />
         <Route path="lop-hoc" element={<LegacyFrame page={ClassPage} />} />

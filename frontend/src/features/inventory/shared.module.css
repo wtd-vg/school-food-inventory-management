@@ -1,0 +1,157 @@
+.lines {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.lineList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  list-style: none;
+}
+
+.line {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+
+.lineHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 32px;
+}
+
+.lineNo {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.lineGrid2,
+.lineGrid3 {
+  display: grid;
+  gap: 12px;
+}
+
+.lineGrid2 {
+  grid-template-columns: 1fr 140px;
+}
+
+.lineGrid3 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.lineGrid3 .foodField {
+  grid-column: 1 / -1;
+}
+
+.lineWarn {
+  padding: 8px 10px;
+  border-radius: var(--r-input-sm);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 13px;
+}
+
+.lineTotal {
+  font-size: 14px;
+  color: var(--muted);
+  text-align: right;
+}
+
+.totalBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+}
+
+.totalBar strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.span2 {
+  grid-column: 1 / -1;
+}
+
+.docLines {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.docLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+
+.docLineName {
+  font-weight: 600;
+}
+
+.docLineMeta {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.docLineValue {
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.subhead {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.inlineGroup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .lineGrid2,
+  .lineGrid3,
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

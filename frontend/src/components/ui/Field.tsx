@@ -59,7 +59,7 @@ export function TextField({ label, hint, error, numeric, suffix, fieldClassName,
   const cls = [
     styles.control,
     numeric ? styles.numeric : '',
-    suffix ? styles.withSuffix : '',
+    suffix !== undefined ? styles.withSuffix : '',
     error ? styles.invalid : '',
     className ?? '',
   ].join(' ');
@@ -77,16 +77,15 @@ export function TextField({ label, hint, error, numeric, suffix, fieldClassName,
   );
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} required={required} className={fieldClassName}>
-      {suffix ? (
-        <div className={styles.adorned}>
-          {input}
+      {/* Luôn bọc cùng một cấu trúc để ô nhập không bị dựng lại (mất focus) khi hậu tố đổi. */}
+      <div className={styles.adorned}>
+        {input}
+        {suffix ? (
           <span className={styles.suffix} aria-hidden="true">
             {suffix}
           </span>
-        </div>
-      ) : (
-        input
-      )}
+        ) : null}
+      </div>
     </FieldShell>
   );
 }

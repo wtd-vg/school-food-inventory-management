@@ -1,0 +1,100 @@
+.pickActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pickCount {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.pickCount strong {
+  color: var(--ink);
+}
+
+.createBar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+
+.note {
+  flex: 1 1 320px;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hint {
+  font-size: 14px;
+  color: var(--muted);
+  text-align: right;
+}
+
+.countCell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  white-space: normal;
+}
+
+.countInput {
+  width: 110px;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-input-sm);
+  background: var(--surface);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.countInput:disabled {
+  background: var(--surface-sunken);
+  cursor: not-allowed;
+}
+
+.countInvalid {
+  border-color: var(--danger);
+}
+
+.countUnit {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.countState {
+  display: inline-flex;
+  min-width: 16px;
+  color: var(--ok);
+  font-size: 13px;
+}
+
+.countError {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.varPlus {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.varMinus {
+  color: var(--danger);
+  font-weight: 600;
+}

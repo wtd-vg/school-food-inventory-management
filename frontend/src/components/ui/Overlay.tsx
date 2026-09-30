@@ -19,12 +19,17 @@ import styles from './Overlay.module.css';
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** Các lớp phủ đang mở; chỉ lớp trên cùng xử lý Esc/Tab (hộp xác nhận mở chồng lên ngăn kéo). */
+const overlayStack: symbol[] = [];
+
 /** Giữ focus trong hộp thoại, Esc để đóng, trả focus về nút đã mở khi đóng. */
 function useFocusTrap(ref: RefObject<HTMLElement | null>, onClose: () => void) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
   useEffect(() => {
+    const me = Symbol('overlay');
+    overlayStack.push(me);
     const previous = document.activeElement as HTMLElement | null;
     const node = ref.current;
     const first = node?.querySelector<HTMLElement>('[data-autofocus]') ?? node?.querySelector<HTMLElement>(FOCUSABLE);
@@ -33,6 +38,7 @@ function useFocusTrap(ref: RefObject<HTMLElement | null>, onClose: () => void) {
     document.body.style.overflow = 'hidden';
 
     const onKey = (e: KeyboardEvent) => {
+      if (overlayStack[overlayStack.length - 1] !== me) return;
       if (e.key === 'Escape') {
         e.stopPropagation();
         onCloseRef.current();
@@ -54,7 +60,9 @@ function useFocusTrap(ref: RefObject<HTMLElement | null>, onClose: () => void) {
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
+      const i = overlayStack.indexOf(me);
+      if (i >= 0) overlayStack.splice(i, 1);
+      if (overlayStack.length === 0) document.body.style.overflow = prevOverflow;
       previous?.focus?.();
     };
   }, [ref]);
@@ -114,7 +122,7 @@ export function Modal({ title, onClose, children, actions, role = 'dialog' }: Mo
   useFocusTrap(ref, onClose);
   return createPortal(
     <>
-      <div className={styles.backdrop} onClick={onClose} aria-hidden="true" />
+      <div className={`${styles.backdrop} ${styles.backdropTop}`} onClick={onClose} aria-hidden="true" />
       <div className={styles.modalWrap}>
         <div ref={ref} className={styles.modal} role={role} aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
           <h2 className={styles.modalTitle} id={titleId}>
