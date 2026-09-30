@@ -7,6 +7,12 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+# Sửa khi gộp SF43 (TV1, 30/09/2026): bản gốc của nhánh feat/Nguyen_Dat tạo lại Issue/IssueLine,
+# trùng với 0008_issue_contract (SF25) → hai lá migration và bảng bị tạo hai lần, `migrate` lỗi.
+# Giữ nguyên TÊN file (để DB đã chạy bản cũ vẫn nhận ra), chỉ bỏ Issue/IssueLine.
+# SchoolClass được SF43 mở rộng ở 0012_lunch_counts.
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -32,35 +38,6 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=120)),
                 ('is_active', models.BooleanField(default=True)),
             ],
-        ),
-        migrations.CreateModel(
-            name='Issue',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('code', models.CharField(max_length=32, unique=True)),
-                ('date', models.DateField()),
-                ('note', models.TextField(blank=True, default='')),
-                ('status', models.CharField(choices=[('draft', 'Nháp'), ('posted', 'Đã chốt')], default='draft', max_length=10)),
-                ('posted_at', models.DateTimeField(blank=True, null=True)),
-                ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='issues_created', to=settings.AUTH_USER_MODEL)),
-            ],
-            options={
-                'ordering': ['id'],
-            },
-        ),
-        migrations.CreateModel(
-            name='IssueLine',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('quantity', models.DecimalField(decimal_places=3, max_digits=14, validators=[django.core.validators.MinValueValidator(Decimal('0.001'))])),
-                ('unit_cost', models.DecimalField(decimal_places=2, default=0, max_digits=14)),
-                ('food', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='issue_lines', to='inventory.fooditem')),
-                ('issue', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='lines', to='inventory.issue')),
-            ],
-            options={
-                'ordering': ['id'],
-                'constraints': [models.UniqueConstraint(fields=('issue', 'food'), name='issue_line_unique_food')],
-            },
         ),
         migrations.CreateModel(
             name='RecipeComponent',

@@ -302,14 +302,162 @@ class IssueLine(models.Model):
             models.CheckConstraint(condition=models.Q(quantity__gt=0, quantity__lt=Decimal("100000000000")), name="issue_line_quantity_positive"),
             models.CheckConstraint(condition=models.Q(unit_cost__gte=0, unit_cost__lt=Decimal("1000000000000")), name="issue_line_cost_nonnegative"),
         ]
+
+
+# =========================================================================
+# SF43 (G2.1): LỚP, NGÀY ĂN VÀ SUẤT TRƯA
+# =========================================================================
+MAX_CLASS_SIZE = 200  # chặn gõ nhầm (ví dụ 3000 thay vì 30); trường tiểu học không có lớp > 200.
+MAX_STAFF_MEALS = 1000
+
+
 class SchoolClass(models.Model):
+    """Lớp học. `enrolled` là sĩ số HIỆN HÀNH; ngày ăn chụp lại sĩ số riêng (enrolled_snapshot)."""
+
     code = models.CharField(max_length=32, unique=True)
     name = models.CharField(max_length=120)
+    grade = models.PositiveSmallIntegerField(null=True, blank=True)
+    # default=0: lớp tạo từ API SF44 (chưa có ô sĩ số) vẫn hợp lệ. 0 = chưa nhập sĩ số,
+    # khi đó suất của lớp chỉ được là 0 cho tới khi cập nhật sĩ số.
+    enrolled = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["code"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(enrolled__gte=0, enrolled__lte=MAX_CLASS_SIZE), name="school_class_enrolled_valid"),
+            models.CheckConstraint(condition=models.Q(grade__isnull=True) | models.Q(grade__gte=1, grade__lte=12), name="school_class_grade_valid"),
+            models.CheckConstraint(condition=~models.Q(code=""), name="school_class_code_not_empty"),
+        ]
 
     def __str__(self):
         return f"{self.code} - {self.name}"
 
+
+class LunchDay(models.Model):
+    """Một ngày bữa trưa. Số dự kiến và số thực tế độc lập, mỗi loại chốt riêng.
+
+    NULL = chưa nhập; 0 = không ăn. `version` tăng đúng 1 ở mọi lần sửa (khóa lạc quan cho SF46).
+    """
+
+    date = models.DateField(unique=True)
+    staff_planned = models.PositiveSmallIntegerField(null=True, blank=True)
+    staff_actual = models.PositiveSmallIntegerField(null=True, blank=True)
+    planned_confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    planned_confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="lunch_planned_confirmed",
+        null=True, blank=True, editable=False,
+    )
+    actual_confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    actual_confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="lunch_actual_confirmed",
+        null=True, blank=True, editable=False,
+    )
+    version = models.PositiveIntegerField(default=1, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["date"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(staff_planned__isnull=True) | models.Q(staff_planned__lte=MAX_STAFF_MEALS), name="lunch_day_staff_planned_valid"),
+            models.CheckConstraint(condition=models.Q(staff_actual__isnull=True) | models.Q(staff_actual__lte=MAX_STAFF_MEALS), name="lunch_day_staff_actual_valid"),
+            models.CheckConstraint(
+                condition=(models.Q(planned_confirmed_at__isnull=True, planned_confirmed_by__isnull=True)
+                           | models.Q(planned_confirmed_at__isnull=False, planned_confirmed_by__isnull=False)),
+                name="lunch_day_planned_confirm_pair",
+            ),
+            models.CheckConstraint(
+                condition=(models.Q(actual_confirmed_at__isnull=True, actual_confirmed_by__isnull=True)
+                           | models.Q(actual_confirmed_at__isnull=False, actual_confirmed_by__isnull=False)),
+                name="lunch_day_actual_confirm_pair",
+            ),
+            # Chốt thực tế sau khi đã chốt dự kiến.
+            models.CheckConstraint(
+                condition=models.Q(actual_confirmed_at__isnull=True) | models.Q(planned_confirmed_at__isnull=False),
+                name="lunch_day_actual_after_planned",
+            ),
+            models.CheckConstraint(condition=models.Q(version__gte=1), name="lunch_day_version_positive"),
+        ]
+
+    def __str__(self):
+        return f"LunchDay {self.date} v{self.version}"
+
+    @property
+    def planned_total(self):
+        """Tổng suất dự kiến = các lớp + nhân viên; None nếu còn chỗ chưa nhập."""
+        rows = list(self.class_counts.values_list("planned", flat=True))
+        if self.staff_planned is None or any(v is None for v in rows):
+            return None
+        return sum(rows) + self.staff_planned
+
+    @property
+    def actual_total(self):
+        rows = list(self.class_counts.values_list("actual", flat=True))
+        if self.staff_actual is None or any(v is None for v in rows):
+            return None
+        return sum(rows) + self.staff_actual
+
+
+class ClassMealCount(models.Model):
+    """Suất trưa của một lớp trong một ngày. enrolled_snapshot = sĩ số tại lúc mở ngày."""
+
+    lunch_day = models.ForeignKey(LunchDay, on_delete=models.PROTECT, related_name="class_counts")
+    school_class = models.ForeignKey(SchoolClass, on_delete=models.PROTECT, related_name="meal_counts")
+    enrolled_snapshot = models.PositiveSmallIntegerField()
+    planned = models.PositiveSmallIntegerField(null=True, blank=True)
+    actual = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["lunch_day_id", "school_class_id"]
+        constraints = [
+            models.UniqueConstraint(fields=["lunch_day", "school_class"], name="class_meal_count_unique_day"),
+            models.CheckConstraint(condition=models.Q(enrolled_snapshot__lte=MAX_CLASS_SIZE), name="class_meal_count_snapshot_valid"),
+            # Suất lớp không vượt sĩ số snapshot; NULL (chưa nhập) được phép.
+            models.CheckConstraint(
+                condition=models.Q(planned__isnull=True) | models.Q(planned__lte=models.F("enrolled_snapshot")),
+                name="class_meal_count_planned_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(actual__isnull=True) | models.Q(actual__lte=models.F("enrolled_snapshot")),
+                name="class_meal_count_actual_valid",
+            ),
+        ]
+
+
+class LunchDayEvent(models.Model):
+    """Lịch sử chốt/mở lại (append-only). Mỗi lần đổi trạng thái chốt phải có đúng một sự kiện."""
+
+    class Action(models.TextChoices):
+        CONFIRM_PLANNED = "confirm_planned", "Chốt dự kiến"
+        REOPEN_PLANNED = "reopen_planned", "Mở lại dự kiến"
+        CONFIRM_ACTUAL = "confirm_actual", "Chốt thực tế"
+        REOPEN_ACTUAL = "reopen_actual", "Mở lại thực tế"
+
+    lunch_day = models.ForeignKey(LunchDay, on_delete=models.PROTECT, related_name="events")
+    action = models.CharField(max_length=20, choices=Action.choices)
+    version = models.PositiveIntegerField()
+    reason = models.TextField(blank=True, default="")
+    snapshot = models.JSONField(default=dict)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="lunch_events")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["lunch_day_id", "version", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["lunch_day", "version"], name="lunch_day_event_unique_version"),
+            # Mở lại bắt buộc có lý do (architecture.md §5).
+            models.CheckConstraint(
+                condition=models.Q(action__in=["confirm_planned", "confirm_actual"]) | ~models.Q(reason__regex=r"^\s*$"),
+                name="lunch_day_event_reopen_needs_reason",
+            ),
+        ]
+
+
+# =========================================================================
+# SF44/SF50 (G2): MÓN ĂN VÀ ĐỊNH LƯỢNG
+# =========================================================================
 class Dish(models.Model):
     code = models.CharField(max_length=32, unique=True)
     name = models.CharField(max_length=120)
@@ -317,6 +465,7 @@ class Dish(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.name}"
+
 
 class RecipeComponent(models.Model):
     dish = models.ForeignKey(Dish, on_delete=models.CASCADE, related_name="components")
@@ -329,4 +478,3 @@ class RecipeComponent(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["dish", "food"], name="recipe_component_unique_food"),
         ]
-
