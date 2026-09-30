@@ -3,3 +3,6 @@ Django==5.2.17
 
 # Driver để Django kết nối PostgreSQL.
 psycopg[binary]==3.3.5
+
+# WSGI server cho production (SF38); dev vẫn dùng runserver.
+gunicorn==23.0.0
