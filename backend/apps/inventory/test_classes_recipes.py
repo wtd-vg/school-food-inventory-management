@@ -43,6 +43,23 @@ class ClassApiTests(TestCase):
         response = self.client.post("/api/classes/", json.dumps({"code": "1A", "name": "Lớp 1A Mới"}), content_type="application/json")
         self.assertEqual(response.status_code, 409)
 
+    def test_class_enrolled(self):
+        self.client.force_login(self.admin_user)
+        # Tạo lớp có sĩ số
+        response = self.client.post("/api/classes/", json.dumps({"code": "1B", "name": "Lớp 1B", "enrolled": 30}), content_type="application/json")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["enrolled"], 30)
+
+        # GET detail lấy sĩ số
+        c_id = response.json()["id"]
+        response_get = self.client.get(f"/api/classes/{c_id}/")
+        self.assertEqual(response_get.json()["enrolled"], 30)
+
+        # PATCH update sĩ số
+        response_patch = self.client.patch(f"/api/classes/{c_id}/", json.dumps({"enrolled": 35}), content_type="application/json")
+        self.assertEqual(response_patch.status_code, 200)
+        self.assertEqual(response_patch.json()["enrolled"], 35)
+
 
 class RecipeApiTests(TestCase):
     def setUp(self):
