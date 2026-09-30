@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { LoginPage } from './LoginPage';
 import { CategoryPage } from './CategoryPage';
 import FoodPage from './FoodPage';
+import { ReceiptPage } from './ReceiptPage';
+import { IssuePage } from './IssuePage';
 import { ReportPage } from './ReportPage';
+import { ClassPage } from './ClassPage';
+import { RecipePage } from './RecipePage';
 import { fetchApi } from './utils/api';
 
-type Screen = 'LOGIN' | 'CATEGORIES' | 'FOODS' | 'REPORTS';
+type Screen = 'LOGIN' | 'CATEGORIES' | 'FOODS' | 'RECEIPTS' | 'ISSUES' | 'REPORTS' | 'CLASSES' | 'RECIPES';
 
 export const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('LOGIN');
@@ -59,6 +63,27 @@ export const App: React.FC = () => {
     return <LoginPage onLoginSuccess={checkAuth} />;
   }
 
+  const getSubHeaderTitle = () => {
+    switch (currentScreen) {
+      case 'CATEGORIES':
+        return 'Danh mục thực phẩm';
+      case 'FOODS':
+        return 'Thực phẩm & Nguyên liệu';
+      case 'RECEIPTS':
+        return 'Phiếu nhập kho & Giá vốn';
+      case 'ISSUES':
+        return 'Phiếu xuất kho & Trừ tồn';
+      case 'REPORTS':
+        return 'Báo cáo tồn kho & Sổ giao dịch';
+      case 'CLASSES':
+        return 'Quản lý Lớp học bán trú';
+      case 'RECIPES':
+        return 'Món ăn & Công thức bữa trưa';
+      default:
+        return 'Quản lý kho bếp';
+    }
+  };
+
   // Nếu đã đăng nhập, hiển thị giao diện chính
   return (
     <div className="school-app">
@@ -72,28 +97,30 @@ export const App: React.FC = () => {
         .nav-item { color: #94a3b8; text-decoration: none; font-size: 13px; padding: 6px 14px; border-radius: 20px; }
         .nav-item.active { background-color: #ffffff; color: #0f172a; font-weight: 600; }
         .sub-header { background-color: #064e3b; color: #ffffff; padding: 10px 24px; font-size: 13px; font-weight: 500; }
-        .main-content { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
+        .main-content { max-width: 1100px; margin: 24px auto; padding: 0 20px; }
         
         /* CSS cho menu chuyển tab nội bộ */
-        .tab-menu { display: flex; gap: 24px; margin-bottom: 24px; border-bottom: 1px solid #cbd5e1; }
-        .tab-item { padding-bottom: 12px; font-weight: 600; font-size: 14px; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
-        .tab-item.active { color: #059669; border-bottom-color: #059669; }
+        .tab-menu { display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid #cbd5e1; overflow-x: auto; padding-bottom: 4px; }
+        .tab-item { padding: 8px 14px; font-weight: 600; font-size: 13px; color: #64748b; cursor: pointer; border-radius: 6px; white-space: nowrap; transition: all 0.15s ease; border-bottom: 2px solid transparent; }
+        .tab-item:hover { color: #0f172a; background-color: #e2e8f0; }
+        .tab-item.active { color: #059669; background-color: #ecfdf5; border-bottom-color: #059669; }
         .btn-logout { background: transparent; border: 1px solid #475569; color: #cbd5e1; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 16px; }
         .btn-logout:hover { background: #1e293b; color: white; }
 
         /* Các class CSS dùng bên trong Page */
         .card-container { background: #ffffff; border-radius: 12px; padding: 28px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
         .card-title { font-size: 22px; font-weight: 700; color: #0f172a; }
         .card-subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
         .btn-add { background-color: #059669; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; }
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .btn-add:hover { background-color: #047857; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
         .stat-card { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
         .stat-label { font-size: 12px; color: #64748b; font-weight: 500; }
         .stat-value { font-size: 24px; font-weight: 700; }
         .text-dark { color: #0f172a; } .text-green { color: #16a34a; } .text-red { color: #dc2626; }
-        .filter-bar { display: flex; gap: 12px; margin-bottom: 20px; }
-        .search-input-wrapper { position: relative; flex: 1; }
+        .filter-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .search-input-wrapper { position: relative; flex: 1; min-width: 220px; }
         .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; color: #94a3b8; }
         .search-input { width: 100%; padding: 9px 12px 9px 36px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; }
         .status-select { padding: 9px 16px; border: 1px solid #cbd5e1; border-radius: 6px; background-color: #ffffff; font-size: 13px; color: #334155; }
@@ -119,9 +146,7 @@ export const App: React.FC = () => {
           <span className="logo-text">SchoolOS</span>
         </div>
         <nav className="nav-menu">
-          <a href="#" className="nav-item">Điều hành</a>
-          <a href="#" className="nav-item active">Bếp ăn & Kho</a>
-          <a href="#" className="nav-item">Kế toán</a>
+          <span className="nav-item active" style={{ cursor: 'default' }}>Bếp ăn & Kho</span>
           {currentUser && (
             <span style={{ fontSize: '12px', color: '#cbd5e1', marginLeft: '8px' }}>
               👤 {currentUser} <span style={{ 
@@ -141,11 +166,7 @@ export const App: React.FC = () => {
       </header>
 
       <div className="sub-header">
-        🥗 Quản lý kho bếp — {
-          currentScreen === 'CATEGORIES' ? 'Danh mục' :
-          currentScreen === 'FOODS' ? 'Thực phẩm & Nguyên liệu' :
-          'Báo cáo tồn kho & Sổ giao dịch'
-        }
+        🥗 Quản lý kho bếp — {getSubHeaderTitle()}
       </div>
 
       <main className="main-content">
@@ -155,29 +176,57 @@ export const App: React.FC = () => {
             className={`tab-item ${currentScreen === 'CATEGORIES' ? 'active' : ''}`}
             onClick={() => setCurrentScreen('CATEGORIES')}
           >
-            Danh mục thực phẩm
+            🏷️ Danh mục
           </div>
           <div 
             className={`tab-item ${currentScreen === 'FOODS' ? 'active' : ''}`}
             onClick={() => setCurrentScreen('FOODS')}
           >
-            Quản lý Thực phẩm
+            🥦 Thực phẩm
+          </div>
+          <div 
+            className={`tab-item ${currentScreen === 'RECEIPTS' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('RECEIPTS')}
+          >
+            📥 Phiếu nhập kho
+          </div>
+          <div 
+            className={`tab-item ${currentScreen === 'ISSUES' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('ISSUES')}
+          >
+            📤 Phiếu xuất kho
           </div>
           <div 
             className={`tab-item ${currentScreen === 'REPORTS' ? 'active' : ''}`}
             onClick={() => setCurrentScreen('REPORTS')}
           >
-            Báo cáo tồn & Lịch sử
+            📊 Báo cáo & Sổ kho
+          </div>
+          <div 
+            className={`tab-item ${currentScreen === 'CLASSES' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('CLASSES')}
+          >
+            🏫 Lớp học
+          </div>
+          <div 
+            className={`tab-item ${currentScreen === 'RECIPES' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('RECIPES')}
+          >
+            🍲 Công thức món
           </div>
         </div>
 
         {/* Nội dung thay đổi dựa trên State */}
         {currentScreen === 'CATEGORIES' && <CategoryPage isViewer={isViewer} />}
         {currentScreen === 'FOODS' && <FoodPage isViewer={isViewer} />}
+        {currentScreen === 'RECEIPTS' && <ReceiptPage isViewer={isViewer} />}
+        {currentScreen === 'ISSUES' && <IssuePage isViewer={isViewer} />}
         {currentScreen === 'REPORTS' && <ReportPage isViewer={isViewer} />}
+        {currentScreen === 'CLASSES' && <ClassPage isViewer={isViewer} />}
+        {currentScreen === 'RECIPES' && <RecipePage isViewer={isViewer} />}
       </main>
     </div>
   );
-}
+};
 
 export default App;
