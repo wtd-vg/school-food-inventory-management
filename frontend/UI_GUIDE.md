@@ -11,10 +11,30 @@ src/
   auth/          AuthContext (me, role, login/logout, session-expired), RequireAuth
   components/
     icons/       SVG inline, 24×24, stroke currentColor
-    ui/          Button, Field, Display (Badge, Callout, Segmented, RouteTabs, PageHeader…), DataTable, Overlay (Drawer, Modal, ConfirmDialog, Toast)
+    ui/          Button, Field, Display (Badge, Callout, Segmented, RouteTabs, PageHeader, Lead, Toolbar…), DataTable (thành thẻ trên điện thoại),
+                 Overlay (Drawer, Modal, ConfirmDialog, Toast), Chart (BarChart, CostBar)
     layout/      AppShell (sidebar 232 → chỉ icon <1280 → tab dưới <768), nav.ts
   features/      mỗi nghiệp vụ một thư mục: auth, inventory, dishes, classes, suppliers, reports
+  services/      inventory.ts, catalog.ts: kiểu dữ liệu + lời gọi API khớp JSON backend
 ```
+
+## Bản đồ màn hình
+
+| Route | Màn | Ghi chú |
+| --- | --- | --- |
+| `/dang-nhap` | Đăng nhập | |
+| `/kho` | Tồn kho | `?mat-hang=ID` mở ngăn kéo lịch sử giao dịch |
+| `/kho/phieu-nhap` | Phiếu nhập | `?tao=1` tạo nháp (`&mat-hang=`, `&ncc=` điền sẵn), `?phieu=ID` xem/chốt |
+| `/kho/phieu-xuat` | Phiếu xuất | như phiếu nhập |
+| `/kho/kiem-ke` | Kiểm kê | phiếu đang đếm nhớ trên trình duyệt (API chưa có danh sách) |
+| `/kho/danh-muc` | Danh mục & mặt hàng | `?tab=mat-hang` hoặc `danh-muc`, `?tao=1`, `?sua=ID` |
+| `/mon-an` | Món & công thức | `?tao=1`, `?sua=ID` |
+| `/lop-hoc` | Lớp học | `?tao=1`, `?sua=ID` |
+| `/nha-cung-cap/:id` | Nhà cung cấp | danh sách trái / chi tiết phải |
+| `/bao-cao` | Báo cáo kho | `?thang=YYYY-MM`, `?muc=tong-quan`, `ton-kho` hoặc `so-giao-dich`, Xuất CSV |
+| `/_kit` | Bộ component | chỉ bản dev |
+
+Trạng thái mở ngăn kéo nằm trên URL để bấm Back/chia sẻ link được. Đổi nhiều tham số cùng lúc dùng `useUpdateParams` (gọi `setSearchParams` liên tiếp sẽ ghi đè nhau).
 
 Trang `/_kit` (chỉ bản dev) liệt kê mọi component. Mở nó trước khi dựng màn mới.
 
