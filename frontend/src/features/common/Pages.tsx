@@ -1,17 +1,5 @@
 import { Link } from 'react-router-dom';
-import { IconClock } from '../../components/icons';
 import { EmptyState, PageHeader } from '../../components/ui';
-
-export function ComingSoon({ title }: { title: string }) {
-  return (
-    <>
-      <PageHeader title={title} />
-      <EmptyState icon={<IconClock size={32} />} title="Màn này đang được làm lại">
-        Chức năng sẽ có trong bản cập nhật tới.
-      </EmptyState>
-    </>
-  );
-}
 
 export function NotFoundPage() {
   return (
