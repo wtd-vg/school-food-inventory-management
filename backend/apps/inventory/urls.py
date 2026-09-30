@@ -90,3 +90,11 @@ urlpatterns.extend([
     path('dishes/', dish_list, name='dishes'),
     path('dishes/<int:dish_id>/', dish_detail, name='dish_detail'),
 ])
+
+from apps.inventory.recipe_views import lunch_day_counts, lunch_day_lock, lunch_day_reopen
+
+urlpatterns.extend([
+    path('lunch-days/<str:date_str>/counts/', lunch_day_counts, name='lunch_day_counts'),
+    path('lunch-days/<str:date_str>/lock/', lunch_day_lock, name='lunch_day_lock'),
+    path('lunch-days/<str:date_str>/reopen/', lunch_day_reopen, name='lunch_day_reopen'),
+])
