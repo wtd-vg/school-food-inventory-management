@@ -1,0 +1,32 @@
+{
+  "name": "schoolfood",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SchoolFood: lệnh gốc cho chạy local và deploy EC2 (SF38). Script ec2:* chạy trên máy chủ Linux, cần file .env.prod.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "fe:install": "npm --prefix frontend ci",
+    "fe:build": "npm --prefix frontend run build",
+    "fe:dev": "npm --prefix frontend run dev",
+
+    "local:up": "docker compose up --build -d",
+    "local:down": "docker compose down",
+    "local:logs": "docker compose logs --tail 100 backend frontend",
+    "local:migrate": "docker compose exec backend python manage.py migrate",
+    "local:check": "docker compose exec backend python manage.py check && docker compose exec backend python manage.py makemigrations --check --dry-run",
+
+    "ec2:build": "docker compose --env-file .env.prod -f compose.prod.yaml --profile tunnel build",
+    "ec2:up": "docker compose --env-file .env.prod -f compose.prod.yaml --profile tunnel up -d",
+    "ec2:down": "docker compose --env-file .env.prod -f compose.prod.yaml --profile tunnel down",
+    "ec2:ps": "docker compose --env-file .env.prod -f compose.prod.yaml --profile tunnel ps",
+    "ec2:logs": "docker compose --env-file .env.prod -f compose.prod.yaml --profile tunnel logs --tail 200",
+    "ec2:check": "docker compose --env-file .env.prod -f compose.prod.yaml exec -T backend python manage.py check --deploy",
+    "ec2:db:backup": "mkdir -p backups && docker compose --env-file .env.prod -f compose.prod.yaml exec -T db sh -c 'pg_dump -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -Fc' > backups/schoolfood-$(date +%Y%m%d-%H%M%S).dump",
+    "ec2:migrate": "npm run ec2:db:backup && docker compose --env-file .env.prod -f compose.prod.yaml exec -T backend python manage.py migrate",
+    "ec2:createsuperuser": "docker compose --env-file .env.prod -f compose.prod.yaml exec backend python manage.py createsuperuser",
+    "ec2:ledger-audit": "docker compose --env-file .env.prod -f compose.prod.yaml exec -T backend python manage.py sf31_ledger_audit --strict",
+    "ec2:deploy": "git pull --ff-only && npm run ec2:build && npm run ec2:up && npm run ec2:migrate && npm run ec2:check && npm run ec2:ledger-audit"
+  }
+}
