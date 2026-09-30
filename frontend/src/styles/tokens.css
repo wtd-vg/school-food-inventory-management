@@ -1,0 +1,79 @@
+/* Design tokens "Bếp Nhà Trường" (design/FRONTEND_PROMPT.md §3).
+   Đây là nơi DUY NHẤT được khai báo mã màu. Component chỉ dùng var(--...). */
+:root {
+  /* nền & bề mặt */
+  --bg: #FFF8EC;
+  --sidebar: #FFE9BF;
+  --surface: #FFFFFF;
+  --surface-sunken: #F6EEDF;
+  --surface-hover: #FFFCF5;
+  --warm-inner: #FFF6E0;
+  --warm-line: #F1D9A6;
+  --warm-muted: #6E5A2E;
+  --photo-a: #FFF0C9;
+  --photo-b: #E8EFD9;
+
+  /* chữ & đường kẻ */
+  --ink: #2A2522;
+  --ink-hover: #3A332F;
+  --ink-soft: #4A3D33;
+  --muted: #6B5F55;
+  --line: #EADFC9;
+  --border: #D9CBB0;
+  --border-field: #E3D6BD;
+  --pending: #CDBFA6;
+  --on-ink: #FFFFFF;
+
+  /* thương hiệu & liên kết */
+  --brand: #FFC93C;
+  --link: #1D4F87;
+  --link-hover: #123A66;
+
+  /* trạng thái: chữ / nền */
+  --ok: #1F6B3A;
+  --ok-bg: #E3F1E6;
+  --danger: #A5361A;
+  --danger-bg: #FFE4DA;
+  --warn: #6E4C00;
+  --warn-bg: #FFF0C2;
+  --info: #1D4F87;
+  --info-bg: #DCEBFA;
+
+  /* biểu đồ & nhóm chi phí */
+  --chart-bar: #E3B341;
+  --chart-over: #A5361A;
+  --cat-protein: #8C3B1E;
+  --cat-veg: #5E7F2E;
+  --cat-dry: #C99A2E;
+  --cat-dairy: #3B6FA8;
+
+  /* hiệu ứng */
+  --overlay: rgba(42, 37, 34, .28);
+  --shadow-seg: 0 1px 2px rgba(60, 40, 10, .12);
+  --shadow-drawer: -20px 0 40px -20px rgba(42, 37, 34, .35);
+  --shadow-pop: 0 12px 32px -12px rgba(42, 37, 34, .35);
+  --shadow-bar: 0 -6px 20px -12px rgba(42, 37, 34, .3);
+
+  /* bo góc */
+  --r-badge: 6px;
+  --r-seg-item: 9px;
+  --r-input-sm: 10px;
+  --r-md: 12px;
+  --r-logo: 13px;
+  --r-card: 14px;
+  --r-day: 16px;
+  --r-warm: 22px;
+  --r-phone: 38px;
+  --r-pill: 999px;
+
+  /* chữ */
+  --font-body: 'Be Vietnam Pro', system-ui, sans-serif;
+  --font-display: 'Baloo 2', 'Be Vietnam Pro', system-ui, sans-serif;
+
+  /* khung trang */
+  --sidebar-w: 232px;
+  --sidebar-w-compact: 76px;
+  --tabbar-h: 64px;
+  --control-h: 44px;
+  --motion: 200ms ease-out;
+}

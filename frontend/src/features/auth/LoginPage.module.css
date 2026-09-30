@@ -1,0 +1,105 @@
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px 16px;
+  background: var(--bg);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: min(420px, 100%);
+  padding: 32px 32px 28px;
+  border-radius: var(--r-warm);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-logo);
+  background: var(--brand);
+  color: var(--ink);
+  transform: rotate(-5deg);
+}
+
+.brandName {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.school {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.lead {
+  margin-top: 4px;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.passwordRow {
+  position: relative;
+}
+
+.toggle {
+  position: absolute;
+  right: 6px;
+  top: 30px;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--r-input-sm);
+  background: transparent;
+  color: var(--link);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.toggle:hover {
+  background: var(--surface-sunken);
+}
+
+.passwordInput {
+  padding-right: 64px;
+}
+
+.foot {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 24px 20px;
+  }
+}
