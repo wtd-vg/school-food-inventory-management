@@ -317,7 +317,9 @@ class SchoolClass(models.Model):
     code = models.CharField(max_length=32, unique=True)
     name = models.CharField(max_length=120)
     grade = models.PositiveSmallIntegerField(null=True, blank=True)
-    enrolled = models.PositiveSmallIntegerField()
+    # default=0: lớp tạo từ API SF44 (chưa có ô sĩ số) vẫn hợp lệ. 0 = chưa nhập sĩ số,
+    # khi đó suất của lớp chỉ được là 0 cho tới khi cập nhật sĩ số.
+    enrolled = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -450,4 +452,29 @@ class LunchDayEvent(models.Model):
                 condition=models.Q(action__in=["confirm_planned", "confirm_actual"]) | ~models.Q(reason__regex=r"^\s*$"),
                 name="lunch_day_event_reopen_needs_reason",
             ),
+        ]
+
+
+# =========================================================================
+# SF44/SF50 (G2): MÓN ĂN VÀ ĐỊNH LƯỢNG
+# =========================================================================
+class Dish(models.Model):
+    code = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+
+class RecipeComponent(models.Model):
+    dish = models.ForeignKey(Dish, on_delete=models.CASCADE, related_name="components")
+    food = models.ForeignKey("FoodItem", on_delete=models.PROTECT, related_name="recipe_components")
+    quantity = models.DecimalField(
+        max_digits=14, decimal_places=3, validators=[MinValueValidator(Decimal("0.001"))]
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["dish", "food"], name="recipe_component_unique_food"),
         ]
