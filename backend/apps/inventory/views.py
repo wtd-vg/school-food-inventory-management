@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError, PermissionDenied
 from .models import StockTake, StockTakeItem, Receipt, ReceiptLine, Issue, IssueLine
 from .services import (
     create_stocktake, update_stocktake_item, post_stocktake,
-    create_receipt_draft, post_receipt, post_issue
+    create_receipt_draft, post_receipt, post_issue, InventoryConflict
 )
 import json
 from decimal import Decimal, InvalidOperation
@@ -994,7 +994,7 @@ def issue_post(request, issue_id):
         return JsonResponse({"error": "Phiếu xuất đã được chốt trước đó hoặc không ở trạng thái nháp."}, status=409)
 
     try:
-        posted = post_issue(issue_id)
+        posted = post_issue(issue_id, request.user)
         total_val = sum((l.quantity * l.unit_cost for l in posted.lines.all()), Decimal("0.00"))
         return JsonResponse({
             "id": posted.id,
@@ -1004,10 +1004,10 @@ def issue_post(request, issue_id):
             "total_value": str(round(total_val, 2)),
             "message": "Chốt phiếu xuất thành công."
         }, status=200)
+    except Issue.DoesNotExist:
+        return JsonResponse({"error": "Phiếu xuất không tồn tại."}, status=404)
+    except InventoryConflict as e:
+        msg = " ".join(e.messages)
+        return JsonResponse({"error": msg, "message": msg}, status=409)
     except ValidationError as e:
-        msg = str(e.message_dict if hasattr(e, "message_dict") else (e.messages if hasattr(e, "messages") else str(e)))
-        if "Không đủ tồn kho" in msg or "chốt" in msg or "xử lý" in msg:
-            return JsonResponse({"error": msg, "message": msg}, status=409)
-        return JsonResponse({"error": msg}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        return JsonResponse({"error": " ".join(e.messages)}, status=400)
