@@ -1,16 +1,16 @@
 from django.core.exceptions import ValidationError, PermissionDenied
-from .models import StockTake, StockTakeItem, Receipt, ReceiptLine, Issue, IssueLine
+from .models import StockTake, StockTakeItem, StockTransaction, Receipt, ReceiptLine, Issue, IssueLine
 from .services import (
     create_stocktake, update_stocktake_item, post_stocktake,
     create_receipt_draft, post_receipt, post_issue, InventoryConflict
 )
 import json
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.db import connection, IntegrityError, transaction
 from django.http import JsonResponse
 from django.utils import timezone
-from .models import Category, FoodItem, Supplier, InventoryLedger
+from .models import Category, FoodItem, Supplier
 from .auth_views import inventory_permission_required
 
 
@@ -499,6 +499,31 @@ def supplier_detail(request, supplier_id):
     return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
+def _stocktake_payload(st):
+    items = list(st.items.select_related("food").order_by("id"))
+    return {
+        "id": st.id,
+        "date": str(st.date) if st.date else None,
+        "status": st.status,
+        "note": st.note,
+        "posted_at": st.posted_at.isoformat() if st.posted_at else None,
+        "items": [
+            {
+                "id": item.id,
+                "food_id": item.food_id,
+                "food_name": item.food.name,
+                "unit": item.food.unit,
+                "snapshot_qty": str(item.snapshot_qty),
+                "snapshot_cost": str(item.snapshot_cost),
+                "snapshot_version": item.snapshot_version,
+                "counted_qty": None if item.counted_qty is None else str(item.counted_qty),
+                "variance": str(item.variance),
+            }
+            for item in items
+        ],
+    }
+
+
 @inventory_permission_required
 def stocktakes(request):
     if request.method == "POST":
@@ -506,18 +531,24 @@ def stocktakes(request):
             data = json.loads(request.body)
         except (json.JSONDecodeError, UnicodeDecodeError):
             return JsonResponse({"error": "Invalid JSON"}, status=400)
-            
+        if not isinstance(data, dict):
+            return JsonResponse({"error": "Request body must be a JSON object"}, status=400)
+
         food_ids = data.get("food_ids", [])
         if not isinstance(food_ids, list) or not food_ids:
             return JsonResponse({"error": "food_ids list is required"}, status=400)
-            
+        note = data.get("note", "")
+        if not isinstance(note, str):
+            return JsonResponse({"error": "note must be a string"}, status=400)
+
         try:
-            st = create_stocktake(food_ids)
-            return JsonResponse({"id": st.id, "status": st.status}, status=201)
+            st = create_stocktake(food_ids, request.user, note=note.strip())
         except ValidationError as e:
-            return JsonResponse({"error": str(e)}, status=400)
+            return JsonResponse({"error": " ".join(e.messages)}, status=400)
+        return JsonResponse(_stocktake_payload(st), status=201)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
 
 @inventory_permission_required
 def stocktake_items(request, item_id):
@@ -526,37 +557,39 @@ def stocktake_items(request, item_id):
             data = json.loads(request.body)
         except (json.JSONDecodeError, UnicodeDecodeError):
             return JsonResponse({"error": "Invalid JSON"}, status=400)
-            
-        counted_qty = data.get("counted_qty")
-        if counted_qty is None:
-            return JsonResponse({"error": "counted_qty is required"}, status=400)
-            
+        if not isinstance(data, dict) or set(data) != {"counted_qty"}:
+            return JsonResponse({"error": "Chỉ nhận field counted_qty."}, status=400)
+
         try:
-            item = update_stocktake_item(item_id, counted_qty)
-            return JsonResponse({
-                "id": item.id,
-                "counted_qty": float(item.counted_qty),
-                "variance": float(item.variance)
-            }, status=200)
-        except ValidationError as e:
-            return JsonResponse({"error": str(e)}, status=400)
+            item = update_stocktake_item(item_id, data["counted_qty"])
         except StockTakeItem.DoesNotExist:
             return JsonResponse({"error": "Item not found"}, status=404)
+        except InventoryConflict as e:
+            return JsonResponse({"error": " ".join(e.messages)}, status=409)
+        except ValidationError as e:
+            return JsonResponse({"error": " ".join(e.messages)}, status=400)
+        # Decimal gửi dạng chuỗi (architecture.md §4), không dùng float.
+        return JsonResponse({
+            "id": item.id,
+            "counted_qty": str(item.counted_qty),
+            "variance": str(item.variance),
+        }, status=200)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
 
 @inventory_permission_required
 def stocktake_post(request, stocktake_id):
     if request.method == "POST":
         try:
-            st = post_stocktake(stocktake_id)
-            return JsonResponse({"id": st.id, "status": st.status}, status=200)
-        except ValueError as e:
-            return JsonResponse({"error": str(e)}, status=409)
-        except ValidationError as e:
-            return JsonResponse({"error": str(e)}, status=400)
+            st = post_stocktake(stocktake_id, request.user)
         except StockTake.DoesNotExist:
             return JsonResponse({"error": "StockTake not found"}, status=404)
+        except InventoryConflict as e:
+            return JsonResponse({"error": " ".join(e.messages)}, status=409)
+        except ValidationError as e:
+            return JsonResponse({"error": " ".join(e.messages)}, status=400)
+        return JsonResponse(_stocktake_payload(st), status=200)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
 
@@ -567,16 +600,27 @@ from django.utils.dateparse import parse_date
 from django.utils.timezone import make_aware
 import datetime
 
+def _transaction_reference(tx):
+    if tx.receipt_line_id:
+        return f"Receipt #{tx.receipt_line.receipt_id}"
+    if tx.issue_line_id:
+        return f"Issue {tx.issue_line.issue.code}"
+    if tx.stocktake_item_id:
+        return f"StockTake #{tx.stocktake_item.stock_take_id}"
+    return ""
+
+
 @inventory_permission_required
 def reports_stock(request):
     if request.method == "GET":
+        # SF31: số giao dịch đếm trên sổ kho duy nhất StockTransaction.
         foods = FoodItem.objects.select_related('category').annotate(
-            transaction_count=Count('ledger_entries')
+            transaction_count=Count('stock_transactions')
         ).order_by('id')
-        
+
         results = []
         for f in foods:
-            stock_value = round(f.quantity * f.avg_cost, 2)
+            stock_value = (f.quantity * f.avg_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             results.append({
                 "id": f.id,
                 "code": f.code,
@@ -591,42 +635,48 @@ def reports_stock(request):
         return JsonResponse({"results": results})
     return JsonResponse({"error": "Method not allowed"}, status=405)
 
+
 @inventory_permission_required
 def reports_transactions(request):
-    if request.method == "GET":
-        ledgers = InventoryLedger.objects.all()
-        
-        food_id = request.GET.get('food')
-        if food_id:
-            ledgers = ledgers.filter(food_id=food_id)
-            
-        date_from = request.GET.get('from')
-        if date_from:
-            parsed_from = parse_date(date_from)
-            if parsed_from:
-                ledgers = ledgers.filter(created_at__gte=make_aware(datetime.datetime.combine(parsed_from, datetime.time.min)))
-                
-        date_to = request.GET.get('to')
-        if date_to:
-            parsed_to = parse_date(date_to)
-            if parsed_to:
-                ledgers = ledgers.filter(created_at__lte=make_aware(datetime.datetime.combine(parsed_to, datetime.time.max)))
-                
-        ledgers = ledgers.order_by('id')
-        
-        results = []
-        for l in ledgers:
-            results.append({
-                "id": l.id,
-                "food_id": l.food_id,
-                "transaction_type": l.transaction_type,
-                "quantity_change": str(l.quantity_change),
-                "cost": str(l.cost),
-                "reference": l.reference,
-                "created_at": l.created_at.isoformat()
-            })
-        return JsonResponse({"results": results})
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    """SF31: sổ giao dịch đọc StockTransaction (IN/OUT/ADJUST), lọc theo ngày chứng từ.
+
+    Giữ các field cũ (transaction_type, quantity_change, cost, reference, created_at) để
+    ReportPage chạy nguyên; thêm value_delta, date, source.
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    txs = StockTransaction.objects.select_related(
+        "receipt_line", "issue_line__issue", "stocktake_item",
+    )
+    food_id = request.GET.get('food')
+    if food_id:
+        if not food_id.isdigit():
+            return JsonResponse({"error": "food must be an integer id"}, status=400)
+        txs = txs.filter(food_id=int(food_id))
+    for param, lookup in (("from", "date__gte"), ("to", "date__lte")):
+        raw = request.GET.get(param)
+        if raw:
+            parsed = parse_date(raw)
+            if parsed is None:
+                return JsonResponse({"error": f"{param} must be YYYY-MM-DD"}, status=400)
+            txs = txs.filter(**{lookup: parsed})
+
+    results = []
+    for tx in txs.order_by('date', 'id'):
+        results.append({
+            "id": tx.id,
+            "food_id": tx.food_id,
+            "transaction_type": tx.type,
+            "quantity_change": str(tx.quantity_delta),
+            "cost": str(tx.unit_cost),
+            "value_delta": str(tx.value_delta),
+            "date": str(tx.date),
+            "source": "receipt" if tx.receipt_line_id else "issue" if tx.issue_line_id else "stocktake",
+            "reference": _transaction_reference(tx),
+            "created_at": (tx.created_at.isoformat() if tx.created_at else f"{tx.date}T00:00:00"),
+        })
+    return JsonResponse({"results": results})
 
 
 # =========================================================================
@@ -795,7 +845,7 @@ def receipt_post(request, receipt_id):
         return JsonResponse({"error": "Phiếu nhập đã được chốt trước đó hoặc không ở trạng thái nháp."}, status=409)
 
     try:
-        posted = post_receipt(receipt_id)
+        posted = post_receipt(receipt_id, request.user)
         return JsonResponse({
             "id": posted.id,
             "status": posted.status.upper(),

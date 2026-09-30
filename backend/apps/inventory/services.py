@@ -3,11 +3,23 @@
 from datetime import date as CalendarDate, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.utils import timezone
-from .models import Receipt, ReceiptLine, FoodItem, InventoryLedger, Issue, IssueLine, StockTransaction
+from .models import (
+    FoodItem, Issue, IssueLine, Receipt, ReceiptLine, StockTake, StockTakeItem, StockTransaction,
+)
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
-from .models import Receipt, ReceiptLine
+
+class InventoryConflict(ValidationError):
+    """Xung đột trạng thái/tồn kho → view trả 409.
+
+    Kế thừa ValidationError để code và test cũ (bắt ValidationError) vẫn chạy.
+    """
+
+
+class StaleStocktake(InventoryConflict):
+    """Tồn kho đã đổi sau khi mở kiểm kê (stock_version khác snapshot) → 409, lập lại kiểm kê."""
+
 
 
 def _positive_decimal(value, field):
@@ -65,182 +77,190 @@ def create_receipt_draft(*, supplier_id, date, lines, user, note=""):
         line.receipt = receipt
         line.save()
     return receipt
-from decimal import Decimal
-from django.db import transaction
-from django.core.exceptions import ValidationError
-from .models import FoodItem, StockTake, StockTakeItem, InventoryLedger
 
+
+# =========================================================================
+# SF20: CHỐT PHIẾU NHẬP (theo contract SF19)
+# =========================================================================
 @transaction.atomic
-def create_stocktake(food_ids):
-    foods = FoodItem.objects.filter(id__in=food_ids).select_for_update()
-    if not foods:
-        raise ValidationError("No valid food items provided.")
-    
-    st = StockTake.objects.create(status='draft')
-    items = []
-    for food in foods:
-        items.append(StockTakeItem(
-            stock_take=st,
-            food=food,
-            snapshot_qty=food.quantity,
-            snapshot_cost=food.avg_cost,
-            snapshot_version=food.stock_version,
-            counted_qty=None,
-            variance=0
-        ))
-    StockTakeItem.objects.bulk_create(items)
-    return st
+def post_receipt(receipt_id, user=None):
+    """Chốt phiếu nhập: khóa phiếu → khóa food theo id tăng dần → cập nhật tồn/giá bình quân →
+    ghi đúng một bút toán IN mỗi dòng → posted. Lỗi bất kỳ bước nào rollback toàn bộ.
 
-@transaction.atomic
-def update_stocktake_item(item_id, counted_qty):
-    if counted_qty is None or Decimal(counted_qty) < 0:
-        raise ValidationError("counted_qty must be a non-negative number.")
-    
-    item = StockTakeItem.objects.select_related('stock_take').get(id=item_id)
-    if item.stock_take.status != 'draft':
-        raise ValidationError("Can only update draft stock takes.")
-    
-    item.counted_qty = Decimal(counted_qty)
-    item.variance = item.counted_qty - item.snapshot_qty
-    item.save(update_fields=['counted_qty', 'variance'])
-    return item
-
-@transaction.atomic
-def post_stocktake(stocktake_id):
-    # Lock the stocktake first to avoid concurrent posting
-    try:
-        st = StockTake.objects.select_for_update(nowait=True).get(id=stocktake_id)
-    except Exception:
-        raise ValidationError("StockTake is already being processed.")
-
-    if st.status != 'draft':
-        raise ValidationError("Only draft stock takes can be posted.")
-
-    items = list(st.items.select_related('food').all())
-    food_ids = [item.food_id for item in items]
-    
-    # Lock foods to prevent concurrent stock updates
-    foods = {f.id: f for f in FoodItem.objects.filter(id__in=food_ids).select_for_update()}
-
-    for item in items:
-        if item.counted_qty is None:
-            raise ValidationError(f"Food {item.food.name} has not been counted.")
-        
-        current_food = foods[item.food_id]
-        if current_food.stock_version != item.snapshot_version:
-            # 409 Conflict logic
-            raise ValueError(f"Snapshot for {current_food.name} is outdated.")
-            
-        variance = item.counted_qty - item.snapshot_qty
-        
-        # Only create ledger if there is a variance
-        if variance != 0:
-            InventoryLedger.objects.create(
-                food=current_food,
-                transaction_type='ADJUST',
-                quantity_change=variance,
-                cost=current_food.avg_cost,
-                reference=f"StockTake {st.id}"
-            )
-        
-        # Update food
-        current_food.quantity = item.counted_qty
-        current_food.stock_version += 1
-        current_food.save(update_fields=['quantity', 'stock_version'])
-    
-    st.status = 'posted'
-    st.save(update_fields=['status'])
-    return st
-@transaction.atomic
-def post_receipt(receipt_id):
+    Giá bình quân gia quyền: (tồn cũ × giá cũ + lượng nhập × giá nhập) / tồn mới,
+    làm tròn 2 số lẻ ROUND_HALF_UP (không dùng round() vì Python làm tròn kiểu ngân hàng).
     """
-    SF20: Chốt phiếu nhập
-    - Lock receipt (status draft)
-    - Lock FoodItems theo ID tăng dần tránh deadlock
-    - Tính bình quân gia quyền: new_avg = (old_qty*old_cost + in_qty*in_price) / new_qty
-    - Tăng quantity, tăng stock_version
-    - Ghi InventoryLedger loại 'IN'
-    - Chốt posted và cập nhật posted_at (bắt buộc theo CheckConstraint)
-    """
-    try:
-        receipt = Receipt.objects.select_for_update(nowait=True).get(id=receipt_id)
-    except Exception:
-        raise ValidationError("Phiếu nhập đang được xử lý bởi tiến trình khác.")
-
+    receipt = Receipt.objects.select_for_update(of=("self",)).get(id=receipt_id)
     if receipt.status != Receipt.Status.DRAFT:
-        raise ValidationError("Chỉ có thể chốt phiếu nhập ở trạng thái nháp.")
+        raise InventoryConflict("Chỉ có thể chốt phiếu nhập ở trạng thái nháp.")
+    actor = user if user is not None and getattr(user, "is_authenticated", False) else receipt.created_by
 
-    lines = list(receipt.lines.select_related("food").all())
+    lines = list(receipt.lines.order_by("id"))
     if not lines:
         raise ValidationError("Phiếu nhập không có dòng hàng nào.")
 
-    # Sắp xếp food_id tăng dần để tránh Deadlock
-    food_ids = sorted([line.food_id for line in lines])
-    foods_map = {f.id: f for f in FoodItem.objects.filter(id__in=food_ids).select_for_update()}
+    food_ids = sorted({line.food_id for line in lines})
+    foods = {f.id: f for f in FoodItem.objects.filter(id__in=food_ids).order_by("id").select_for_update()}
 
     for line in lines:
-        food = foods_map.get(line.food_id)
-        if not food:
-            raise ValidationError(f"Thực phẩm ID {line.food_id} không tồn tại.")
+        food = foods[line.food_id]
         if not food.is_active:
             raise ValidationError(f"Thực phẩm {food.name} đang bị khóa.")
-
-        qty_in = Decimal(str(line.quantity))
-        price_in = Decimal(str(line.unit_price))
-
-        if qty_in <= Decimal("0") or price_in <= Decimal("0"):
+        if line.quantity <= 0 or line.unit_price <= 0:
             raise ValidationError("Số lượng và đơn giá nhập phải lớn hơn 0.")
 
-        old_qty = Decimal(str(food.quantity or 0))
-        old_cost = Decimal(str(food.avg_cost or 0))
-
-        new_qty = old_qty + qty_in
-        # Công thức bình quân gia quyền
-        new_avg_cost = ((old_qty * old_cost) + (qty_in * price_in)) / new_qty
-
-        # Cập nhật FoodItem
+        new_qty = food.quantity + line.quantity
+        new_avg = (food.quantity * food.avg_cost + line.quantity * line.unit_price) / new_qty
         food.quantity = new_qty
-        food.avg_cost = round(new_avg_cost, 2)
+        food.avg_cost = new_avg.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         food.stock_version += 1
         food.save(update_fields=["quantity", "avg_cost", "stock_version"])
 
-        # Ghi StockTransaction để thỏa mãn constraint trigger sf19_check_receipt
         StockTransaction.objects.create(
             receipt_line=line,
             food=food,
             type=StockTransaction.Type.IN,
-            quantity_delta=qty_in,
-            unit_cost=price_in,
-            value_delta=(qty_in * price_in).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            quantity_delta=line.quantity,
+            unit_cost=line.unit_price,
+            value_delta=(line.quantity * line.unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
             date=receipt.date,
-            created_by=receipt.created_by,
-        )
-
-        # Ghi sổ InventoryLedger
-        InventoryLedger.objects.create(
-            food=food,
-            transaction_type="IN",
-            quantity_change=qty_in,
-            cost=food.avg_cost,
-            reference=f"Receipt #{receipt.id}"
+            created_by=actor,
         )
 
     receipt.status = Receipt.Status.POSTED
-    receipt.posted_at = timezone.now()  # Bắt buộc để không bị lỗi CheckConstraint
+    receipt.posted_at = timezone.now()
     receipt.save(update_fields=["status", "posted_at"])
     return receipt
 
 
 # =========================================================================
+# SF31 contract · SF32 nghiệp vụ: KIỂM KÊ
+# =========================================================================
+def _parse_counted_qty(value):
+    """Số đếm: chuỗi/số nguyên/Decimal, hữu hạn, >= 0, tối đa 3 số lẻ. Không nhận bool; float
+    được đổi qua str() để không mang sai số nhị phân (UI cũ gửi number)."""
+    if isinstance(value, bool) or value is None:
+        raise ValidationError({"counted_qty": "Số đếm là bắt buộc và phải là số."})
+    if isinstance(value, float):
+        value = str(value)
+    if not isinstance(value, (str, int, Decimal)):
+        raise ValidationError({"counted_qty": "Số đếm phải là số thập phân dạng chuỗi."})
+    try:
+        number = Decimal(value)
+    except InvalidOperation:
+        raise ValidationError({"counted_qty": "Số đếm không hợp lệ."})
+    if not number.is_finite() or number < 0:
+        raise ValidationError({"counted_qty": "Số đếm phải là số hữu hạn, không âm."})
+    if number != number.quantize(Decimal("0.001")):
+        raise ValidationError({"counted_qty": "Số đếm tối đa 3 chữ số thập phân."})
+    return number.quantize(Decimal("0.001"))
+
+
+@transaction.atomic
+def create_stocktake(food_ids, user=None, date=None, note=""):
+    """Mở kiểm kê: khóa food theo id tăng dần và chụp snapshot tồn, giá vốn, stock_version."""
+    if not isinstance(food_ids, list) or not food_ids:
+        raise ValidationError("food_ids phải là danh sách không rỗng.")
+    if any(isinstance(i, bool) or not isinstance(i, int) or i <= 0 for i in food_ids):
+        raise ValidationError("food_ids chỉ gồm id số nguyên dương.")
+    if len(set(food_ids)) != len(food_ids):
+        raise ValidationError("Một thực phẩm chỉ xuất hiện một lần trong phiếu kiểm kê.")
+
+    foods = list(FoodItem.objects.filter(id__in=food_ids).order_by("id").select_for_update())
+    missing = sorted(set(food_ids) - {f.id for f in foods})
+    if missing:
+        raise ValidationError(f"Thực phẩm không tồn tại: {missing}.")
+
+    creator = user if user is not None and getattr(user, "is_authenticated", False) else None
+    st = StockTake.objects.create(
+        status=StockTake.Status.DRAFT, date=date or timezone.localdate(), note=note, created_by=creator,
+    )
+    StockTakeItem.objects.bulk_create([
+        StockTakeItem(
+            stock_take=st, food=food,
+            snapshot_qty=food.quantity, snapshot_cost=food.avg_cost, snapshot_version=food.stock_version,
+            counted_qty=None, variance=Decimal("0"),
+        )
+        for food in foods
+    ])
+    return st
+
+
+@transaction.atomic
+def update_stocktake_item(item_id, counted_qty):
+    """Ghi số đếm cho một dòng nháp. Chưa đổi tồn; variance = đếm − snapshot."""
+    counted = _parse_counted_qty(counted_qty)
+    item = StockTakeItem.objects.select_related("stock_take").select_for_update(of=("self",)).get(id=item_id)
+    if item.stock_take.status != StockTake.Status.DRAFT:
+        raise InventoryConflict("Phiếu kiểm kê đã chốt, không sửa số đếm được.")
+    item.counted_qty = counted
+    item.variance = counted - item.snapshot_qty
+    item.save(update_fields=["counted_qty", "variance"])
+    return item
+
+
+@transaction.atomic
+def post_stocktake(stocktake_id, user=None):
+    """SF31: chốt kiểm kê.
+
+    1. Khóa phiếu (chờ, không nowait); không còn draft → InventoryConflict (409).
+    2. Mọi dòng phải đã đếm (NULL khác 0).
+    3. Khóa food theo id tăng dần; food nào có stock_version khác snapshot → StaleStocktake (409):
+       có nhập/xuất sau khi mở kiểm kê, số đếm cũ không được ghi đè tồn mới → lập lại kiểm kê.
+    4. Dòng có chênh lệch ≠ 0: tồn mới = số đếm, avg_cost giữ nguyên, version + 1, ghi đúng một
+       bút toán ADJUST (giá = giá snapshot). Chênh lệch 0: không ghi sổ, không đổi version.
+    5. posted, posted_by, posted_at. Chênh lệch chỉ là sai khác số liệu, không kết luận gian lận.
+    """
+    st = StockTake.objects.select_for_update(of=("self",)).get(id=stocktake_id)
+    if st.status != StockTake.Status.DRAFT:
+        raise InventoryConflict("Phiếu kiểm kê đã được chốt trước đó.")
+    poster = user if user is not None and getattr(user, "is_authenticated", False) else st.created_by
+
+    items = list(st.items.order_by("id"))
+    if not items:
+        raise ValidationError("Phiếu kiểm kê không có dòng nào.")
+    uncounted = [item.food_id for item in items if item.counted_qty is None]
+    if uncounted:
+        names = ", ".join(FoodItem.objects.filter(id__in=uncounted).order_by("id").values_list("name", flat=True))
+        raise ValidationError(f"Chưa nhập số đếm cho: {names}.")
+
+    foods = {f.id: f for f in FoodItem.objects.filter(id__in=[i.food_id for i in items]).order_by("id").select_for_update()}
+    stale = [foods[i.food_id].name for i in items if foods[i.food_id].stock_version != i.snapshot_version]
+    if stale:
+        raise StaleStocktake(
+            "Tồn kho đã thay đổi sau khi mở kiểm kê (" + ", ".join(stale) + "). Hãy lập lại phiếu kiểm kê."
+        )
+    if poster is None:
+        raise PermissionDenied("Cần người chốt kiểm kê.")
+
+    for item in items:
+        variance = item.counted_qty - item.snapshot_qty
+        if variance == 0:
+            continue
+        food = foods[item.food_id]
+        food.quantity = item.counted_qty
+        food.stock_version += 1
+        food.save(update_fields=["quantity", "stock_version"])
+        StockTransaction.objects.create(
+            stocktake_item=item,
+            food=food,
+            type=StockTransaction.Type.ADJUST,
+            quantity_delta=variance,
+            unit_cost=item.snapshot_cost,
+            value_delta=(variance * item.snapshot_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            date=st.date,
+            created_by=poster,
+        )
+
+    st.status = StockTake.Status.POSTED
+    st.posted_by = poster
+    st.posted_at = timezone.now()
+    st.save(update_fields=["status", "posted_by", "posted_at", "updated_at"])
+    return st
+
+# =========================================================================
 # SF25 contract · SF26 nghiệp vụ: CHỐT XUẤT KHO & CHỐNG ÂM KHO
 # =========================================================================
-class InventoryConflict(ValidationError):
-    """Xung đột trạng thái/tồn kho → view trả 409.
-
-    Kế thừa ValidationError để code và test cũ (bắt ValidationError) vẫn chạy.
-    """
-
-
 @transaction.atomic
 def post_issue(issue_id, user=None):
     """SF25: chốt phiếu xuất theo contract trong architecture.md (mục SF25).
@@ -292,14 +312,6 @@ def post_issue(issue_id, user=None):
             value_delta=-(line.quantity * unit_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
             date=issue.date,
             created_by=actor,
-        )
-        # Tạm giữ để báo cáo SF34 cũ còn chạy; SF31 chuyển báo cáo sang StockTransaction rồi bỏ dòng này.
-        InventoryLedger.objects.create(
-            food=food,
-            transaction_type="OUT",
-            quantity_change=-line.quantity,
-            cost=unit_cost,
-            reference=f"Issue #{issue.id}",
         )
 
     issue.status = Issue.Status.POSTED
