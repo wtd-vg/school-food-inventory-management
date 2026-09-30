@@ -167,7 +167,7 @@ export function DishesPage() {
               { value: 'all', label: 'Tất cả' },
             ]}
           />
-          <SearchField value={search} onValueChange={setSearch} placeholder="Tìm món hoặc nguyên liệu…" />
+          <SearchField value={search} onValueChange={setSearch} placeholder="Tìm món…" />
         </Toolbar>
         {query.loading ? (
           <Skeleton rows={6} />
