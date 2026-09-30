@@ -174,7 +174,7 @@ export function ReceiptsPage() {
           onCreated={(r) => {
             list.reload();
             toast.show(`Đã lưu nháp phiếu nhập #${r.id}.`);
-            updateParams({ tao: null, 'mat-hang': null, phieu: String(r.id) });
+            updateParams({ tao: null, 'mat-hang': null, ncc: null, phieu: String(r.id) });
           }}
         />
       ) : null}
@@ -211,6 +211,7 @@ function CreateReceiptDrawer({
 }) {
   const [params, setParams] = useSearchParams();
   const preset = params.get('mat-hang') ?? '';
+  const presetSupplier = params.get('ncc') ?? '';
   const [supplierId, setSupplierId] = useState('');
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState('');
@@ -220,15 +221,19 @@ function CreateReceiptDrawer({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    // Đã dùng mặt hàng gợi ý từ ngăn kéo Tồn kho thì bỏ khỏi URL.
-    if (preset) {
+    // NCC gợi ý (từ trang Nhà cung cấp): áp dụng khi danh sách đã tải.
+    if (presetSupplier && suppliers.length === 0) return;
+    if (presetSupplier && suppliers.some((x) => String(x.id) === presetSupplier)) setSupplierId(presetSupplier);
+    // Đã dùng mặt hàng / NCC gợi ý thì bỏ khỏi URL.
+    if (preset || presetSupplier) {
       setParams((p) => {
         const n = new URLSearchParams(p);
         n.delete('mat-hang');
+        n.delete('ncc');
         return n;
       }, { replace: true });
     }
-  }, [preset, setParams]);
+  }, [preset, presetSupplier, suppliers, setParams]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
