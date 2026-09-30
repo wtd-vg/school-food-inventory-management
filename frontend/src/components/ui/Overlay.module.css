@@ -87,11 +87,15 @@
   flex: 1;
 }
 
-/* Modal giữa màn hình */
+/* Modal giữa màn hình: luôn trên ngăn kéo (hộp xác nhận mở từ trong ngăn kéo). */
+.backdropTop {
+  z-index: 55;
+}
+
 .modalWrap {
   position: fixed;
   inset: 0;
-  z-index: 51;
+  z-index: 56;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,15 +138,20 @@
 }
 
 /* Toast */
+/* Toast ở giữa phía trên: không che nút chính ở chân ngăn kéo. */
 .toasts {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 60;
+  top: 20px;
+  left: 50%;
+  z-index: 70;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
-  max-width: min(420px, calc(100vw - 32px));
+  width: max-content;
+  max-width: min(480px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .toast {
@@ -176,9 +185,6 @@
   }
 
   .toasts {
-    right: 16px;
-    left: 16px;
-    bottom: calc(var(--tabbar-h) + 12px);
-    max-width: none;
+    top: 68px;
   }
 }
