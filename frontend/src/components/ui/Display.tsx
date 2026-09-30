@@ -42,9 +42,9 @@ export function Segmented<T extends string>({
 export function RouteTabs({ items, label }: { items: { to: string; label: string; end?: boolean }[]; label: string }) {
   return (
     <nav className={styles.scrollX} aria-label={label}>
-      <div className={styles.segmented}>
+      <div className={styles.tabs}>
         {items.map((it) => (
-          <NavLink key={it.to} to={it.to} end={it.end} className={styles.segItem}>
+          <NavLink key={it.to} to={it.to} end={it.end} className={styles.tab}>
             {it.label}
           </NavLink>
         ))}
@@ -112,6 +112,20 @@ export function PageHeader({
       {actions ? <div className={styles.actions}>{actions}</div> : null}
     </header>
   );
+}
+
+/** Dòng tóm tắt dưới tiêu đề (bản vẽ 02: "86 mặt hàng · 2 cần dùng sớm…"); số in đậm bằng <strong>. */
+export function Lead({ children }: { children: ReactNode }) {
+  return <p className={`${styles.lead} num`}>{children}</p>;
+}
+
+/** Hàng công cụ: bộ lọc bên trái, ô tìm/nút bên phải. */
+export function Toolbar({ children }: { children: ReactNode }) {
+  return <div className={styles.toolbar}>{children}</div>;
+}
+
+export function Stack({ children, gap = 'md' }: { children: ReactNode; gap?: 'sm' | 'md' | 'lg' }) {
+  return <div className={`${styles.stack} ${styles[`stack-${gap}`]}`}>{children}</div>;
 }
 
 export function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
