@@ -1,0 +1,186 @@
+/* Bản vẽ 07: cột trái 250px danh sách, phải chi tiết, gap 36. */
+.layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 36px;
+  align-items: start;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.item:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.item[aria-current='true'] {
+  background: var(--surface);
+}
+
+.item[aria-current='true'] .itemName {
+  font-weight: 700;
+}
+
+.itemName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.itemMeta {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.detail {
+  min-width: 0;
+}
+
+.detailInner {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.back {
+  display: none;
+}
+
+.detailHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.name {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.sub {
+  margin-top: 4px;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.detailActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.summary {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.summary strong {
+  font-weight: 700;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 36px;
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.priceList {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+
+.priceRow strong {
+  white-space: nowrap;
+}
+
+.priceDate {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.deliveries {
+  display: flex;
+  flex-direction: column;
+}
+
+.empty {
+  padding: 12px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Hẹp: có chi tiết thì ẩn danh sách, hiện nút quay lại. */
+  .hasDetail .list {
+    display: none;
+  }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .layout:not(.hasDetail) .detail {
+    display: none;
+  }
+
+  .columns {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .item {
+    min-height: 56px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  .list {
+    gap: 8px;
+  }
+}

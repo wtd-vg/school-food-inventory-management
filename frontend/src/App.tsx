@@ -4,7 +4,7 @@ import { RequireAuth } from './auth/RequireAuth';
 import { AppShell } from './components/layout/AppShell';
 import { Skeleton } from './components/ui';
 import { LoginPage } from './features/auth/LoginPage';
-import { ComingSoon, NotFoundPage } from './features/common/Pages';
+import { NotFoundPage } from './features/common/Pages';
 import { InventoryLayout } from './features/inventory/InventoryLayout';
 import { LegacyFrame } from './legacy/LegacyFrame';
 import { CatalogPage } from './features/inventory/CatalogPage';
@@ -13,8 +13,9 @@ import { ReceiptsPage } from './features/inventory/ReceiptsPage';
 import { StockPage } from './features/inventory/StockPage';
 import { StocktakePage } from './features/inventory/StocktakePage';
 import { ReportPage } from './ReportPage';
-import { ClassPage } from './ClassPage';
-import { RecipePage } from './RecipePage';
+import { ClassesPage } from './features/classes/ClassesPage';
+import { DishesPage } from './features/dishes/DishesPage';
+import { SuppliersPage } from './features/suppliers/SuppliersPage';
 
 // Trang kit chỉ có trong bản dev; bản build production loại bỏ hoàn toàn.
 const KitPage = import.meta.env.DEV ? lazy(() => import('./features/dev/KitPage')) : null;
@@ -38,9 +39,9 @@ export function App() {
           <Route path="kiem-ke" element={<StocktakePage />} />
           <Route path="danh-muc" element={<CatalogPage />} />
         </Route>
-        <Route path="mon-an" element={<LegacyFrame page={RecipePage} />} />
-        <Route path="lop-hoc" element={<LegacyFrame page={ClassPage} />} />
-        <Route path="nha-cung-cap/:id?" element={<ComingSoon title="Nhà cung cấp" />} />
+        <Route path="mon-an" element={<DishesPage />} />
+        <Route path="lop-hoc" element={<ClassesPage />} />
+        <Route path="nha-cung-cap/:id?" element={<SuppliersPage />} />
         <Route path="bao-cao" element={<LegacyFrame page={ReportPage} />} />
         {KitPage ? (
           <Route
