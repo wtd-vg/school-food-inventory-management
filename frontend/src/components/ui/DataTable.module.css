@@ -1,0 +1,102 @@
+.wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: var(--table-min, 640px);
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 15px;
+}
+
+.col {
+  width: var(--w, auto);
+}
+
+.table th {
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  height: 52px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table tbody tr:hover td {
+  background: var(--surface-hover);
+}
+
+.right {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.center {
+  text-align: center !important;
+}
+
+.wrapText {
+  white-space: normal !important;
+}
+
+.caption {
+  text-align: left;
+}
+
+/* Ô tên mặt hàng: tên 600 + nhóm 13 muted (bản vẽ Kho hàng) */
+.primaryText {
+  font-weight: 600;
+}
+
+.secondaryText {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.rowButton {
+  display: inline;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--link);
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowButton:hover {
+  color: var(--link-hover);
+}
+
+.cellActions {
+  display: inline-flex;
+  gap: 6px;
+  justify-content: flex-end;
+}

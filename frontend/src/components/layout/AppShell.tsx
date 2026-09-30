@@ -1,0 +1,142 @@
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { roleLabel, useAuth } from '../../auth/AuthContext';
+import { IconBowl, IconLogOut } from '../icons';
+import { useToast } from '../ui';
+import { APP_NAME, NAV_ITEMS, SCHOOL_NAME } from './nav';
+import styles from './AppShell.module.css';
+
+function Brand() {
+  return (
+    <NavLink to="/kho" className={styles.brand} aria-label={`${APP_NAME} – về trang Kho hàng`}>
+      <span className={styles.logo}>
+        <IconBowl size={22} />
+      </span>
+      <span className={styles.brandText}>
+        <span className={styles.brandName}>{APP_NAME}</span>
+        {SCHOOL_NAME ? <span className={styles.schoolName}>{SCHOOL_NAME}</span> : null}
+      </span>
+    </NavLink>
+  );
+}
+
+function UserMenu() {
+  const { user, logout } = useAuth();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const areaRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (areaRef.current && !areaRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  if (!user) return null;
+  const initial = user.username.trim().charAt(0) || '?';
+
+  const onLogout = async () => {
+    setOpen(false);
+    try {
+      await logout();
+    } catch {
+      toast.show('Đăng xuất chưa thành công. Vui lòng thử lại.', 'error');
+    }
+    navigate('/dang-nhap', { replace: true });
+  };
+
+  return (
+    <div className={styles.userArea} ref={areaRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={styles.userButton}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Tài khoản ${user.username}, ${roleLabel(user.role)}`}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className={styles.avatar} aria-hidden="true">
+          {initial}
+        </span>
+        <span className={styles.userText}>
+          <span className={styles.userName}>{user.username}</span>
+          <span className={styles.userRole}>{roleLabel(user.role)}</span>
+        </span>
+      </button>
+      {open ? (
+        <div className={styles.menu} role="menu" aria-label="Tài khoản">
+          <p className={styles.menuHead}>
+            <strong>{user.username}</strong>
+            {roleLabel(user.role)}
+          </p>
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={onLogout} autoFocus>
+            <IconLogOut size={18} />
+            Đăng xuất
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Khung trang (FRONTEND_PROMPT §5): sidebar 232 → chỉ icon (<1280) → tab dưới đáy (<768). */
+export function AppShell() {
+  return (
+    <div className={styles.shell}>
+      <a className={styles.skip} href="#main">
+        Bỏ qua điều hướng
+      </a>
+
+      <aside className={styles.sidebar}>
+        <Brand />
+        <nav className={styles.nav} aria-label="Điều hướng chính">
+          {NAV_ITEMS.map((item) => (
+            <NavLink key={item.to} to={item.to} className={styles.navLink} title={item.label}>
+              <item.icon size={20} className={styles.navIcon} />
+              <span className={styles.navLabel}>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+        <UserMenu />
+      </aside>
+
+      <header className={styles.topbar}>
+        <Brand />
+        <UserMenu />
+      </header>
+
+      <main id="main" className={styles.main} tabIndex={-1}>
+        <div className={styles.content}>
+          <Outlet />
+        </div>
+      </main>
+
+      <nav className={styles.tabbar} aria-label="Điều hướng chính (điện thoại)">
+        {NAV_ITEMS.map((item) => (
+          <NavLink key={item.to} to={item.to} className={styles.tabLink}>
+            <span className={styles.tabIcon}>
+              <item.icon size={22} />
+            </span>
+            {item.short}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  );
+}
