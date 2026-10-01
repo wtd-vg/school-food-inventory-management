@@ -8,7 +8,7 @@ Thứ tự ưu tiên khi mâu thuẫn:
 3. file này;
 4. [architecture.md](architecture.md) (thiết kế);
 5. [thẻ task](outputs/team-6/SchoolFood_HuongDan_Task.md) (yêu cầu);
-6. [Excel checklist](SchoolFood_Checklist_6_ThanhVien.xlsx) (trạng thái nghiệm thu).
+6. [Excel checklist](SchoolFood_Checklist.xlsx) (trạng thái nghiệm thu).
 
 Kế hoạch, hiện trạng, lỗi mở và lộ trình nằm **chỉ** trong [plan_final.md](plan_final.md). Không tạo thêm file kế hoạch/báo cáo song song. Bằng chứng để ở `outputs/team-6/evidence/`, log tạm để ở `.tmp/`.
 
@@ -18,10 +18,10 @@ Quản lý kho thực phẩm và bữa trưa cho **một trường / một kho**
 
 - **Giai đoạn 1 (SF01–SF42):** danh mục, nhập, xuất, kiểm kê, báo cáo, deploy.
 - **Giai đoạn 2 (SF43–SF72):** số suất theo lớp → thực đơn → nhu cầu nguyên liệu → đề xuất mua/giữ hàng → đơn đặt → nhận hàng → xuất cho bếp → đối chiếu/đóng ngày. Kế hoạch chi tiết: [GiaiDoan2_KeHoach.md](outputs/team-6/GiaiDoan2_KeHoach.md).
-- **Vai trò:** Quản lý (mọi nghiệp vụ), Hiệu trưởng (giám sát, quản lý tài khoản). Phụ huynh không có tài khoản, nhận thực đơn qua Zalo ZNS.
+- **Vai trò:** Quản lý (mọi nghiệp vụ), Hiệu trưởng (giám sát, quản lý tài khoản). Phụ huynh không có tài khoản, nhận email thực đơn hôm nay lúc 6h30.
 - **Thực đơn:** cố định theo thứ T2–T6, lặp hằng tuần. Chi tiết: plan_final §1 (R9–R12).
 
-Ngoài phạm vi (không tự thêm): AI, nhiều bữa/khẩu phần, hồ sơ học sinh ngoài họ tên/lớp/SĐT phụ huynh, lô/hạn dùng, quy cách đóng gói, trả/hủy sau xuất.
+Ngoài phạm vi (không tự thêm): AI, nhiều bữa/khẩu phần, hồ sơ học sinh ngoài họ tên/lớp/email phụ huynh, lô/hạn dùng, quy cách đóng gói, trả/hủy sau xuất.
 
 ## 2. Stack và bản đồ code (`dev1@6f0bdc7`)
 
