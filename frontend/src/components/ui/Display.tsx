@@ -230,7 +230,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   );
 }
 
-/** Nhãn "Dữ liệu mẫu" chỉ hiện trong bản dev (FRONTEND_PROMPT §2). */
+/** Nhãn "Dữ liệu mẫu" chỉ hiện trong bản dev (UI_GUIDE.md). */
 export function DevSampleTag() {
   if (!import.meta.env.DEV) return null;
   return (

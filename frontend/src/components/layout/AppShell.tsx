@@ -95,7 +95,7 @@ function UserMenu() {
   );
 }
 
-/** Khung trang (FRONTEND_PROMPT §5): sidebar 232 → chỉ icon (<1280) → tab dưới đáy (<768). */
+/** Khung trang (UI_GUIDE.md): sidebar 232 → chỉ icon (<1280) → tab dưới đáy (<768). */
 export function AppShell() {
   return (
     <div className={styles.shell}>

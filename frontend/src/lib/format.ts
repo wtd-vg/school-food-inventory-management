@@ -1,5 +1,5 @@
 /**
- * Định dạng hiển thị vi-VN (FRONTEND_PROMPT §4). Nhận chuỗi Decimal từ API, không đổi sang float.
+ * Định dạng hiển thị vi-VN (UI_GUIDE.md). Nhận chuỗi Decimal từ API, không đổi sang float.
  *   Khối lượng: 338,8 kg · Tiền: 29.500 đ · Ngày: 01/10/2026 hoặc 1/10 · Số âm dùng dấu trừ thật (−).
  */
 import { parseDec, round, type Dec } from './decimal';
