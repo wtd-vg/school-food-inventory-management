@@ -8,7 +8,7 @@ from_stock = min(need, allocatable), from_pending = min(phần còn lại, đơn
 from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 
 from django.db import transaction
-from django.db.models import Max, Sum
+from django.db.models import Max, Q, Sum
 from django.utils import timezone
 
 from .http_input import Conflict, InputError
@@ -40,11 +40,15 @@ def allocatable(food, day_id):
 
 
 def pending_lines(food_id, day):
-    """Dòng đơn đang chờ về kịp ngày ăn, kèm lượng còn giữ được cho ngày này (theo expected_date rồi id)."""
-    lines = (PurchaseOrderLine.objects.filter(
-        food_id=food_id, order__status__in=[PurchaseOrder.Status.APPROVED, PurchaseOrder.Status.SENT],
-        order__expected_date__lte=day.date)
-        .select_related("order").order_by("order__expected_date", "order_id", "id"))
+    """Dòng đơn đang chờ về kịp ngày ăn, kèm lượng còn giữ được cho ngày này (theo expected_date rồi id).
+
+    Đơn đã duyệt/đã gửi; thêm đơn NHÁP tạo từ đề xuất của chính ngày này — duyệt lại đề xuất bỏ giữ mọi phần của
+    ngày rồi giữ lại từ đầu, nếu bỏ qua đơn nháp đó thì bản mới đề xuất mua trùng lượng đã đặt.
+    """
+    lines = (PurchaseOrderLine.objects.filter(food_id=food_id, order__expected_date__lte=day.date)
+             .filter(Q(order__status__in=[PurchaseOrder.Status.APPROVED, PurchaseOrder.Status.SENT])
+                     | Q(order__status=PurchaseOrder.Status.DRAFT, order__demand_revision__lunch_day=day))
+             .select_related("order").order_by("order__expected_date", "order_id", "id"))
     result = []
     for line in lines:
         held_elsewhere = (Alloc.objects.filter(po_line=line, status=Alloc.Status.RESERVED)
