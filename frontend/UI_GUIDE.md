@@ -14,10 +14,10 @@ src/
     ui/          Button, Field, Display (Badge, Callout, Segmented, RouteTabs, PageHeader, Lead, Toolbar…), DataTable (thành thẻ trên điện thoại),
                  Overlay (Drawer, Modal, ConfirmDialog, Toast), Chart (BarChart, CostBar)
     layout/      AppShell (sidebar 232 → chỉ icon <1280 → tab dưới <768), nav.ts
-  features/      mỗi nghiệp vụ một thư mục: auth, inventory, dishes, menus, classes, meals, students, notifications,
+  features/      mỗi nghiệp vụ một thư mục: auth, lunch (G2), inventory, dishes, menus, classes, meals, students, notifications,
                  suppliers, reports, users, audit, public (trang không cần đăng nhập), common (tab con DishTabs/ClassTabs)
   services/      kiểu dữ liệu + lời gọi API khớp JSON backend: inventory, catalog, menus, meals, students,
-                 notifications, administration (tài khoản + nhật ký)
+                 notifications, administration (tài khoản + nhật ký), lunch (G2: nhu cầu, đơn đặt, chi phí, đóng ngày)
 ```
 
 ## Bản đồ màn hình
@@ -25,6 +25,11 @@ src/
 | Route | Màn | Ghi chú |
 | --- | --- | --- |
 | `/dang-nhap` | Đăng nhập | |
+| `/bua-trua` | Hôm nay (SF69) | `?ngay=`; dòng thời gian Suất → Thực đơn → Nhu cầu → Đơn → Nhận → Xuất → Đóng ngày theo trạng thái thật, chi phí ngày/suất, đóng/mở lại ngày (ghi chú khi chênh lệch) |
+| `/bua-trua/nhu-cau` | Nhu cầu & đề xuất (SF57/59) | `?ngay=`, `?du-phong=1` (tính lại kèm dự phòng có lý do), `?tao-don=1` (tạo đơn từ đề xuất); cảnh báo `is_outdated`, `shortages`; lịch sử bản tính |
+| `/bua-trua/don-dat` | Đơn đặt (SF63) | `?trang-thai=`, `?don=ID` (duyệt/gửi/huỷ/đóng phần còn lại, gửi kèm version, 409 → tải lại), `?tao=1` (đơn tay) |
+| `/bua-trua/nhan-hang` | Nhận hàng theo đơn (SF65) | `?don=ID`; lượng ≤ phần còn chờ + đơn giá → phiếu nhập nháp → chốt |
+| `/bua-trua/xuat-bep` | Xuất bếp theo ngày | `?ngay=`; tạo phiếu xuất theo nhu cầu còn thiếu → chốt; cần/đã xuất/chênh lệch |
 | `/kho` | Tồn kho | `?mat-hang=ID` mở ngăn kéo lịch sử giao dịch |
 | `/kho/phieu-nhap` | Phiếu nhập | `?tao=1` tạo nháp (`&mat-hang=`, `&ncc=` điền sẵn), `?phieu=ID` xem/chốt |
 | `/kho/phieu-xuat` | Phiếu xuất | như phiếu nhập |
@@ -37,7 +42,7 @@ src/
 | `/lop-hoc/hoc-sinh` | Học sinh (FE-06) | `?lop=ID`, `?tao=1`, `?sua=ID`, `?nhap-csv=1` (kiểm tra dry-run rồi mới lưu) |
 | `/lop-hoc/thu-thuc-don` | Thư thực đơn (FE-07) | `?ngay=`; nhật ký gửi, Gửi lại (202), Gửi thử, nhãn "Chế độ thử" khi `EMAIL_MODE=dry_run` |
 | `/nha-cung-cap/:id` | Nhà cung cấp | danh sách trái / chi tiết phải |
-| `/bao-cao` | Báo cáo kho | `?thang=YYYY-MM`, `?muc=tong-quan`, `ton-kho` hoặc `so-giao-dich`, Xuất CSV |
+| `/bao-cao` | Báo cáo kho | `?thang=YYYY-MM`, `?muc=tong-quan`, `ton-kho`, `so-giao-dich` hoặc `theo-ngay` (SF70: chi phí ngày, suất thực tế, chi phí/suất, biểu đồ), Xuất CSV |
 | `/tai-khoan` | Tài khoản (FE-02) | chỉ Hiệu trưởng; `?tao=1`, `?sua=ID`; khoá/mở khoá, đặt lại mật khẩu |
 | `/nhat-ky` | Nhật ký (FE-03) | chỉ Hiệu trưởng; `?actor=&action=&entity_type=&from=&to=&page=`, `?chi-tiet=ID` (trước → sau) |
 | `/huy-nhan/:token` | Huỷ nhận email (công khai) | ngoài khung đăng nhập; chỉ gọi API khi bấm "Xác nhận huỷ nhận" |
@@ -56,6 +61,7 @@ Trang `/_kit` (chỉ bản dev) liệt kê mọi component. Mở nó trước kh
 - **Vai trò** (`/api/auth/me/`): `manager` = **Quản lý** (làm mọi nghiệp vụ, `can_write`), `principal` = **Hiệu trưởng** (xem tất cả, `can_manage_users`, `can_view_audit`). Không có tài khoản phụ huynh.
 - **Quyền**: nút ghi nghiệp vụ dùng `<Button write>`. Hiệu trưởng thấy nút bị khoá kèm icon ổ khoá và tooltip "Hiệu trưởng chỉ xem"; **không ẩn nút**. Ô nhập của màn ghi (số suất…) cũng `disabled` khi `!canWrite`. Màn chỉ dành cho Hiệu trưởng bọc `RequirePermission need="users" | "audit"`; mục điều hướng có `requires` chỉ hiện khi đủ quyền (trên điện thoại nằm trong menu tài khoản). Backend vẫn là nơi chặn (403).
 - **Lỗi API**: `ApiError` có `status`, `message` (câu tiếng Việt) và `errors` theo ô (`{"lines[0].planned": "…"}`); dùng `fieldsOf(err)` để gắn lỗi vào đúng ô. 401 giữa phiên → về `/dang-nhap` kèm "Phiên đăng nhập đã hết hạn". Đăng nhập: 401 sai thông tin, 403 chưa phân quyền, 429 tạm khoá (giữ câu của backend/nginx). 409 (version cũ) → báo và tải lại dữ liệu mới nhất.
+- **Sau thao tác ghi**: `useApiQuery.reload()` giữ dữ liệu cũ trên màn trong lúc tải. Thao tác tiếp theo phụ thuộc version/id mới (duyệt bản vừa tính, gửi đơn vừa duyệt) phải dùng kết quả API vừa trả hoặc khoá nút tới khi tải xong; nếu không sẽ gửi version cũ → 409.
 - **Dữ liệu cá nhân**: email phụ huynh chỉ hiện dạng che (`email_hint`); email đầy đủ chỉ lấy khi Quản lý bấm "Hiện email" (có ghi nhật ký). Không ghi email vào URL, toast hay log.
 - **Truy cập**: thẻ thật (`button`, `a`, `label`+`input`, `table`+`th scope`); không `onClick` trên `div`. Bảng dùng `DataTable` (caption ẩn, cuộn ngang khi hẹp). Hộp thoại dùng `Drawer`/`Modal` (focus trap, Esc, trả focus).
 - **Trạng thái**: mọi danh sách có đủ tải (`Skeleton`), rỗng (`EmptyState` + nút chính), lỗi (`ErrorState` + Thử lại). Thao tác xong báo bằng `useToast().show(...)`.

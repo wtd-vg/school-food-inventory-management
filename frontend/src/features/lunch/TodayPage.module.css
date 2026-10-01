@@ -1,0 +1,137 @@
+.cost {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.costItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+
+.costLabel {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.costValue {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+/* Dòng thời gian 7 bước: vạch dọc nối các điểm đánh số. Trạng thái luôn kèm chữ (Badge), màu chỉ bổ trợ. */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 14px;
+  padding-bottom: 18px;
+}
+
+.step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: 32px;
+  bottom: 0;
+  left: 15px;
+  width: 2px;
+  background: var(--line);
+}
+
+.marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.done .marker {
+  border-color: var(--ok);
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.doing .marker {
+  border-color: var(--info);
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.warn .marker {
+  border-color: var(--warn);
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.skip .marker {
+  border-style: dashed;
+}
+
+.stepBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.stepHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.stepDetail {
+  color: var(--ink-soft);
+}
+
+.stepLink {
+  align-self: flex-start;
+  font-weight: 600;
+  color: var(--link);
+}
+
+.stepLink:hover {
+  color: var(--link-hover);
+}
+
+@media (max-width: 1023px) {
+  .cost {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .costValue {
+    font-size: 20px;
+  }
+}
