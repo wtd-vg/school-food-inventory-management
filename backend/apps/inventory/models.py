@@ -478,3 +478,78 @@ class RecipeComponent(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["dish", "food"], name="recipe_component_unique_food"),
         ]
+
+
+# =========================================================================
+# BE-02 (PR1 security): VAI TRÒ, KHÓA ĐĂNG NHẬP SAI, NHẬT KÝ THAO TÁC
+# Vai trò là Django Group "manager" (Quản lý) và "principal" (Hiệu trưởng), tạo ở migration 0014.
+# =========================================================================
+ROLE_MANAGER = "manager"
+ROLE_PRINCIPAL = "principal"
+
+
+class LoginThrottle(models.Model):
+    """Đếm số lần đăng nhập sai theo tên đăng nhập hoặc theo IP (logic đếm/khóa ở BE-10).
+
+    Không lưu username/IP rõ: key_hash = HMAC-SHA256 dùng SECRET_KEY (xem `hash_key`), để bảng này
+    lộ ra cũng không suy ngược được (băm trần IPv4 dò hết được vì chỉ có 2^32 giá trị).
+    """
+
+    class Scope(models.TextChoices):
+        USER = "user", "Tên đăng nhập"
+        IP = "ip", "Địa chỉ IP"
+
+    scope = models.CharField(max_length=10, choices=Scope.choices)
+    key_hash = models.CharField(max_length=64)
+    failures = models.PositiveIntegerField(default=0)
+    window_start = models.DateTimeField()
+    locked_until = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["scope", "key_hash"], name="login_throttle_unique_key"),
+            models.CheckConstraint(condition=models.Q(scope__in=["user", "ip"]), name="login_throttle_scope_valid"),
+            models.CheckConstraint(condition=models.Q(key_hash__regex=r"^[0-9a-f]{64}$"), name="login_throttle_key_hash_hex"),
+        ]
+
+    @staticmethod
+    def hash_key(scope, value):
+        from django.utils.crypto import salted_hmac
+
+        normalized = f"{scope}:{str(value).strip().lower()}"
+        return salted_hmac("schoolfood.login-throttle", normalized, algorithm="sha256").hexdigest()
+
+
+class AuditLog(models.Model):
+    """Nhật ký thao tác, chỉ thêm (trigger chặn UPDATE/DELETE ở 0014). Ghi qua audit.record (BE-15).
+
+    actor PROTECT: tài khoản chỉ được khóa, không xóa; SET_NULL sẽ phải UPDATE dòng nhật ký và bị trigger chặn.
+    changes không bao giờ chứa mật khẩu, token hay email phụ huynh rõ.
+    """
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="audit_logs", null=True, blank=True,
+    )
+    actor_username = models.CharField(max_length=150, blank=True, default="")
+    action = models.CharField(max_length=40)
+    entity_type = models.CharField(max_length=40, blank=True, default="")
+    entity_id = models.CharField(max_length=40, blank=True, default="")
+    summary = models.CharField(max_length=255, blank=True, default="")
+    changes = models.JSONField(default=dict, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=200, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["created_at"], name="audit_log_created_idx"),
+            models.Index(fields=["actor", "created_at"], name="audit_log_actor_idx"),
+            models.Index(fields=["entity_type", "entity_id"], name="audit_log_entity_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(condition=~models.Q(action=""), name="audit_log_action_not_empty"),
+        ]
+
+    def __str__(self):
+        return f"{self.created_at:%Y-%m-%d %H:%M} {self.actor_username or '-'} {self.action}"
