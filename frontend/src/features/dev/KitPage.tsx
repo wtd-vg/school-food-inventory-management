@@ -61,7 +61,7 @@ export default function KitPage() {
           <Button size="sm">Nhỏ</Button>
           <Button busy>Đang lưu</Button>
           <Button disabled>Vô hiệu</Button>
-          <Button write>Ghi (viewer bị khoá)</Button>
+          <Button write>Ghi (Hiệu trưởng bị khoá)</Button>
           <IconButton label="In tem">
             <IconPrinter size={20} />
           </IconButton>

@@ -1,7 +1,9 @@
 /**
- * Phiên đăng nhập: /api/auth/me/ quyết định vai trò manager | viewer.
- * fetchApi phát sự kiện `session-expired` khi gặp 401; nếu đang đăng nhập thì
- * quay về màn đăng nhập với thông báo "Phiên làm việc đã hết".
+ * Phiên đăng nhập (FE-01): /api/auth/me/ trả vai trò manager (Quản lý) | principal (Hiệu trưởng) cùng
+ * can_write, can_manage_users, can_view_audit. Superuser được backend trả role manager và đủ quyền.
+ * fetchApi phát sự kiện `session-expired` khi gặp 401; nếu đang đăng nhập thì quay về /dang-nhap
+ * với thông báo "Phiên đăng nhập đã hết hạn" (phiên 30 phút không thao tác hoặc quá 12 giờ).
+ * Đăng nhập: 401 sai thông tin, 403 chưa phân quyền, 429 tạm khóa (giữ câu của backend/nginx).
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ApiError, api } from '../lib/http';
@@ -13,7 +15,7 @@ type Status = 'loading' | 'anon' | 'authed';
 type AuthValue = {
   status: Status;
   user: User | null;
-  /** Viewer chỉ xem: nút ghi hiện ở trạng thái khoá. */
+  /** Chỉ Quản lý ghi nghiệp vụ; Hiệu trưởng thấy nút ghi bị khoá ("Hiệu trưởng chỉ xem"). */
   canWrite: boolean;
   canManageUsers: boolean;
   canViewAudit: boolean;
@@ -73,10 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('authed');
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
-        throw new ApiError(403, 'Tài khoản chưa được phân quyền', err.errors);
+        // Backend: "Tài khoản chưa được phân quyền…"; 403 không có JSON là lỗi CSRF (cookie cũ).
+        const fromBackend = Boolean(err.body && typeof err.body === 'object' && 'message' in err.body);
+        throw new ApiError(
+          403,
+          fromBackend ? err.message : 'Phiên bảo mật của trang đã cũ. Tải lại trang rồi đăng nhập lại.',
+          err.errors,
+          err.body,
+        );
       }
       if (err instanceof ApiError && err.status === 401) {
-        throw new ApiError(401, 'Tên đăng nhập hoặc mật khẩu không đúng.');
+        throw new ApiError(401, 'Tên đăng nhập hoặc mật khẩu không đúng.', err.errors, err.body);
       }
       throw err;
     }
