@@ -72,6 +72,19 @@ EXPECTED_PERMS = {
     "notifications": ("inventory", ["GET"], []),
     "notifications_send": ("inventory", [], ["POST"]),
     "notifications_test": ("inventory", [], ["POST"]),
+    "lunch_day_demand": ("inventory", ["GET"], []),
+    "lunch_day_demand_calculate": ("inventory", [], ["POST"]),
+    "demand_approve": ("inventory", [], ["POST"]),
+    "purchase_orders": ("inventory", ["GET"], ["POST"]),
+    "purchase_order_from_demand": ("inventory", [], ["POST"]),
+    "purchase_order_detail": ("inventory", ["GET"], []),
+    "purchase_order_receipts": ("inventory", [], ["POST"]),
+    "purchase_order_action": ("inventory", [], ["POST"]),
+    "lunch_day_issue": ("inventory", [], ["POST"]),
+    "lunch_day_cost": ("inventory", ["GET"], []),
+    "lunch_day_close": ("inventory", [], ["POST"]),
+    "lunch_day_reopen_close": ("inventory", [], ["POST"]),
+    "reports_daily": ("inventory", ["GET"], []),
 }
 SAMPLE_ARGS = {"int": "999999", "str": "2026-10-06"}
 
