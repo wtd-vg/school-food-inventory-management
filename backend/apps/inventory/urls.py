@@ -11,6 +11,7 @@ from apps.inventory import (
     meal_views,
     menu_views,
     notification_views,
+    photo_views,
     purchase_views,
     recipe_views,
     student_views,
@@ -112,4 +113,9 @@ urlpatterns = [
     path("lunch-days/<str:date_str>/close/", day_views.lunch_day_close, name="lunch_day_close"),
     path("lunch-days/<str:date_str>/reopen-close/", day_views.lunch_day_reopen_close, name="lunch_day_reopen_close"),
     path("reports/daily/", day_views.reports_daily, name="reports_daily"),
+
+    # SF73 ảnh suất ăn thực tế
+    path("lunch-days/<str:date_str>/photos/", photo_views.lunch_day_photos, name="lunch_day_photos"),
+    path("meal-photos/<int:photo_id>/", photo_views.meal_photo_detail, name="meal_photo_detail"),
+    path("meal-photos/<int:photo_id>/image/", photo_views.meal_photo_image, name="meal_photo_image"),
 ]

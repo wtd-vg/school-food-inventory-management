@@ -13,7 +13,7 @@ export type NavItem = {
 
 /** Điều hướng chính (gom theo công việc, đã duyệt 01/10/2026). */
 export const NAV_ITEMS: NavItem[] = [
-  { to: '/bua-trua', label: 'Bữa trưa', short: 'Bữa trưa', icon: IconSun },
+  { to: '/bua-trua', label: 'Hôm nay', short: 'Hôm nay', icon: IconSun },
   { to: '/kho', label: 'Kho hàng', short: 'Kho', icon: IconBox },
   { to: '/mon-an', label: 'Món & công thức', short: 'Món ăn', icon: IconBowl },
   { to: '/lop-hoc', label: 'Lớp học', short: 'Lớp', icon: IconUsers },

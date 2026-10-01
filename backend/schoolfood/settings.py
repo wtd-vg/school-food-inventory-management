@@ -109,6 +109,10 @@ USE_TZ = True
 STATIC_URL = "static/"
 # collectstatic gom file admin vào đây; nginx phục vụ ở production.
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# SF73: ảnh suất ăn lưu trên ổ server (volume media ở compose.prod.yaml). Không có URL công khai:
+# ảnh chỉ tải qua API cần đăng nhập, nên không cấu hình nginx phục vụ thư mục này.
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media")))
+MEDIA_URL = "/media/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Cấu hình CSRF và Session cho M2 (SF13)

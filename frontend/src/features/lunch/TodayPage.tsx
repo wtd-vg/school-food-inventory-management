@@ -3,6 +3,7 @@
  * Mỗi bước đọc trạng thái thật từ API (số suất, thực đơn, nhu cầu, đơn đặt, phiếu xuất, chi phí); không lưu gì riêng.
  * Chi phí ngày = giá trị xuất cho bếp của ngày; chi phí/suất chia cho số suất THỰC TẾ đã chốt.
  * Đóng ngày cần chốt thực tế và mọi phiếu xuất đã chốt; có chênh lệch (đã xuất − cần) thì phải ghi chú. Mở lại cần lý do.
+ * SF73: ảnh suất ăn thực tế của ngày (MealPhotos). Đây là trang mở đầu sau đăng nhập.
  */
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -30,6 +31,7 @@ import { mealsApi, type MealDay } from '../../services/meals';
 import { menusApi, type MenuDay } from '../../services/menus';
 import { LunchTabs } from '../common/FeatureLayouts';
 import s from '../inventory/shared.module.css';
+import { MealPhotos } from './MealPhotos';
 import { ReasonModal } from './OrdersPage';
 import { DayPicker, isZero, useLunchDate } from './shared';
 import styles from './TodayPage.module.css';
@@ -257,6 +259,8 @@ export function TodayPage() {
                 </li>
               ))}
             </ol>
+
+            <MealPhotos date={date} dayOpen={Boolean(meal.data && meal.data.status !== 'not_open')} closed={Boolean(c?.closed)} />
 
             {c?.close ? (
               <KeyValueList

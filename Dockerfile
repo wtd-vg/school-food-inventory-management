@@ -42,8 +42,9 @@ RUN DEBUG=False SECRET_KEY=build-only-not-secret-build-only-not-secret-build-onl
     FIELD_ENCRYPTION_KEYS=build-only-not-a-key CONTACT_HASH_KEY=build-only-not-a-key \
     python manage.py collectstatic --noinput
 
-# Không chạy tiến trình web bằng root.
-RUN useradd --system --no-create-home app
+# Không chạy tiến trình web bằng root. /app/media (ảnh suất ăn, SF73) thuộc user app để volume mới tạo
+# kế thừa đúng quyền ghi.
+RUN useradd --system --no-create-home app && mkdir -p /app/media && chown app /app/media
 USER app
 
 # Số worker lấy từ WEB_CONCURRENCY (gunicorn tự đọc biến này).
