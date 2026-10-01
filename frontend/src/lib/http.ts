@@ -6,9 +6,13 @@ import { fetchApi } from '../utils/api';
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  errors: Record<string, string>;
+  body: unknown;
+  constructor(status: number, message: string, errors: Record<string, string> = {}, body?: unknown) {
     super(message);
     this.status = status;
+    this.errors = errors;
+    this.body = body;
   }
 }
 
@@ -78,24 +82,32 @@ export async function apiRequest<T>(url: string, method: Method = 'GET', body?: 
   try {
     response = await fetchApi(url, {
       method,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body instanceof FormData ? body : body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.');
   }
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new ApiError(response.status, errorMessageFrom(response.status, data));
+    const raw = data && typeof data === 'object' ? (data as { errors?: unknown }).errors : null;
+    const errors = raw && typeof raw === 'object' && !Array.isArray(raw)
+      ? Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, flatten(value)])) : {};
+    throw new ApiError(response.status, errorMessageFrom(response.status, data), errors, data);
   }
   return data as T;
 }
 
 export const api = {
+  delete: <T>(url: string) => apiRequest<T>(url, 'DELETE'),
   get: <T>(url: string) => apiRequest<T>(url, 'GET'),
   post: <T>(url: string, body?: unknown) => apiRequest<T>(url, 'POST', body ?? {}),
   patch: <T>(url: string, body: unknown) => apiRequest<T>(url, 'PATCH', body),
   put: <T>(url: string, body: unknown) => apiRequest<T>(url, 'PUT', body),
 };
+
+export function fieldsOf(err: unknown): Record<string, string> {
+  return err instanceof ApiError ? err.errors : {};
+}
 
 export function messageOf(err: unknown): string {
   if (err instanceof ApiError) return err.message;

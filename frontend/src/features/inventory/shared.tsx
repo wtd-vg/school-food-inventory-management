@@ -8,9 +8,11 @@ import type { DocStatus, Food } from '../../services/inventory';
 import styles from './shared.module.css';
 
 /** Ngăn kéo điều khiển bằng query string (?phieu=12, ?tao=1) để có thể chia sẻ link và bấm Back. */
-export function useQueryParam(name: string): [string | null, (value: string | null) => void] {
+export function useQueryParam(name: string, fallback: string): [string, (value: string | null) => void];
+export function useQueryParam(name: string): [string | null, (value: string | null) => void];
+export function useQueryParam(name: string, fallback?: string): [string | null, (value: string | null) => void] {
   const [params, setParams] = useSearchParams();
-  const value = params.get(name);
+  const value = params.get(name) ?? fallback ?? null;
   const set = useCallback(
     (next: string | null) => {
       setParams(

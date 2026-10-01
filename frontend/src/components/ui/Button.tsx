@@ -3,7 +3,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { IconLock } from '../icons';
 import styles from './Button.module.css';
 
-export const VIEWER_TITLE = 'Tài khoản chỉ xem';
+export const VIEWER_TITLE = 'Hiệu trưởng chỉ xem';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
