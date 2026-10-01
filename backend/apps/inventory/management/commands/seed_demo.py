@@ -1,3 +1,12 @@
+"""Dữ liệu mẫu cho máy local/demo. KHÔNG chạy trên production (từ chối khi DEBUG=False).
+
+    python manage.py seed_demo                       # 3 danh mục
+    python manage.py seed_demo --scenario security   # BE-18: + 2 tài khoản, 3 lớp, 3 món, thực đơn, 5 học sinh
+
+--scenario security đọc mật khẩu demo từ DEMO_MANAGER_PASSWORD / DEMO_PRINCIPAL_PASSWORD (không có mặc định,
+không in ra), chỉ chạy với EMAIL_MODE=dry_run. Chạy lại không nhân bản và không đổi mật khẩu tài khoản đã có.
+"""
+
 import os
 from datetime import timedelta
 from decimal import Decimal
@@ -5,6 +14,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
@@ -30,7 +41,14 @@ class Command(BaseCommand):
                 password = os.environ.get(variable, '')
                 if not password.strip():
                     raise CommandError(f'Thiếu biến môi trường {variable}; hãy đặt mật khẩu demo trước khi chạy.')
+                try:
+                    validate_password(password, user=get_user_model()(username=f'demo_{role}'))
+                except ValidationError as exc:
+                    # Thông báo của validator không chứa mật khẩu.
+                    raise CommandError(f'{variable} chưa đạt yêu cầu mật khẩu: ' + ' '.join(exc.messages)) from None
                 passwords[role] = password
+            if settings.EMAIL_MODE != 'dry_run':
+                raise CommandError('Demo security chỉ chạy với EMAIL_MODE=dry_run để không gửi thư thật.')
 
         # 1. Danh sách các danh mục cố định
         danh_muc_mau = [
@@ -65,7 +83,8 @@ class Command(BaseCommand):
             if created:
                 user.set_password(password)
                 user.save(update_fields=['password'])
-                user.groups.set([group])
+            if not user.groups.filter(pk=group.pk).exists():
+                user.groups.add(group)
             users[role] = user
 
         classes = {}
