@@ -9,3 +9,6 @@ gunicorn==23.0.0
 
 # Mã hóa email phụ huynh (BE-04, đã duyệt 01/10/2026).
 cryptography==46.0.3
+
+# SF73: đọc, xoay, nén ảnh suất ăn thực tế (đã duyệt 01/10/2026).
+Pillow==12.0.0
