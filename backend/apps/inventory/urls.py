@@ -93,6 +93,7 @@ urlpatterns = [
     path("notifications/", notification_views.notifications, name="notifications"),
     path("notifications/send/", notification_views.notifications_send, name="notifications_send"),
     path("notifications/test/", notification_views.notifications_test, name="notifications_test"),
+    path("notifications/preview/", notification_views.notifications_preview, name="notifications_preview"),
     path("unsubscribe/<str:token>/", notification_views.unsubscribe, name="unsubscribe"),
 
     # Đợt 2 — SF58 nhu cầu & đề xuất

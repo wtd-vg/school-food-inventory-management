@@ -2,14 +2,16 @@
  * SF73: ảnh suất ăn thực tế của một ngày ăn (photo_views.py). Quản lý chụp/tải tối đa 5 ảnh; Hiệu trưởng chỉ xem.
  * Ảnh được thu nhỏ ≤ 1600px và nén JPEG ngay trên trình duyệt trước khi gửi (đỡ tốn 4G); máy chủ đọc lại,
  * xoay đúng chiều và bỏ EXIF/GPS. Ảnh chỉ xem được khi đã đăng nhập.
+ * SF74: "Gửi thư cho phụ huynh" — thư thực đơn kèm các ảnh này (không tự gửi 06:30, Quản lý bấm mới gửi).
  */
 import { useRef, useState } from 'react';
-import { IconCamera, IconTrash } from '../../components/icons';
+import { IconCamera, IconSend, IconTrash } from '../../components/icons';
 import { Button, Callout, ConfirmDialog, EmptyState, Modal, SectionTitle, Stack, TextField, useToast } from '../../components/ui';
 import { formatDate, formatDateTime, todayISO } from '../../lib/format';
 import { messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { lunchApi, type MealPhoto } from '../../services/lunch';
+import { SendMenuDrawer } from '../notifications/SendMenuDrawer';
 import s from '../inventory/shared.module.css';
 import styles from './MealPhotos.module.css';
 
@@ -52,6 +54,7 @@ export function MealPhotos({ date, dayOpen, closed }: { date: string; dayOpen: b
   const [viewing, setViewing] = useState<MealPhoto | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [pickError, setPickError] = useState('');
+  const [sending, setSending] = useState(false);
   const toast = useToast();
 
   const list = photos.data?.results ?? [];
@@ -86,17 +89,22 @@ export function MealPhotos({ date, dayOpen, closed }: { date: string; dayOpen: b
         <SectionTitle id="anh-suat-an">
           Ảnh suất ăn thực tế ({list.length}/{max})
         </SectionTitle>
-        <Button
-          write
-          variant="secondary"
-          icon={<IconCamera size={18} />}
-          busy={preparing}
-          disabled={Boolean(blocked) || photos.loading}
-          title={blocked || undefined}
-          onClick={() => inputRef.current?.click()}
-        >
-          Chụp / tải ảnh
-        </Button>
+        <div className={styles.actions}>
+          <Button
+            write
+            variant="secondary"
+            icon={<IconCamera size={18} />}
+            busy={preparing}
+            disabled={Boolean(blocked) || photos.loading}
+            title={blocked || undefined}
+            onClick={() => inputRef.current?.click()}
+          >
+            Chụp / tải ảnh
+          </Button>
+          <Button write icon={<IconSend size={18} />} disabled={future} title={future ? 'Ngày chưa tới, chưa gửi thư được.' : undefined} onClick={() => setSending(true)}>
+            Gửi thư cho phụ huynh
+          </Button>
+        </div>
         <input
           ref={inputRef}
           className={styles.fileInput}
@@ -150,6 +158,16 @@ export function MealPhotos({ date, dayOpen, closed }: { date: string; dayOpen: b
             setPending(null);
             toast.show('Đã lưu ảnh suất ăn.');
             photos.reload();
+          }}
+        />
+      ) : null}
+      {sending ? (
+        <SendMenuDrawer
+          date={date}
+          onClose={() => setSending(false)}
+          onSent={(message) => {
+            setSending(false);
+            toast.show(message);
           }}
         />
       ) : null}
