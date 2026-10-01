@@ -4,7 +4,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { IconBowl } from '../../components/icons';
 import { APP_NAME, SCHOOL_NAME } from '../../components/layout/nav';
 import { Button, Callout, TextField } from '../../components/ui';
-import { messageOf } from '../../lib/http';
+import { fieldsOf, messageOf } from '../../lib/http';
 import styles from './LoginPage.module.css';
 
 export function LoginPage() {
@@ -35,6 +35,7 @@ export function LoginPage() {
       await login(username.trim(), password);
       navigate(from, { replace: true });
     } catch (err) {
+      setErrors(fieldsOf(err));
       setFormError(messageOf(err));
       setPassword('');
     } finally {
@@ -64,7 +65,7 @@ export function LoginPage() {
 
         {sessionExpired ? (
           <Callout tone="info" role="status">
-            Phiên làm việc đã hết. Vui lòng đăng nhập lại.
+            Phiên đăng nhập đã hết hạn
           </Callout>
         ) : null}
         {formError ? (
@@ -111,7 +112,7 @@ export function LoginPage() {
           </Button>
         </form>
 
-        <p className={styles.foot}>Quên mật khẩu? Liên hệ quản lý kho của trường.</p>
+        <p className={styles.foot}>Quên mật khẩu? Liên hệ Hiệu trưởng.</p>
       </section>
     </main>
   );

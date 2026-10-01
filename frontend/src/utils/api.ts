@@ -16,7 +16,7 @@ export function getCookie(name: string): string {
 export async function fetchApi(url: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers || {});
   headers.set('X-CSRFToken', getCookie('csrftoken'));
-  headers.set('Content-Type', 'application/json');
+  if (!(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
 
   const response = await fetch(url, {
     ...options,
