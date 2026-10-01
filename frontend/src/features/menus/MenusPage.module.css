@@ -1,0 +1,9 @@
+.week { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.day { padding: 16px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
+.day h2 { font-size: 15px; margin: 0 0 8px; }
+.day ul { padding-left: 16px; }
+.weekend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); }
+.choices { border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px; display: grid; gap: 12px; }
+.error { color: var(--danger); font-size: 13px; }
+@media (max-width: 1023px) { .week { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 599px) { .week { grid-template-columns: 1fr; } }

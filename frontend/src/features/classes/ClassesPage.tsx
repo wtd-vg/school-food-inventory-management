@@ -26,7 +26,7 @@ import {
   type Column,
 } from '../../components/ui';
 import { formatNumber } from '../../lib/format';
-import { messageOf } from '../../lib/http';
+import { fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { catalogApi, ENROLLED_MAX, type SchoolClass } from '../../services/catalog';
 import { focusFirstInvalid, useQueryParam, useUpdateParams } from '../inventory/shared';
@@ -65,6 +65,7 @@ export function ClassesPage() {
       ),
     },
     { key: 'code', header: 'Mã', width: '18%', cell: (c) => <span className={tableText.muted}>{c.code}</span> },
+    { key: 'grade', header: 'Khối', cell: (c) => c.grade ?? '—' },
     { key: 'enrolled', header: 'Sĩ số', width: '16%', align: 'right', cell: (c) => <span className={tableText.strong}>{c.enrolled}</span> },
     { key: 'status', header: 'Trạng thái', width: '18%', cell: (c) => (c.is_active ? <Badge tone="ok">Đang học</Badge> : <Badge>Ngừng</Badge>) },
     {
@@ -157,6 +158,7 @@ function ClassForm({ schoolClass, onClose, onSaved }: { schoolClass: SchoolClass
   const [code, setCode] = useState(schoolClass?.code ?? '');
   const [name, setName] = useState(schoolClass?.name ?? '');
   const [enrolled, setEnrolled] = useState(schoolClass ? String(schoolClass.enrolled) : '');
+  const [grade, setGrade] = useState(schoolClass?.grade == null ? '' : String(schoolClass.grade));
   const [active, setActive] = useState(schoolClass?.is_active ?? true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
@@ -168,6 +170,7 @@ function ClassForm({ schoolClass, onClose, onSaved }: { schoolClass: SchoolClass
     const next: Record<string, string> = {};
     if (!schoolClass && !code.trim()) next.code = 'Hãy nhập mã lớp.';
     if (!name.trim()) next.name = 'Hãy nhập tên lớp.';
+    if (grade.trim() && (!/^\d+$/.test(grade.trim()) || Number(grade) < 1 || Number(grade) > 12)) next.grade = 'Khối là số nguyên từ 1 đến 12.';
     const n = enrolled.trim();
     if (!/^\d+$/.test(n)) next.enrolled = 'Sĩ số là số nguyên, ví dụ 30.';
     else if (Number(n) > ENROLLED_MAX) next.enrolled = `Sĩ số tối đa ${ENROLLED_MAX}.`;
@@ -178,12 +181,13 @@ function ClassForm({ schoolClass, onClose, onSaved }: { schoolClass: SchoolClass
     }
     setBusy(true);
     try {
-      if (schoolClass) await catalogApi.updateClass(schoolClass.id, { name: name.trim(), enrolled: Number(n), is_active: active });
-      else await catalogApi.createClass({ code: code.trim(), name: name.trim(), enrolled: Number(n) });
+      if (schoolClass) await catalogApi.updateClass(schoolClass.id, { name: name.trim(), grade: grade.trim() ? Number(grade) : null, enrolled: Number(n), is_active: active });
+      else await catalogApi.createClass({ code: code.trim(), name: name.trim(), grade: grade.trim() ? Number(grade) : null, enrolled: Number(n) });
       toast.show(schoolClass ? `Đã lưu lớp ${name.trim()}.` : `Đã thêm lớp ${name.trim()}.`);
       onSaved();
     } catch (err) {
       setFormError(messageOf(err));
+      setErrors(fieldsOf(err));
     } finally {
       setBusy(false);
     }
@@ -223,6 +227,7 @@ function ClassForm({ schoolClass, onClose, onSaved }: { schoolClass: SchoolClass
           maxLength={32}
         />
         <TextField label="Tên lớp" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} required maxLength={120} placeholder="Lớp 2A1" />
+        <TextField label="Khối" inputMode="numeric" value={grade} onChange={e => setGrade(e.target.value)} error={errors.grade} hint="Từ 1 đến 12, có thể để trống." />
         <TextField
           label="Sĩ số"
           inputMode="numeric"

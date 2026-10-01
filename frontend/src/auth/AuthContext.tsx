@@ -6,8 +6,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ApiError, api } from '../lib/http';
 
-export type Role = 'manager' | 'viewer';
-export type User = { id: number; username: string; role: Role };
+export type Role = 'manager' | 'principal';
+export type User = { id: number; username: string; full_name: string; role: Role; can_write: boolean; can_manage_users: boolean; can_view_audit: boolean };
 type Status = 'loading' | 'anon' | 'authed';
 
 type AuthValue = {
@@ -15,6 +15,8 @@ type AuthValue = {
   user: User | null;
   /** Viewer chỉ xem: nút ghi hiện ở trạng thái khoá. */
   canWrite: boolean;
+  canManageUsers: boolean;
+  canViewAudit: boolean;
   /** true khi vừa bị đá ra vì hết phiên; màn đăng nhập hiện thông báo. */
   sessionExpired: boolean;
   login: (username: string, password: string) => Promise<void>;
@@ -34,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .get<User>('/api/auth/me/')
       .then((me) => {
         if (cancelled) return;
-        setUser({ id: me.id, username: me.username, role: me.role });
+        setUser(me);
         setStatus('authed');
       })
       .catch(() => {
@@ -66,10 +68,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await api.get('/api/auth/csrf/');
     try {
       const res = await api.post<{ user: User }>('/api/auth/login/', { username, password });
-      setUser({ id: res.user.id, username: res.user.username, role: res.user.role });
+      setUser(res.user);
       setSessionExpired(false);
       setStatus('authed');
     } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        throw new ApiError(403, 'Tài khoản chưa được phân quyền', err.errors);
+      }
       if (err instanceof ApiError && err.status === 401) {
         throw new ApiError(401, 'Tên đăng nhập hoặc mật khẩu không đúng.');
       }
@@ -91,7 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       status,
       user,
-      canWrite: user?.role === 'manager',
+      canWrite: user?.can_write ?? false,
+      canManageUsers: user?.can_manage_users ?? false,
+      canViewAudit: user?.can_view_audit ?? false,
       sessionExpired,
       login,
       logout,
@@ -109,5 +116,5 @@ export function useAuth(): AuthValue {
 }
 
 export function roleLabel(role: Role | undefined): string {
-  return role === 'manager' ? 'Quản lý kho' : 'Chỉ xem';
+  return role === 'manager' ? 'Quản lý' : role === 'principal' ? 'Hiệu trưởng' : 'Chưa phân quyền';
 }
