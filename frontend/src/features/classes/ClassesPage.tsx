@@ -29,6 +29,7 @@ import { formatNumber } from '../../lib/format';
 import { fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { catalogApi, ENROLLED_MAX, type SchoolClass } from '../../services/catalog';
+import { ClassTabs } from '../common/FeatureLayouts';
 import { focusFirstInvalid, useQueryParam, useUpdateParams } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
 import styles from './ClassesPage.module.css';
@@ -92,6 +93,7 @@ export function ClassesPage() {
           </Button>
         }
       />
+      <ClassTabs />
       <Stack gap="lg">
         {query.data ? (
           <section className={styles.stat} aria-label="Tổng sĩ số">

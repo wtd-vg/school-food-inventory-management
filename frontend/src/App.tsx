@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { RequireAuth } from './auth/RequireAuth';
+import { RequirePermission } from './auth/RequirePermission';
 import { AppShell } from './components/layout/AppShell';
 import { Skeleton } from './components/ui';
 import { LoginPage } from './features/auth/LoginPage';
@@ -15,6 +16,13 @@ import { ReportsPage } from './features/reports/ReportsPage';
 import { ClassesPage } from './features/classes/ClassesPage';
 import { DishesPage } from './features/dishes/DishesPage';
 import { SuppliersPage } from './features/suppliers/SuppliersPage';
+import { AuditPage } from './features/audit/AuditPage';
+import { MealCountsPage } from './features/meals/MealCountsPage';
+import { MenusPage } from './features/menus/MenusPage';
+import { NotificationsPage } from './features/notifications/NotificationsPage';
+import { UnsubscribePage } from './features/public/UnsubscribePage';
+import { StudentsPage } from './features/students/StudentsPage';
+import { UsersPage } from './features/users/UsersPage';
 
 // Trang kit chỉ có trong bản dev; bản build production loại bỏ hoàn toàn.
 const KitPage = import.meta.env.DEV ? lazy(() => import('./features/dev/KitPage')) : null;
@@ -23,6 +31,8 @@ export function App() {
   return (
     <Routes>
       <Route path="/dang-nhap" element={<LoginPage />} />
+      {/* Công khai: phụ huynh huỷ nhận email thực đơn (FE-07), không cần đăng nhập. */}
+      <Route path="/huy-nhan/:token" element={<UnsubscribePage />} />
       <Route
         element={
           <RequireAuth>
@@ -39,9 +49,29 @@ export function App() {
           <Route path="danh-muc" element={<CatalogPage />} />
         </Route>
         <Route path="mon-an" element={<DishesPage />} />
+        <Route path="mon-an/thuc-don" element={<MenusPage />} />
         <Route path="lop-hoc" element={<ClassesPage />} />
+        <Route path="lop-hoc/so-suat" element={<MealCountsPage />} />
+        <Route path="lop-hoc/hoc-sinh" element={<StudentsPage />} />
+        <Route path="lop-hoc/thu-thuc-don" element={<NotificationsPage />} />
         <Route path="nha-cung-cap/:id?" element={<SuppliersPage />} />
         <Route path="bao-cao" element={<ReportsPage />} />
+        <Route
+          path="tai-khoan"
+          element={
+            <RequirePermission need="users">
+              <UsersPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="nhat-ky"
+          element={
+            <RequirePermission need="audit">
+              <AuditPage />
+            </RequirePermission>
+          }
+        />
         {KitPage ? (
           <Route
             path="_kit"
