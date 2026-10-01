@@ -2,20 +2,25 @@
 
 import os
 import secrets
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 from io import StringIO
 from unittest.mock import patch
 
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from .crypto_fields import decrypt
-from .models import Category, Dish, FoodItem, MenuVersion, MenuVersionItem, ParentContact, RecipeComponent, SchoolClass, Student
+from .models import (
+    Category, DayMenuSnapshot, Dish, FoodItem, MenuVersion, MenuVersionItem, NotificationLog, ParentContact,
+    RecipeComponent, SchoolClass, Student,
+)
 
 
 @override_settings(DEBUG=True, EMAIL_MODE='dry_run')
@@ -116,3 +121,60 @@ class SeedDemoTests(TestCase):
         for model in (Category, get_user_model(), SchoolClass, FoodItem, Dish, RecipeComponent,
                       MenuVersion, MenuVersionItem, Student, ParentContact):
             self.assertEqual(model.objects.count(), 0)
+
+    def test_mat_khau_yeu_bi_tu_choi_khong_lo_mat_khau(self):
+        for weak in ('ngan', '1234567890', 'demo_manager1'):
+            with self.subTest(weak=weak), patch.dict(os.environ, {'DEMO_MANAGER_PASSWORD': weak}):
+                with self.assertRaises(CommandError) as caught:
+                    self.seed(scenario='security')
+                self.assertIn('DEMO_MANAGER_PASSWORD', str(caught.exception))
+                self.assertNotIn(weak, str(caught.exception))
+                self.assertEqual(get_user_model().objects.count(), 0)
+                self.assertEqual(Category.objects.count(), 0)
+
+    @override_settings(EMAIL_MODE='smtp')
+    def test_tu_choi_khi_email_mode_smtp(self):
+        with self.assertRaisesMessage(CommandError, 'EMAIL_MODE=dry_run'):
+            self.seed(scenario='security')
+        self.assertEqual(Student.objects.count(), 0)
+
+    def test_tai_khoan_da_co_giu_mat_khau_va_duoc_gan_vai_tro(self):
+        user = get_user_model().objects.create_user('demo_manager', password='mat-khau-cu-dai-hon-10')
+        self.seed(scenario='security')
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('mat-khau-cu-dai-hon-10'))
+        self.assertEqual(list(user.groups.values_list('name', flat=True)), ['manager'])
+        self.assertTrue(Group.objects.filter(name='principal', user__username='demo_principal').exists())
+
+
+@override_settings(DEBUG=True, EMAIL_MODE='dry_run', TIME_ZONE='Asia/Ho_Chi_Minh')
+class SendMenuPreviewTests(TestCase):
+    """BE-17: npm run ec2:send-menu-dry = send_daily_menu --preview, không ghi nhật ký/bản chụp."""
+
+    def setUp(self):
+        self.enterContext(patch.dict(os.environ, {
+            'DEMO_MANAGER_PASSWORD': secrets.token_urlsafe(24),
+            'DEMO_PRINCIPAL_PASSWORD': secrets.token_urlsafe(24),
+        }))
+        self.enterContext(override_settings(
+            FIELD_ENCRYPTION_KEYS=Fernet.generate_key().decode(), CONTACT_HASH_KEY=secrets.token_hex(32),
+        ))
+        call_command('seed_demo', scenario='security', stdout=StringIO())
+
+    def test_preview_dem_nguoi_nhan_nhung_khong_ghi_gi(self):
+        version = MenuVersion.objects.get()
+        ngay = version.effective_from + timedelta(days=(7 - version.effective_from.weekday()) % 7)  # thứ Hai
+        bay_gio = datetime.combine(ngay, datetime.min.time(), ZoneInfo('Asia/Ho_Chi_Minh')).replace(hour=6, minute=0)
+        output = StringIO()
+        with patch('django.utils.timezone.now', return_value=bay_gio):
+            call_command('send_daily_menu', '--preview', stdout=output)
+        self.assertIn(ngay.isoformat(), output.getvalue())
+        self.assertIn('dry_run=5', output.getvalue())
+        self.assertFalse(NotificationLog.objects.exists())
+        self.assertFalse(DayMenuSnapshot.objects.exists())
+
+    def test_preview_ngay_chu_nhat_skipped(self):
+        output = StringIO()
+        call_command('send_daily_menu', '--preview', '--date', date(2026, 10, 4).isoformat(), stdout=output)
+        self.assertIn('skipped=1', output.getvalue())
+        self.assertFalse(NotificationLog.objects.exists())
