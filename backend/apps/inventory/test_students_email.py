@@ -649,6 +649,15 @@ class HocSinhEmailTests(CsrfClientMixin, TestCase):
         self.assertFalse(NotificationLog.objects.exists())
         self.assertTrue(AuditLog.objects.filter(action="email_test").exists())
 
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend", EMAIL_HOST_USER="", EMAIL_HOST_PASSWORD="")
+    def test_gui_thu_chua_cau_hinh_gmail_tra_409_ro_rang(self):
+        self.quan_ly.email = "quanly@example.test"
+        self.quan_ly.save(update_fields=["email"])
+        self.client = self.csrf_client(self.quan_ly)
+        response = self.call(self.client, "POST", "/api/notifications/test/", {"date": "2026-10-01"})
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("EMAIL_HOST_USER", response.json()["message"])
+
     def test_gui_thu_tai_khoan_chua_co_email_tra_400(self):
         self.gui("POST", "/api/notifications/test/", {}, status=400)
         self.assertEqual(len(mail.outbox), 0)

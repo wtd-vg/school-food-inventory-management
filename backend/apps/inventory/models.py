@@ -908,3 +908,29 @@ class LunchDayClose(models.Model):
             models.CheckConstraint(condition=models.Q(reopened_at__isnull=True) | ~models.Q(reopen_reason=""),
                                    name="lunch_day_reopen_close_needs_reason"),
         ]
+
+
+# =========================================================================
+# SF73: ẢNH SUẤT ĂN THỰC TẾ (01/10/2026)
+# =========================================================================
+MAX_MEAL_PHOTOS_PER_DAY = 5
+
+
+class MealPhoto(models.Model):
+    """Ảnh suất ăn thực tế của một ngày ăn. Quản lý tải, tối đa 5 ảnh/ngày; Hiệu trưởng chỉ xem.
+
+    File lưu trên ổ server (MEDIA_ROOT), đã nén lại JPEG ≤ 1600px và bỏ EXIF (vị trí GPS). Không công khai:
+    chỉ tải qua API cần đăng nhập.
+    """
+
+    lunch_day = models.ForeignKey(LunchDay, on_delete=models.PROTECT, related_name="photos")
+    image = models.FileField(upload_to="meal_photos/", max_length=200)
+    note = models.CharField(max_length=200, blank=True, default="")
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    size = models.PositiveIntegerField()
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="meal_photos")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["lunch_day_id", "id"]

@@ -11,7 +11,7 @@ export function LoginPage() {
   const { status, login, sessionExpired } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? '/kho';
+  const from = (location.state as { from?: string } | null)?.from ?? '/bua-trua';
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

@@ -85,6 +85,9 @@ EXPECTED_PERMS = {
     "lunch_day_close": ("inventory", [], ["POST"]),
     "lunch_day_reopen_close": ("inventory", [], ["POST"]),
     "reports_daily": ("inventory", ["GET"], []),
+    "lunch_day_photos": ("inventory", ["GET"], ["POST"]),
+    "meal_photo_detail": ("inventory", [], ["DELETE"]),
+    "meal_photo_image": ("inventory", ["GET"], []),
 }
 SAMPLE_ARGS = {"int": "999999", "str": "2026-10-06"}
 

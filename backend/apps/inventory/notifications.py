@@ -9,6 +9,8 @@ send_daily_menu(d):
 5. EMAIL_MODE=dry_run chỉ ghi log. smtp: một kết nối cho cả đợt, mỗi người một thư riêng; lỗi đăng nhập
    SMTP dừng cả đợt; chạm EMAIL_DAILY_LIMIT thì dừng. Không gửi bên trong transaction DB.
 Thông báo lỗi lưu trong log không chứa địa chỉ email.
+Email đuôi .invalid (RFC 2606, dùng cho dữ liệu mẫu seed_sample) không bao giờ được gửi qua SMTP: ghi skipped
+để không bị trả thư làm hỏng uy tín tài khoản Gmail gửi.
 """
 
 import logging
@@ -28,6 +30,11 @@ log = logging.getLogger(__name__)
 SUMMARY = "*"
 LOCK_KEY = 4_200_108  # pg_advisory_lock: BE-08 gửi email thực đơn
 Status = NotificationLog.Status
+SAMPLE_EMAIL_SUFFIX = ".invalid"  # RFC 2606: tên miền không bao giờ nhận thư thật.
+
+
+def is_sample_email(email):
+    return email.lower().endswith(SAMPLE_EMAIL_SUFFIX)
 
 
 def recipients():
@@ -112,6 +119,8 @@ def _send(d):
                 entry.status, entry.error = Status.FAILED, aborted
             elif dry_run:
                 entry.status, entry.error = Status.DRY_RUN, ""
+            elif is_sample_email(group["email"]):
+                entry.status, entry.error = Status.SKIPPED, "Email dữ liệu mẫu (.invalid): không gửi."
             elif sent_today >= settings.EMAIL_DAILY_LIMIT:
                 entry.status, entry.error = Status.FAILED, f"Vượt hạn mức {settings.EMAIL_DAILY_LIMIT} thư/ngày."
             else:
@@ -127,13 +136,19 @@ def _send(d):
                 except (smtplib.SMTPException, OSError) as exc:
                     entry.status, entry.error = Status.FAILED, _safe_error(exc, group["email"])
             entry.save(update_fields=["status", "error", "attempts", "student_count", "updated_at"])
-            stats[{"sent": "sent", "dry_run": "dry_run"}.get(entry.status, "failed")] += 1
+            stats[{"sent": "sent", "dry_run": "dry_run", "skipped": "skipped"}.get(entry.status, "failed")] += 1
     finally:
         if smtp is not None:
             smtp.close()
-    final = Status.DRY_RUN if dry_run else (Status.FAILED if aborted or stats["failed"] else Status.SENT)
-    _summary(d, final, count=len(groups),
-             error=aborted or (f"{stats['failed']} thư lỗi, bấm Gửi lại để thử lại." if stats["failed"] else ""))
+    if dry_run:
+        final, note = Status.DRY_RUN, ""
+    elif aborted or stats["failed"]:
+        final, note = Status.FAILED, aborted or f"{stats['failed']} thư lỗi, bấm Gửi lại để thử lại."
+    elif stats["skipped"] and not (stats["sent"] or stats["already"]):
+        final, note = Status.SKIPPED, "Chỉ có email dữ liệu mẫu (.invalid): không gửi thư nào."
+    else:
+        final, note = Status.SENT, ""
+    _summary(d, final, count=len(groups), error=note)
     return stats
 
 
