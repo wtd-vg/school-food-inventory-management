@@ -1,0 +1,39 @@
+Kịch bản Playwright FE đợt 1, 2026-10-01 — commit nền 3b4f22a, Vite dev + Django runserver (DB PG17 riêng, seed security).
+OK [1280] Quản lý đăng nhập
+OK [1280] Mở ngày 02/10
+OK [1280] 31 suất > sĩ số 30 bị chặn ở ô
+OK [1280] Lưu số suất (ô trống ≠ 0)
+OK [1280] Chốt dự kiến 88 suất
+OK [1280] Tab cũ lưu → 409 + tải lại
+OK [1280] Mở lại có lý do
+OK [1280] Xem thực đơn tuần
+OK [1280] Quản lý hiện email đầy đủ
+OK [1280] CSV dry-run báo 1 dòng lỗi, nút Lưu khoá
+OK [1280] CSV hợp lệ lưu 2 học sinh
+OK [1280] Gửi lại → 202
+OK [1280] Gửi thử tới email của mình
+OK [1280] Hiệu trưởng đăng nhập
+OK [1280] Hiệu trưởng: nút ghi + Hiện email khoá, tooltip="Hiệu trưởng chỉ xem"
+OK [1280] Hiệu trưởng: ô số suất khoá
+OK [1280] Hiệu trưởng xem /tai-khoan
+OK [1280] Hiệu trưởng xem nhật ký + ngăn kéo chi tiết
+OK [1280] Quản lý mở /nhat-ky → không có quyền
+OK [1280] Quản lý không thấy mục Nhật ký trong điều hướng
+OK [375] Quản lý đăng nhập
+OK [375] Xem thực đơn tuần
+OK [375] Quản lý hiện email đầy đủ
+OK [375] CSV dry-run báo 1 dòng lỗi, nút Lưu khoá
+OK [375] CSV hợp lệ lưu 2 học sinh
+OK [375] Gửi lại → 202
+OK [375] Gửi thử tới email của mình
+OK [375] Hiệu trưởng đăng nhập
+OK [375] Hiệu trưởng: nút ghi + Hiện email khoá, tooltip="Hiệu trưởng chỉ xem"
+OK [375] Hiệu trưởng: ô số suất khoá
+OK [375] Hiệu trưởng xem /tai-khoan
+OK [375] Hiệu trưởng xem nhật ký + ngăn kéo chi tiết
+OK [375] Quản lý mở /nhat-ky → không có quyền
+OK [375] Quản lý không thấy mục Nhật ký trong điều hướng
+OK [1280] 401 giữa phiên → /dang-nhap + "Phiên đăng nhập đã hết hạn"
+OK [1280] Đăng nhập sai nhiều lần → 429 "tạm khóa"
+OK [1280] Trang công khai huỷ nhận: bấm xác nhận → 200
+OK [375] Trang công khai huỷ nhận: bấm xác nhận → 200

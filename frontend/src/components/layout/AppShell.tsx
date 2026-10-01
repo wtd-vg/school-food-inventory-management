@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { roleLabel, useAuth } from '../../auth/AuthContext';
 import { IconBowl, IconLogOut } from '../icons';
 import { useToast } from '../ui';
-import { APP_NAME, NAV_ITEMS, SCHOOL_NAME } from './nav';
+import { APP_NAME, NAV_ITEMS, SCHOOL_NAME, type NavItem } from './nav';
 import styles from './AppShell.module.css';
 
 function Brand() {
@@ -20,8 +20,20 @@ function Brand() {
   );
 }
 
+/** Mục điều hướng theo quyền: Tài khoản/Nhật ký chỉ hiện với Hiệu trưởng (FE-02/03). */
+function useNavItems(): { main: NavItem[]; admin: NavItem[] } {
+  const { canManageUsers, canViewAudit } = useAuth();
+  const allowed = (item: NavItem) =>
+    !item.requires || (item.requires === 'users' ? canManageUsers : canViewAudit);
+  return {
+    main: NAV_ITEMS.filter((item) => !item.requires),
+    admin: NAV_ITEMS.filter((item) => item.requires && allowed(item)),
+  };
+}
+
 function UserMenu() {
   const { user, logout } = useAuth();
+  const { admin } = useNavItems();
   const toast = useToast();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -85,6 +97,12 @@ function UserMenu() {
             <strong>{user.username}</strong>
             {roleLabel(user.role)}
           </p>
+          {admin.map((item) => (
+            <NavLink key={item.to} to={item.to} role="menuitem" className={styles.menuItem} onClick={() => setOpen(false)}>
+              <item.icon size={18} />
+              {item.label}
+            </NavLink>
+          ))}
           <button type="button" role="menuitem" className={styles.menuItem} onClick={onLogout} autoFocus>
             <IconLogOut size={18} />
             Đăng xuất
@@ -97,6 +115,7 @@ function UserMenu() {
 
 /** Khung trang (UI_GUIDE.md): sidebar 232 → chỉ icon (<1280) → tab dưới đáy (<768). */
 export function AppShell() {
+  const { main, admin } = useNavItems();
   return (
     <div className={styles.shell}>
       <a className={styles.skip} href="#main">
@@ -106,7 +125,7 @@ export function AppShell() {
       <aside className={styles.sidebar}>
         <Brand />
         <nav className={styles.nav} aria-label="Điều hướng chính">
-          {NAV_ITEMS.map((item) => (
+          {[...main, ...admin].map((item) => (
             <NavLink key={item.to} to={item.to} className={styles.navLink} title={item.label}>
               <item.icon size={20} className={styles.navIcon} />
               <span className={styles.navLabel}>{item.label}</span>
@@ -128,7 +147,8 @@ export function AppShell() {
       </main>
 
       <nav className={styles.tabbar} aria-label="Điều hướng chính (điện thoại)">
-        {NAV_ITEMS.map((item) => (
+        {/* Thanh tab điện thoại chỉ giữ 5 mục nghiệp vụ; Tài khoản/Nhật ký nằm trong menu tài khoản. */}
+        {main.map((item) => (
           <NavLink key={item.to} to={item.to} className={styles.tabLink}>
             <span className={styles.tabIcon}>
               <item.icon size={22} />
