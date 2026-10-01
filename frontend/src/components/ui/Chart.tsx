@@ -1,5 +1,5 @@
 /**
- * Biểu đồ tự vẽ bằng CSS (FRONTEND_PROMPT §6, không thư viện): cột theo ngày và thanh cơ cấu chi phí.
+ * Biểu đồ tự vẽ bằng CSS (UI_GUIDE.md, không thư viện): cột theo ngày và thanh cơ cấu chi phí.
  * Chiều cao/độ rộng truyền qua CSS custom property. Mỗi cột là một mục danh sách có nhãn đầy đủ,
  * focus được bằng bàn phím và hiện tooltip; trình đọc màn hình đọc được từng giá trị.
  */

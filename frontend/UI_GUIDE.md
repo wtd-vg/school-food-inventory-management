@@ -1,6 +1,6 @@
 # Hướng dẫn giao diện SchoolFood
 
-Dành cho thành viên và agent khi thêm hoặc sửa màn hình. Nguồn thiết kế: `design/FRONTEND_PROMPT.md` và `design/reference/*` (bản "Bếp Nhà Trường"). Quyết định áp dụng (duyệt 01/10/2026): dùng **đúng** token, font, component và khung trang; **bố cục từng màn** thiết kế lại cho hợp dữ liệu thật; tên hiển thị là **SchoolFood**.
+Dành cho thành viên và agent khi thêm hoặc sửa màn hình. Nguồn thiết kế: các file mẫu `design/*.html` (bản "Bếp Nhà Trường"). Quyết định áp dụng (duyệt 01/10/2026): dùng **đúng** token, font, component và khung trang; **bố cục từng màn** thiết kế lại cho hợp dữ liệu thật; tên hiển thị là **SchoolFood**.
 
 ## Cấu trúc
 

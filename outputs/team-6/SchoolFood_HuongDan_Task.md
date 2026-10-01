@@ -1,3 +1,5 @@
+> Cập nhật 29/09/2026: SF01–SF42 bên dưới giữ làm thẻ công việc giai đoạn nền, không phải xác nhận trạng thái code hiện tại. Giai đoạn bữa trưa dùng SF43–SF72 ở cuối tài liệu và [kế hoạch G2](GiaiDoan2_KeHoach.md). Tiến độ xem Excel; hiện trạng code xem [README](../../README.md). Các mô tả tạo mới phải đối chiếu code trước khi thực hiện.
+
 # SchoolFood hướng dẫn từng task
 
 Tra theo mã SF trong checklist  |  TV1 leader và TV2 đến TV6
@@ -39,7 +41,7 @@ Lệnh test chung: docker compose exec backend python manage.py test. Lệnh bui
 
 Người làm TV1 | Reviewer TV6 | Cần xong trước: Không
 
-File cần mở: README.md; compose.yaml; task_on_progress.md
+File cần mở: README.md; compose.yaml; plan_final.md
 
 1. Điền tên TV1–TV6 vào Excel. Cùng team đọc phạm vi bản local và thống nhất mỗi người làm một task đang mở.
 
@@ -151,7 +153,7 @@ Bằng chứng: Ảnh trang + kết quả lệnh + 3 câu giải thích của ch
 
 Người làm TV1 | Reviewer TV6 | Cần xong trước: SF01, SF02, SF03, SF04, SF05, SF06
 
-File cần mở: architecture.md; task_on_progress.md
+File cần mở: architecture.md; plan_final.md
 
 1. Cùng TV2/TV3 đọc contract Category ở sổ tay chung; ghi id, code, name và response results.
 
@@ -689,7 +691,7 @@ Bằng chứng: Video đếm 77 từ 80 và thông báo snapshot cũ.
 
 Người làm TV6 | Reviewer TV1 | Cần xong trước: SF32, SF33, SF34, SF35
 
-File cần mở: Checklist Nghiem thu; task_on_progress.md
+File cần mở: Checklist Nghiem thu; plan_final.md
 
 1. Chạy trọn bộ dữ liệu mẫu từ đầu trên local: catalog → nhập → xuất → kiểm kê → báo cáo.
 
@@ -814,3 +816,427 @@ File cần mở: README.md phần deploy khi mở M6; checklist
 Kiểm tra: AC21–AC22 và smoke toàn luồng; TV1 xác nhận bàn giao.
 
 Bằng chứng: Biên bản demo, phiên bản, vị trí backup bảo mật; không password.
+
+## Giai đoạn 2 — SF43–SF72
+
+Quy tắc chung: đọc CLAUDE.md và plan_final.md, trình kế hoạch và được duyệt trước sửa. Mọi task mới chưa nghiệm thu. Điều kiện G2.0 áp dụng G2.3–5. JSON mẫu giúp FE làm song song nhưng nghiệm thu phải qua API thật.
+
+### SF43 Chốt dữ liệu lớp và suất trưa
+
+Mốc G2.1 | Người làm TV1 | Reviewer TV6 | Cần xong trước: kế hoạch G2 được duyệt.
+
+Phạm vi file: `architecture.md; backend/apps/inventory/models.py; migrations mới`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Model lớp, ngày ăn, suất dự kiến/thực tế; unique(lớp, ngày); lịch sử chốt và phiên bản.
+- [ ] Tự kiểm tra: Lớp 30 học sinh: chặn -1 và 31 suất; null khác 0; đổi sĩ số không sửa ngày đã chốt.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Lớp 30 học sinh: chặn -1 và 31 suất; null khác 0; đổi sĩ số không sửa ngày đã chốt.
+
+### SF44 API lớp học
+
+Mốc G2.1 | Người làm TV2 | Reviewer TV4 | Cần xong trước: SF43.
+
+Phạm vi file: `backend/apps/inventory/class_views.py (mới); urls.py`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Tạo, sửa, ngừng dùng lớp; sĩ số nguyên không âm; bảo vệ lớp đã có lịch sử.
+- [ ] Tự kiểm tra: Manager tạo/sửa được; viewer chỉ đọc; mã trùng bị từ chối; lớp ngừng dùng vẫn còn lịch sử.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Manager tạo/sửa được; viewer chỉ đọc; mã trùng bị từ chối; lớp ngừng dùng vẫn còn lịch sử.
+
+### SF45 Giao diện lớp học
+
+Mốc G2.1 | Người làm TV3 | Reviewer TV5 | Cần xong trước: SF44.
+
+Phạm vi file: `frontend/src/ClassPage.tsx (mới); App.tsx`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Danh sách, tạo/sửa lớp và ngừng dùng; tải/rỗng/lỗi; nối API thật.
+- [ ] Tự kiểm tra: Tạo lớp, reload vẫn còn; viewer không có thao tác ghi; lỗi API hiện đúng trường.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Tạo lớp, reload vẫn còn; viewer không có thao tác ghi; lỗi API hiện đúng trường.
+
+### SF46 API suất ăn theo ngày
+
+Mốc G2.1 | Người làm TV4 | Reviewer TV2 | Cần xong trước: SF43, SF44.
+
+Phạm vi file: `backend/apps/inventory/meal_views.py; meal_services.py (mới); urls.py`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Nhập dự kiến/thực tế; chốt và mở lại có lý do; lưu sĩ số tại thời điểm chốt; suất nhân viên riêng.
+- [ ] Tự kiểm tra: Lớp thiếu dữ liệu chặn chốt; không ghi trùng lớp/ngày; cập nhật phiên bản cũ trả 409.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Lớp thiếu dữ liệu chặn chốt; không ghi trùng lớp/ngày; cập nhật phiên bản cũ trả 409.
+
+### SF47 Bảng nhập suất toàn trường
+
+Mốc G2.1 | Người làm TV5 | Reviewer TV3 | Cần xong trước: SF45, SF46.
+
+Phạm vi file: `frontend/src/MealCountPage.tsx (mới); App.tsx phối hợp TV3`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Chọn ngày, nhập từng lớp và suất nhân viên; tổng hợp; chốt/mở lại; cảnh báo còn thiếu.
+- [ ] Tự kiểm tra: 30 + 28 + 5 = 63; lớp thứ ba chưa nhập phải báo thiếu; nhập 0 có ý nghĩa nghỉ ăn.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: 30 + 28 + 5 = 63; lớp thứ ba chưa nhập phải báo thiếu; nhập 0 có ý nghĩa nghỉ ăn.
+
+### SF48 Nghiệm thu lớp và suất
+
+Mốc G2.1 | Người làm TV6 | Reviewer TV1 | Cần xong trước: SF45, SF46, SF47.
+
+Phạm vi file: `backend/apps/inventory/test_meals.py (mới); outputs/team-6/evidence/`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Fixture nhiều lớp và kiểm thử toàn luồng, quyền, cập nhật đồng thời; ghi actual và bằng chứng.
+- [ ] Tự kiểm tra: AC23–AC27 đạt trên máy thứ hai; không tự đánh dấu reviewer của task khác.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: AC23–AC27 đạt trên máy thứ hai; không tự đánh dấu reviewer của task khác.
+
+### SF49 Chốt model món và thực đơn
+
+Mốc G2.2 | Người làm TV1 | Reviewer TV6 | Cần xong trước: SF48.
+
+Phạm vi file: `architecture.md; models.py; migrations mới`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Dish, RecipeLine, LunchPlan và bản chụp định lượng khi chốt; một bữa trưa/ngày.
+- [ ] Tự kiểm tra: Cùng food không lặp trong một công thức; dữ liệu lịch sử độc lập công thức hiện hành.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Cùng food không lặp trong một công thức; dữ liệu lịch sử độc lập công thức hiện hành.
+
+### SF50 API món và công thức
+
+Mốc G2.2 | Người làm TV2 | Reviewer TV4 | Cần xong trước: SF49.
+
+Phạm vi file: `backend/apps/inventory/recipe_services.py; recipe_views.py (mới); urls.py`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Định lượng trước sơ chế cho một suất; Decimal; đơn vị chuẩn kg/l/cái và quy đổi g/ml.
+- [ ] Tự kiểm tra: 60 g thành 0.060 kg; chặn số âm, NaN, đơn vị sai và kg sang lít không có quy tắc.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: 60 g thành 0.060 kg; chặn số âm, NaN, đơn vị sai và kg sang lít không có quy tắc.
+
+### SF51 Giao diện công thức món
+
+Mốc G2.2 | Người làm TV3 | Reviewer TV5 | Cần xong trước: SF50.
+
+Phạm vi file: `frontend/src/RecipePage.tsx (mới); App.tsx`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Chọn food, đơn vị, định lượng; thêm/xóa dòng; giữ ít nhất một dòng hợp lệ khi lưu.
+- [ ] Tự kiểm tra: Hai dòng trùng food bị báo lỗi; gửi sai dữ liệu không mất toàn bộ phần đang nhập.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Hai dòng trùng food bị báo lỗi; gửi sai dữ liệu không mất toàn bộ phần đang nhập.
+
+### SF52 API thực đơn trưa
+
+Mốc G2.2 | Người làm TV4 | Reviewer TV2 | Cần xong trước: SF49, SF50.
+
+Phạm vi file: `backend/apps/inventory/menu_services.py; menu_views.py (mới); urls.py`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Lập, sao chép, chốt và tạo phiên bản điều chỉnh; ngày nghỉ; chỉ chốt món có công thức.
+- [ ] Tự kiểm tra: Sửa công thức sau chốt không đổi lượng cũ; sao chép tạo nháp độc lập; không chốt ngày thiếu món.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Sửa công thức sau chốt không đổi lượng cũ; sao chép tạo nháp độc lập; không chốt ngày thiếu món.
+
+### SF53 Giao diện thực đơn tuần
+
+Mốc G2.2 | Người làm TV5 | Reviewer TV3 | Cần xong trước: SF51, SF52.
+
+Phạm vi file: `frontend/src/MenuPage.tsx (mới); App.tsx phối hợp TV3`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Lịch tuần, chọn món theo ngày, sao chép và chốt; phân biệt nghỉ ăn/chưa lập.
+- [ ] Tự kiểm tra: Ngày có thực đơn và ngày nghỉ hiển thị riêng; xem được phiên bản đã chốt.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Ngày có thực đơn và ngày nghỉ hiển thị riêng; xem được phiên bản đã chốt.
+
+### SF54 Nghiệm thu món và thực đơn
+
+Mốc G2.2 | Người làm TV6 | Reviewer TV1 | Cần xong trước: SF51, SF52, SF53.
+
+Phạm vi file: `backend/apps/inventory/test_menus.py (mới); evidence/`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Kiểm tra công thức, đơn vị, lịch sử; fixture thịt kho 60 g và canh 10 g.
+- [ ] Tự kiểm tra: AC28–AC32 đạt; tổng thịt của hai món là 70 g/suất, không phải hai nhu cầu mua riêng.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: AC28–AC32 đạt; tổng thịt của hai món là 70 g/suất, không phải hai nhu cầu mua riêng.
+
+### SF55 Chốt nhu cầu và phân bổ tồn
+
+Mốc G2.3 | Người làm TV1 | Reviewer TV6 | Cần xong trước: SF54.
+
+Phạm vi file: `architecture.md; models.py; migrations mới`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Quy tắc nhu cầu, dự phòng, phiên bản, giữ hàng, giải phóng; điều kiện G2.0 trước tích hợp kho.
+- [ ] Tự kiểm tra: Ví dụ 300 × 0.070 + 1 - 5 - 4 = 13 kg; chốt luồng nhận hàng không tính đôi.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Ví dụ 300 × 0.070 + 1 - 5 - 4 = 13 kg; chốt luồng nhận hàng không tính đôi.
+
+### SF56 Bộ tính nguyên liệu
+
+Mốc G2.3 | Người làm TV2 | Reviewer TV4 | Cần xong trước: SF55.
+
+Phạm vi file: `backend/apps/inventory/demand_services.py (mới)`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Cộng nguyên liệu qua món; tính theo suất dự kiến/thực tế; quy đổi rồi cộng rồi làm tròn.
+- [ ] Tự kiểm tra: Kết quả Decimal tái lập được; trả phần đóng góp từng món; 0 suất không chia cho 0.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Kết quả Decimal tái lập được; trả phần đóng góp từng món; 0 suất không chia cho 0.
+
+### SF57 Màn hình nhu cầu
+
+Mốc G2.3 | Người làm TV3 | Reviewer TV5 | Cần xong trước: SF56.
+
+Phạm vi file: `frontend/src/DemandPage.tsx (mới); App.tsx`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Hiện phép tính, nguồn định lượng, phiên bản thực đơn và số suất; UI mock theo contract rồi nối SF58.
+- [ ] Tự kiểm tra: Hiện 21 kg từ 300 suất; bản mock chưa được tính nghiệm thu khi API thật chưa nối.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Hiện 21 kg từ 300 suất; bản mock chưa được tính nghiệm thu khi API thật chưa nối.
+
+### SF58 API đề xuất mua và giữ hàng
+
+Mốc G2.3 | Người làm TV4 | Reviewer TV2 | Cần xong trước: SF55, SF56.
+
+Phạm vi file: `backend/apps/inventory/demand_views.py; allocation_services.py (mới); urls.py`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Phân bổ tồn/hàng đang đặt; duyệt atomic, kiểm tra version; phát hiện thiếu hụt khi tồn thay đổi.
+- [ ] Tự kiểm tra: Hai kế hoạch không giữ cùng một kg; tồn không giảm khi giữ; dữ liệu cũ trả 409.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Hai kế hoạch không giữ cùng một kg; tồn không giảm khi giữ; dữ liệu cũ trả 409.
+
+### SF59 Điều chỉnh và chênh lệch đề xuất
+
+Mốc G2.3 | Người làm TV5 | Reviewer TV3 | Cần xong trước: SF57, SF58.
+
+Phạm vi file: `frontend/src/DemandPage.tsx phối hợp TV3; styles.css`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Dự phòng có lý do, tính lại và so chênh lệch; giải thích thiếu, lỗi và dữ liệu cũ.
+- [ ] Tự kiểm tra: Đổi 300 thành 280 suất hiện chênh lệch; đề xuất mua tối thiểu bằng 0.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Đổi 300 thành 280 suất hiện chênh lệch; đề xuất mua tối thiểu bằng 0.
+
+### SF60 Nghiệm thu nhu cầu và chống trùng
+
+Mốc G2.3 | Người làm TV6 | Reviewer TV1 | Cần xong trước: SF57, SF58, SF59.
+
+Phạm vi file: `backend/apps/inventory/test_demand.py (mới); evidence/`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Kiểm thử nhiều ngày tranh tồn, giao hàng muộn, huỷ phân bổ, tính lại và request đồng thời.
+- [ ] Tự kiểm tra: AC33–AC37 đạt; nghiệm thu bổ sung nguồn đơn thật cùng SF66, không coi mock là tích hợp.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: AC33–AC37 đạt; nghiệm thu bổ sung nguồn đơn thật cùng SF66, không coi mock là tích hợp.
+
+### SF61 Chốt model và trạng thái đơn đặt
+
+Mốc G2.4 | Người làm TV1 | Reviewer TV6 | Cần xong trước: SF60.
+
+Phạm vi file: `architecture.md; models.py; migrations mới`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] PurchaseOrder/Line và liên kết kế hoạch, nguồn dòng nhập; trạng thái và điều chỉnh sau gửi.
+- [ ] Tự kiểm tra: Nháp → duyệt → xác nhận gửi → nhận một phần → hoàn tất; hủy/đóng thiếu có lý do.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Nháp → duyệt → xác nhận gửi → nhận một phần → hoàn tất; hủy/đóng thiếu có lý do.
+
+### SF62 Nghiệp vụ đặt hàng
+
+Mốc G2.4 | Người làm TV2 | Reviewer TV4 | Cần xong trước: SF61.
+
+Phạm vi file: `backend/apps/inventory/purchase_services.py (mới)`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Tạo từ phần thiếu; nhà cung cấp; kiểm tra lại khi duyệt; giải phóng phần hủy; chống request lặp.
+- [ ] Tự kiểm tra: Hai lần duyệt cùng nhu cầu không sinh hai đơn có hiệu lực; không nhận vượt lượng còn lại.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Hai lần duyệt cùng nhu cầu không sinh hai đơn có hiệu lực; không nhận vượt lượng còn lại.
+
+### SF63 Giao diện đơn đặt
+
+Mốc G2.4 | Người làm TV3 | Reviewer TV5 | Cần xong trước: SF62.
+
+Phạm vi file: `frontend/src/PurchaseOrderPage.tsx (mới); App.tsx`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Danh sách/chi tiết, chọn nhà cung cấp, lượng và giá dự kiến; duyệt, in, xác nhận đã gửi.
+- [ ] Tự kiểm tra: Tạo đơn chưa tự đánh dấu đã gửi; bản in có ngày cần giao, food, lượng và đơn vị.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Tạo đơn chưa tự đánh dấu đã gửi; bản in có ngày cần giao, food, lượng và đơn vị.
+
+### SF64 API đơn và phiếu nhập liên kết
+
+Mốc G2.4 | Người làm TV4 | Reviewer TV2 | Cần xong trước: SF61, SF62.
+
+Phạm vi file: `backend/apps/inventory/purchase_views.py (mới); services.py; urls.py`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] CRUD nháp/duyệt/xác nhận gửi; tạo phiếu nhập từ đơn; nhiều lần giao; gắn ReceiptLine với OrderLine.
+- [ ] Tự kiểm tra: Nháp nhận không tăng đã nhận; chốt nhận cập nhật kho/đơn/phân bổ cùng giao dịch, rollback nếu lỗi.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Nháp nhận không tăng đã nhận; chốt nhận cập nhật kho/đơn/phân bổ cùng giao dịch, rollback nếu lỗi.
+
+### SF65 Giao diện nhận hàng theo đơn
+
+Mốc G2.4 | Người làm TV5 | Reviewer TV3 | Cần xong trước: SF63, SF64.
+
+Phạm vi file: `frontend/src/ReceiptPage.tsx (tạo nếu chưa có); App.tsx phối hợp TV3`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Hiện đặt/đã nhận/còn thiếu; lượng chấp nhận, từ chối và lý do; chốt phiếu bằng API nhập hiện có.
+- [ ] Tự kiểm tra: Đặt 13, nhận 10 còn 3; nhận thêm 3 hoàn tất; chặn 4 khi chỉ còn 3.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Đặt 13, nhận 10 còn 3; nhận thêm 3 hoàn tất; chặn 4 khi chỉ còn 3.
+
+### SF66 Nghiệm thu đặt và nhận hàng
+
+Mốc G2.4 | Người làm TV6 | Reviewer TV1 | Cần xong trước: SF63, SF64, SF65.
+
+Phạm vi file: `backend/apps/inventory/test_purchases.py (mới); evidence/`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] E2E nhu cầu → đơn → nhận; đồng thời, gửi lại, đóng thiếu; test lại SF58 với đơn thật.
+- [ ] Tự kiểm tra: AC38–AC42 đạt; nhận 4 kg chuyển hàng đang chờ thành tồn giữ cho kế hoạch, không thành 8 kg.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: AC38–AC42 đạt; nhận 4 kg chuyển hàng đang chờ thành tồn giữ cho kế hoạch, không thành 8 kg.
+
+### SF67 Chốt xuất theo ngày và đóng ngày
+
+Mốc G2.5 | Người làm TV1 | Reviewer TV6 | Cần xong trước: SF66.
+
+Phạm vi file: `architecture.md; models.py; migrations mới`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Gắn phiếu xuất với ngày ăn; xuất bổ sung; lý do chênh lệch; đóng ngày chỉ khi dữ liệu đủ.
+- [ ] Tự kiểm tra: Xuất là cấp nguyên liệu cho bếp, không tự coi là lượng học sinh đã ăn; trả/hủy sau xuất để mốc sau.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Xuất là cấp nguyên liệu cho bếp, không tự coi là lượng học sinh đã ăn; trả/hủy sau xuất để mốc sau.
+
+### SF68 Nghiệp vụ xuất và chi phí ngày
+
+Mốc G2.5 | Người làm TV2 | Reviewer TV4 | Cần xong trước: SF67.
+
+Phạm vi file: `backend/apps/inventory/meal_report_services.py (mới); services.py`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Nháp xuất theo suất thực tế, trừ đã xuất; dùng service xuất chung; giải phóng phân bổ tương ứng.
+- [ ] Tự kiểm tra: Đã xuất 10, nhu cầu 13 chỉ đề xuất 3; chi phí dùng ledger lúc xuất; 0 suất trả null chi phí/suất.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Đã xuất 10, nhu cầu 13 chỉ đề xuất 3; chi phí dùng ledger lúc xuất; 0 suất trả null chi phí/suất.
+
+### SF69 Tổng quan bữa trưa
+
+Mốc G2.5 | Người làm TV3 | Reviewer TV5 | Cần xong trước: SF68.
+
+Phạm vi file: `frontend/src/LunchDashboardPage.tsx (mới); App.tsx`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Suất dự kiến/thực tế; lượng cần/đã xuất; chi phí nguyên liệu; liên kết chứng từ; ghi lý do chênh lệch.
+- [ ] Tự kiểm tra: Xem được nguồn từng con số; đổi giá nhập hôm sau không làm thay đổi chi phí ngày cũ.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Xem được nguồn từng con số; đổi giá nhập hôm sau không làm thay đổi chi phí ngày cũ.
+
+### SF70 API báo cáo ngày và test tích hợp
+
+Mốc G2.5 | Người làm TV4 | Reviewer TV2 | Cần xong trước: SF67, SF68.
+
+Phạm vi file: `backend/apps/inventory/meal_report_views.py; test_lunch_flow.py (mới); urls.py`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] API báo cáo/đóng ngày; test quyền, CSRF, request lặp, concurrency và ngày chưa đủ dữ liệu.
+- [ ] Tự kiểm tra: API trả ngày chưa chốt rõ ràng; viewer không đóng ngày; giao dịch lỗi không để dữ liệu nửa vời.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: API trả ngày chưa chốt rõ ràng; viewer không đóng ngày; giao dịch lỗi không để dữ liệu nửa vời.
+
+### SF71 Hoàn thiện UX và hướng dẫn sử dụng
+
+Mốc G2.5 | Người làm TV5 | Reviewer TV3 | Cần xong trước: SF69, SF70.
+
+Phạm vi file: `frontend/src/LunchDashboardPage.tsx phối hợp TV3; outputs/team-6/`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Nối API thật, mobile, tải/rỗng/lỗi/mất kết nối; hướng dẫn manager/viewer có ví dụ.
+- [ ] Tự kiểm tra: Thử màn hình hẹp; retry không tạo phiếu lặp; chụp ảnh màn hình thực tế và ghi hạn chế.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: Thử màn hình hẹp; retry không tạo phiếu lặp; chụp ảnh màn hình thực tế và ghi hạn chế.
+
+### SF72 Nghiệm thu toàn bộ bữa trưa
+
+Mốc G2.5 | Người làm TV6 | Reviewer TV1 | Cần xong trước: SF69, SF70, SF71.
+
+Phạm vi file: `backend/apps/inventory/test_lunch_flow.py; outputs/team-6/evidence/`. Đây là đường dẫn dự kiến tính từ root; `evidence/` là `outputs/team-6/evidence/`. Xác nhận file thực tế khi bắt đầu, phối hợp chủ file chung.
+
+- [ ] Khảo sát code và trình phương án, JSON mẫu nếu có API/UI.
+- [ ] Dữ liệu giả lập nhiều ngày; đối chiếu bằng tay; review hồi quy nền kho và bàn giao.
+- [ ] Tự kiểm tra: AC43–AC47 và mọi case G2 trước đó đạt; lỗi nghiêm trọng đóng; SF37–SF42 nghiệm thu lại trước deploy.
+- [ ] Ghi log/ảnh phù hợp, kiểm tra diff và cập nhật bằng chứng trong Excel.
+- [ ] Reviewer kiểm tra kết quả và dependency; PR về dev1 khi được yêu cầu.
+
+Điều kiện bàn giao: AC43–AC47 và mọi case G2 trước đó đạt; lỗi nghiêm trọng đóng; SF37–SF42 nghiệm thu lại trước deploy.
