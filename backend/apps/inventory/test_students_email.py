@@ -272,7 +272,8 @@ class HocSinhEmailTests(CsrfClientMixin, TestCase):
 
     @override_settings(EMAIL_MODE="smtp")
     def test_hai_hoc_sinh_trung_ten_cung_email_van_dem_hai_be(self):
-        """BUG? recipients() gộp theo full_name khiến hai bé khác lớp chỉ được đếm là một."""
+        """Hai bé trùng họ tên ở hai lớp, cùng email: một thư, đếm 2 bé, tên kèm mã lớp.
+        (Trước đây recipients() gộp theo full_name nên chỉ đếm một bé.)"""
         self.tao_thuc_don()
         be_mot = self.tao_hoc_sinh("Nguyễn Minh Anh")
         self.lop = SchoolClass.objects.create(code="2A", name="Lớp 2A", enrolled=30)
@@ -282,6 +283,8 @@ class HocSinhEmailTests(CsrfClientMixin, TestCase):
         self.assertEqual(notifications.send_daily_menu(NGAY)["sent"], 1)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(self.nhat_ky_nguoi_nhan().get().student_count, 2)
+        self.assertIn("Nguyễn Minh Anh (1A)", mail.outbox[0].body)
+        self.assertIn("Nguyễn Minh Anh (2A)", mail.outbox[0].body)
 
     @override_settings(EMAIL_MODE="smtp")
     def test_chu_nhat_va_ngay_le_khong_gui_co_dong_tong_skipped(self):
@@ -651,8 +654,8 @@ class HocSinhEmailTests(CsrfClientMixin, TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
     def test_gui_thu_loi_smtp_tra_json_khong_500(self):
-        """BUG? notifications_test không bắt SMTPException/OSError: lỗi SMTP khi gửi thử trả 500 (HTML
-        traceback khi DEBUG) thay vì JSON {"message"} theo quy ước lỗi API §10.2."""
+        """Lỗi SMTP khi gửi thử trả 502 JSON {"message"} (§10.2), không 500, không ghi nhật ký gửi thử.
+        (Trước đây notifications_test không bắt SMTPException/OSError.)"""
         self.tao_thuc_don()
         self.quan_ly.email = "quanly@example.test"
         self.quan_ly.save(update_fields=["email"])
@@ -660,8 +663,9 @@ class HocSinhEmailTests(CsrfClientMixin, TestCase):
         self.client.raise_request_exception = False
         with patch("django.core.mail.EmailMultiAlternatives.send", side_effect=smtplib.SMTPServerDisconnected("mất kết nối")):
             response = self.call(self.client, "POST", "/api/notifications/test/", {"date": "2026-10-01"})
-        self.assertNotEqual(response.status_code, 500)
-        self.assertIn("message", response.json())
+        self.assertEqual(response.status_code, 502)
+        self.assertIn("SMTPServerDisconnected", response.json()["message"])
+        self.assertFalse(AuditLog.objects.filter(action="email_test").exists())
 
     @override_settings(EMAIL_MODE="smtp")
     def test_scheduler_thu_bay_ghi_skipped_khong_gui(self):
