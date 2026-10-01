@@ -1,0 +1,25 @@
+Kịch bản Playwright G2 (21/13 kg) trên giao diện, 2026-10-01: Vite dev + Django runserver, DB PG17 riêng; ngày ăn 2026-10-19.
+OK Chốt dự kiến 300 suất (10 lớp + 5 nhân viên)
+OK Bản tính: thịt cần 21 kg
+OK Dự phòng thiếu lý do bị chặn
+OK Tính lại có dự phòng 1 kg (bản 2)
+OK Đề xuất thịt: Thịt heo nạc 21 kg 1 kg Hao hụt khi sơ chế 5 kg 4 kg 13 kg
+OK Tạo đơn từ đề xuất 13 kg (nháp)
+OK Duyệt → gửi NCC
+OK Nhận 4 kg đơn cũ → chốt
+OK Nhận 10 kg đơn mới → chốt
+OK Nhận thêm 4 kg khi còn 3 → bị chặn
+OK Nhận 3 kg → đơn tự đóng (Đã nhận đủ)
+OK Xuất bếp 22 kg thịt + 9 kg bí → chốt
+OK Chốt thực tế 299 suất
+OK Đóng ngày có chênh lệch mà không ghi chú → chặn
+OK Đóng ngày
+INFO chi phí: CHI PHÍ NGÀY 2.634.999,92 đ SUẤT THỰC TẾ 299 CHI PHÍ / SUẤT 8.812,71 đ TRẠNG THÁI Đã đóng ngày
+OK Báo cáo theo ngày ăn
+OK [375] Chụp các màn G2
+OK [1280] Hiệu trưởng: Mở lại ngày khoá
+OK [1280] Hiệu trưởng: Tính lại khoá
+OK [1280] Hiệu trưởng: Tạo đơn khoá, xem chi tiết đơn được
+OK [375] Hiệu trưởng: Mở lại ngày khoá
+OK [375] Hiệu trưởng: Tính lại khoá
+OK [375] Hiệu trưởng: Tạo đơn khoá, xem chi tiết đơn được

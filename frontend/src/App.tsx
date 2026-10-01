@@ -23,6 +23,11 @@ import { NotificationsPage } from './features/notifications/NotificationsPage';
 import { UnsubscribePage } from './features/public/UnsubscribePage';
 import { StudentsPage } from './features/students/StudentsPage';
 import { UsersPage } from './features/users/UsersPage';
+import { DemandPage } from './features/lunch/DemandPage';
+import { KitchenIssuePage } from './features/lunch/KitchenIssuePage';
+import { OrdersPage } from './features/lunch/OrdersPage';
+import { ReceivePage } from './features/lunch/ReceivePage';
+import { TodayPage } from './features/lunch/TodayPage';
 
 // Trang kit chỉ có trong bản dev; bản build production loại bỏ hoàn toàn.
 const KitPage = import.meta.env.DEV ? lazy(() => import('./features/dev/KitPage')) : null;
@@ -48,6 +53,12 @@ export function App() {
           <Route path="kiem-ke" element={<StocktakePage />} />
           <Route path="danh-muc" element={<CatalogPage />} />
         </Route>
+        {/* G2 (SF57–SF69): chuỗi một ngày ăn. */}
+        <Route path="bua-trua" element={<TodayPage />} />
+        <Route path="bua-trua/nhu-cau" element={<DemandPage />} />
+        <Route path="bua-trua/don-dat" element={<OrdersPage />} />
+        <Route path="bua-trua/nhan-hang" element={<ReceivePage />} />
+        <Route path="bua-trua/xuat-bep" element={<KitchenIssuePage />} />
         <Route path="mon-an" element={<DishesPage />} />
         <Route path="mon-an/thuc-don" element={<MenusPage />} />
         <Route path="lop-hoc" element={<ClassesPage />} />

@@ -1,7 +1,8 @@
 /**
  * Báo cáo (bản vẽ 08, dùng dữ liệu thật của sổ kho StockTransaction).
  * Chưa có số suất thực tế/mức thu nên chưa tính "chi mỗi suất"; thay bằng giá trị xuất cho bếp theo ngày.
- * ?thang=YYYY-MM chọn tháng, ?muc=tong-quan|ton-kho|so-giao-dich chọn mục.
+ * ?thang=YYYY-MM chọn tháng, ?muc=tong-quan|ton-kho|so-giao-dich|theo-ngay chọn mục.
+ * "Theo ngày ăn" (SF70): GET /api/reports/daily/?from=&to= — chi phí ngày, suất thực tế, chi phí/suất, đã đóng ngày.
  */
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -34,11 +35,13 @@ import { downloadCsv } from '../../lib/csv';
 import { add, parseDec, sub, sum, toFixed, ZERO, type Dec } from '../../lib/decimal';
 import { formatDate, formatMoney, formatMoneyShort, formatNumber, formatQty, formatShortDate, todayISO } from '../../lib/format';
 import { useApiQuery } from '../../lib/useApiQuery';
+import { lunchApi, type DailyReport } from '../../services/lunch';
 import { inventoryApi, TX_LABELS, txReference, type StockRow, type Transaction, type TxType } from '../../services/inventory';
 import { useQueryParam } from '../inventory/shared';
 import styles from './ReportsPage.module.css';
 
-type Section = 'tong-quan' | 'ton-kho' | 'so-giao-dich';
+type Section = 'tong-quan' | 'ton-kho' | 'so-giao-dich' | 'theo-ngay';
+const SECTIONS: Section[] = ['tong-quan', 'ton-kho', 'so-giao-dich', 'theo-ngay'];
 const TONES: Segment['tone'][] = ['protein', 'veg', 'dry', 'dairy'];
 
 const dec = (v: string) => parseDec(v) ?? ZERO;
@@ -76,18 +79,32 @@ export function ReportsPage() {
   const [monthParam, setMonthParam] = useQueryParam('thang');
   const [sectionParam, setSectionParam] = useQueryParam('muc');
   const month = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : todayISO().slice(0, 7);
-  const section: Section = sectionParam === 'ton-kho' || sectionParam === 'so-giao-dich' ? sectionParam : 'tong-quan';
+  const section: Section = SECTIONS.includes(sectionParam as Section) ? (sectionParam as Section) : 'tong-quan';
   const range = monthRange(month);
   const current = todayISO().slice(0, 7);
 
   const stock = useApiQuery(() => inventoryApi.stock(), []);
   const txQuery = useApiQuery(() => inventoryApi.transactions({ from: range.from, to: range.to }), [range.from, range.to]);
+  const dailyQuery = useApiQuery(
+    () => (section === 'theo-ngay' ? lunchApi.dailyReport(range.from, range.to) : Promise.resolve(null)),
+    [range.from, range.to, section],
+  );
 
   const stockRows = stock.data ?? [];
   const foodById = useMemo(() => new Map(stockRows.map((r) => [r.id, r])), [stockRows]);
   const txs = txQuery.data ?? [];
 
   const exportCsv = () => {
+    if (section === 'theo-ngay') {
+      const r = dailyQuery.data;
+      if (!r) return;
+      downloadCsv(`chi-phi-theo-ngay-${month}.csv`, [
+        ['Ngày', 'Suất dự kiến', 'Suất thực tế', 'Chi phí ngày', 'Chi phí/suất', 'Đã đóng ngày'],
+        ...r.days.map((d) => [d.date, d.planned_total ?? '', d.actual_total ?? '', d.cost, d.cost_per_serving ?? '', d.closed ? 'có' : 'không']),
+        ['Tổng', '', r.total_servings, r.total_cost, r.avg_cost_per_serving ?? '', ''],
+      ]);
+      return;
+    }
     downloadCsv(`so-kho-${month}.csv`, [
       ['Ngày', 'Loại', 'Mã hàng', 'Tên hàng', 'Số lượng', 'Đơn vị', 'Đơn giá', 'Giá trị', 'Chứng từ'],
       ...txs.map((t) => {
@@ -117,7 +134,11 @@ export function ReportsPage() {
                 </IconButton>
               </div>
             ) : null}
-            <Button variant="secondary" onClick={exportCsv} disabled={txs.length === 0 || section === 'ton-kho'}>
+            <Button
+              variant="secondary"
+              onClick={exportCsv}
+              disabled={section === 'ton-kho' || (section === 'theo-ngay' ? !dailyQuery.data?.days.length : txs.length === 0)}
+            >
               Xuất CSV
             </Button>
           </>
@@ -131,9 +152,18 @@ export function ReportsPage() {
           { value: 'tong-quan', label: 'Tổng quan tháng' },
           { value: 'ton-kho', label: 'Tồn kho' },
           { value: 'so-giao-dich', label: 'Sổ giao dịch' },
+          { value: 'theo-ngay', label: 'Theo ngày ăn' },
         ]}
       />
-      {stock.loading || (section !== 'ton-kho' && txQuery.loading) ? (
+      {section === 'theo-ngay' ? (
+        dailyQuery.loading ? (
+          <Skeleton rows={8} />
+        ) : dailyQuery.error ? (
+          <ErrorState message={dailyQuery.error} onRetry={dailyQuery.reload} />
+        ) : dailyQuery.data ? (
+          <DailySection report={dailyQuery.data} label={range.label} />
+        ) : null
+      ) : stock.loading || (section !== 'ton-kho' && txQuery.loading) ? (
         <Skeleton rows={8} />
       ) : stock.error || txQuery.error ? (
         <ErrorState
@@ -151,6 +181,69 @@ export function ReportsPage() {
         <Ledger txs={txs} foodById={foodById} />
       )}
     </>
+  );
+}
+
+/* ---------------- Theo ngày ăn (SF70) ---------------- */
+function DailySection({ report, label }: { report: DailyReport; label: string }) {
+  const chart = useMemo(() => {
+    const rows = report.days.filter((d) => d.cost_per_serving);
+    const values = rows.map((d) => decNum(dec(d.cost_per_serving ?? '0')));
+    const maxV = Math.max(...values, 0);
+    return rows.map<BarDatum>((d, i) => ({
+      key: d.date,
+      label: formatShortDate(d.date),
+      value: values[i],
+      display: formatMoney(d.cost_per_serving),
+      highlight: values[i] === maxV && maxV > 0,
+    }));
+  }, [report]);
+
+  if (!report.days.length) {
+    return (
+      <EmptyState title={`Chưa có ngày ăn nào trong ${label.toLowerCase()}`} icon={<IconChart size={28} />}>
+        Ngày ăn xuất hiện ở đây khi đã mở số suất cho ngày đó.
+      </EmptyState>
+    );
+  }
+  return (
+    <Stack gap="lg">
+      <div className={styles.kpis}>
+        <div className={styles.kpi}>
+          <span className={styles.kpiLabel}>Tổng chi phí</span>
+          <span className={`${styles.kpiValue} num`}>{formatMoney(report.total_cost)}</span>
+        </div>
+        <div className={styles.kpi}>
+          <span className={styles.kpiLabel}>Tổng suất thực tế</span>
+          <span className={`${styles.kpiValue} num`}>{formatNumber(report.total_servings, 0)}</span>
+        </div>
+        <div className={styles.kpi}>
+          <span className={styles.kpiLabel}>Bình quân / suất</span>
+          <span className={`${styles.kpiValue} num`}>{report.avg_cost_per_serving ? formatMoney(report.avg_cost_per_serving) : '—'}</span>
+        </div>
+      </div>
+      {chart.length ? (
+        <>
+          <SectionTitle>Chi phí mỗi suất theo ngày</SectionTitle>
+          <BarChart data={chart} caption="Chi phí mỗi suất theo ngày ăn" axis={axisMoney} />
+        </>
+      ) : (
+        <Callout tone="info">Chưa có ngày nào chốt số suất thực tế nên chưa tính được chi phí/suất.</Callout>
+      )}
+      <DataTable
+        caption={`Chi phí theo ngày ăn, ${label}`}
+        rows={report.days}
+        rowKey={(d) => d.date}
+        columns={[
+          { key: 'date', header: 'Ngày', cell: (d) => <Link to={`/bua-trua?ngay=${d.date}`}>{formatDate(d.date)}</Link> },
+          { key: 'planned', header: 'Dự kiến', align: 'right', cell: (d) => (d.planned_total == null ? '—' : formatNumber(d.planned_total, 0)) },
+          { key: 'actual', header: 'Thực tế', align: 'right', cell: (d) => (d.actual_total == null ? '—' : formatNumber(d.actual_total, 0)) },
+          { key: 'cost', header: 'Chi phí ngày', align: 'right', cell: (d) => <span className={tableText.strong}>{formatMoney(d.cost)}</span> },
+          { key: 'per', header: 'Chi phí/suất', align: 'right', cell: (d) => (d.cost_per_serving ? formatMoney(d.cost_per_serving) : '—') },
+          { key: 'closed', header: 'Đóng ngày', cell: (d) => (d.closed ? <Badge tone="ok">Đã đóng</Badge> : <Badge>Chưa đóng</Badge>) },
+        ]}
+      />
+    </Stack>
   );
 }
 
