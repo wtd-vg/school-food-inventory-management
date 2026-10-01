@@ -26,7 +26,16 @@ docker compose exec backend python manage.py createsuperuser
 docker compose exec backend python manage.py seed_demo
 ```
 
-**DB cũ:** DB từng migrate tại `f00048d` không nâng cấp thẳng được (ISSUE-001 trong [plan_final.md](plan_final.md) §5). Không tự xóa volume hoặc fake migration.
+**Nâng cấp DB cũ (ISSUE-001):** DB từng migrate tại `f00048d` sẽ dừng ở `0008_issue_contract` với lỗi `relation "inventory_issue" already exists`. Không xóa volume, không `--fake`. Chạy lần lượt:
+
+```powershell
+docker compose exec backend python manage.py sf_legacy_db_check            # chỉ kiểm tra
+docker compose exec backend python manage.py sf_legacy_db_check --apply    # xóa 2 bảng phiếu xuất cũ nếu còn rỗng
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py sf31_ledger_audit --strict
+```
+
+Lệnh chỉ xóa hai bảng `inventory_issue`/`inventory_issueline` của bản cũ khi chúng rỗng và đúng schema cũ. Nếu bảng còn dữ liệu, bị bảng khác tham chiếu hoặc schema lạ, lệnh dừng với exit 1 và không sửa gì; khi đó cần kế hoạch chuyển dữ liệu riêng. DB sạch hoặc đã nâng cấp: lệnh báo `clean`/`up_to_date`.
 
 Chỉ migrate/seed trên DB local đã xác nhận. Tài khoản thường được gán group trong Django admin `/admin/`. Không ghi mật khẩu vào repo.
 
