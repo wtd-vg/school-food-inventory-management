@@ -468,13 +468,232 @@ class Dish(models.Model):
 
 
 class RecipeComponent(models.Model):
+    """Định lượng cho MỘT suất, theo đơn vị chuẩn của food (kg/lit/piece). 6 số lẻ (BE-03/ISSUE-003):
+    0,4 g = 0.000400 kg không bị làm tròn thành 0 trước khi nhân số suất."""
+
     dish = models.ForeignKey(Dish, on_delete=models.CASCADE, related_name="components")
     food = models.ForeignKey("FoodItem", on_delete=models.PROTECT, related_name="recipe_components")
     quantity = models.DecimalField(
-        max_digits=14, decimal_places=3, validators=[MinValueValidator(Decimal("0.001"))]
+        max_digits=14, decimal_places=6, validators=[MinValueValidator(Decimal("0.000001"))]
     )
 
     class Meta:
+        ordering = ["id"]
         constraints = [
             models.UniqueConstraint(fields=["dish", "food"], name="recipe_component_unique_food"),
+            models.CheckConstraint(
+                condition=models.Q(quantity__gt=0, quantity__lt=Decimal("100000000")),
+                name="recipe_component_quantity_positive",
+            ),
         ]
+
+
+# =========================================================================
+# BE-03 / SF49 (R10): THỰC ĐƠN CỐ ĐỊNH THEO THỨ, NGÀY NGHỈ, BẢN CHỤP THEO NGÀY
+# =========================================================================
+WEEKDAY_LABELS = ("Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu")
+
+
+class MenuVersion(models.Model):
+    """Một phiên bản thực đơn cố định T2–T6, có hiệu lực từ effective_from tới version kế tiếp.
+
+    Bất biến khi đã có hiệu lực (trigger 0016): muốn đổi thực đơn thì tạo version mới cho ngày sau.
+    """
+
+    effective_from = models.DateField(unique=True)
+    note = models.TextField(blank=True, default="")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="menu_versions")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-effective_from"]
+
+    def __str__(self):
+        return f"Thực đơn từ {self.effective_from}"
+
+
+class MenuVersionItem(models.Model):
+    version = models.ForeignKey(MenuVersion, on_delete=models.CASCADE, related_name="items")
+    weekday = models.PositiveSmallIntegerField()  # 0 = Thứ Hai … 4 = Thứ Sáu
+    dish = models.ForeignKey(Dish, on_delete=models.PROTECT, related_name="menu_items")
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["version_id", "weekday", "position", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["version", "weekday", "dish"], name="menu_item_unique_dish"),
+            models.CheckConstraint(condition=models.Q(weekday__gte=0, weekday__lte=4), name="menu_item_weekday_valid"),
+        ]
+
+
+class SchoolHoliday(models.Model):
+    """Ngày nghỉ ngoài T7/CN (lễ, Tết, hè): không có bữa trưa, không gửi email thực đơn."""
+
+    date = models.DateField(unique=True)
+    name = models.CharField(max_length=120)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="holidays_created")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["date"]
+        constraints = [models.CheckConstraint(condition=~models.Q(name=""), name="school_holiday_name_not_empty")]
+
+
+class DayMenuSnapshot(models.Model):
+    """Bản chụp thực đơn của một ngày (món + định lượng lúc chụp). Bất biến (trigger 0016).
+
+    items: [{"dish_id", "dish_name", "components": [{"food_id", "food_name", "unit", "quantity"}]}].
+    """
+
+    date = models.DateField(unique=True)
+    menu_version = models.ForeignKey(MenuVersion, on_delete=models.PROTECT, related_name="snapshots")
+    items = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["date"]
+
+
+# =========================================================================
+# BE-02 (PR1 security): VAI TRÒ, KHÓA ĐĂNG NHẬP SAI, NHẬT KÝ THAO TÁC
+# Vai trò là Django Group "manager" (Quản lý) và "principal" (Hiệu trưởng), tạo ở migration 0014.
+# =========================================================================
+ROLE_MANAGER = "manager"
+ROLE_PRINCIPAL = "principal"
+
+
+class LoginThrottle(models.Model):
+    """Đếm số lần đăng nhập sai theo tên đăng nhập hoặc theo IP (logic đếm/khóa ở BE-10).
+
+    Không lưu username/IP rõ: key_hash = HMAC-SHA256 dùng SECRET_KEY (xem `hash_key`), để bảng này
+    lộ ra cũng không suy ngược được (băm trần IPv4 dò hết được vì chỉ có 2^32 giá trị).
+    """
+
+    class Scope(models.TextChoices):
+        USER = "user", "Tên đăng nhập"
+        IP = "ip", "Địa chỉ IP"
+
+    scope = models.CharField(max_length=10, choices=Scope.choices)
+    key_hash = models.CharField(max_length=64)
+    failures = models.PositiveIntegerField(default=0)
+    window_start = models.DateTimeField()
+    locked_until = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["scope", "key_hash"], name="login_throttle_unique_key"),
+            models.CheckConstraint(condition=models.Q(scope__in=["user", "ip"]), name="login_throttle_scope_valid"),
+            models.CheckConstraint(condition=models.Q(key_hash__regex=r"^[0-9a-f]{64}$"), name="login_throttle_key_hash_hex"),
+        ]
+
+    @staticmethod
+    def hash_key(scope, value):
+        from django.utils.crypto import salted_hmac
+
+        normalized = f"{scope}:{str(value).strip().lower()}"
+        return salted_hmac("schoolfood.login-throttle", normalized, algorithm="sha256").hexdigest()
+
+
+class AuditLog(models.Model):
+    """Nhật ký thao tác, chỉ thêm (trigger chặn UPDATE/DELETE ở 0014). Ghi qua audit.record (BE-15).
+
+    actor PROTECT: tài khoản chỉ được khóa, không xóa; SET_NULL sẽ phải UPDATE dòng nhật ký và bị trigger chặn.
+    changes không bao giờ chứa mật khẩu, token hay email phụ huynh rõ.
+    """
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="audit_logs", null=True, blank=True,
+    )
+    actor_username = models.CharField(max_length=150, blank=True, default="")
+    action = models.CharField(max_length=40)
+    entity_type = models.CharField(max_length=40, blank=True, default="")
+    entity_id = models.CharField(max_length=40, blank=True, default="")
+    summary = models.CharField(max_length=255, blank=True, default="")
+    changes = models.JSONField(default=dict, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=200, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["created_at"], name="audit_log_created_idx"),
+            models.Index(fields=["actor", "created_at"], name="audit_log_actor_idx"),
+            models.Index(fields=["entity_type", "entity_id"], name="audit_log_entity_idx"),
+        ]
+        constraints = [
+            models.CheckConstraint(condition=~models.Q(action=""), name="audit_log_action_not_empty"),
+        ]
+
+    def __str__(self):
+        return f"{self.created_at:%Y-%m-%d %H:%M} {self.actor_username or '-'} {self.action}"
+
+
+# =========================================================================
+# BE-04 (R11): HỌC SINH, EMAIL PHỤ HUYNH (MÃ HÓA), NHẬT KÝ GỬI EMAIL THỰC ĐƠN
+# =========================================================================
+MAX_CONTACTS_PER_STUDENT = 2
+
+
+class Student(models.Model):
+    """Chỉ họ tên + lớp (ngoài phạm vi: hồ sơ học sinh). Bé nghỉ học → xóa hẳn (xóa luôn email)."""
+
+    school_class = models.ForeignKey(SchoolClass, on_delete=models.PROTECT, related_name="students")
+    full_name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["school_class_id", "full_name", "id"]
+        constraints = [models.CheckConstraint(condition=~models.Q(full_name=""), name="student_name_not_empty")]
+
+    def __str__(self):
+        return self.full_name
+
+
+class ParentContact(models.Model):
+    """Email phụ huynh: lưu bản mã hóa (crypto_fields), HMAC để tìm trùng, gợi ý đã che để hiển thị."""
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="contacts")
+    email_encrypted = models.TextField()
+    email_hash = models.CharField(max_length=64, db_index=True)
+    email_hint = models.CharField(max_length=80)
+    consent_at = models.DateTimeField()
+    consent_note = models.CharField(max_length=200, blank=True, default="")
+    unsubscribed_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="parent_contacts_created")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["student_id", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["student", "email_hash"], name="parent_contact_unique_email"),
+            models.CheckConstraint(condition=models.Q(email_hash__regex=r"^[0-9a-f]{64}$"), name="parent_contact_hash_hex"),
+            models.CheckConstraint(condition=~models.Q(email_encrypted__contains="@"), name="parent_contact_not_plaintext"),
+        ]
+
+
+class NotificationLog(models.Model):
+    """Mỗi email nhận tối đa một thư thực đơn mỗi ngày (unique date + email_hash). Dòng tổng của ngày
+    dùng email_hash = "*" (ghi ngày đã chạy / bỏ qua vì ngày nghỉ)."""
+
+    class Status(models.TextChoices):
+        DRY_RUN = "dry_run", "Chế độ thử"
+        SENT = "sent", "Đã gửi"
+        FAILED = "failed", "Lỗi"
+        SKIPPED = "skipped", "Bỏ qua"
+        PENDING = "pending", "Đang gửi"
+
+    date = models.DateField()
+    email_hash = models.CharField(max_length=64)
+    student_count = models.PositiveSmallIntegerField(default=0)
+    status = models.CharField(max_length=10, choices=Status.choices)
+    error = models.CharField(max_length=300, blank=True, default="")
+    attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date", "id"]
+        constraints = [models.UniqueConstraint(fields=["date", "email_hash"], name="notification_unique_per_day")]

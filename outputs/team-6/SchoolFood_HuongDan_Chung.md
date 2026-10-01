@@ -35,7 +35,7 @@ Team xây một ứng dụng giúp bếp trường ghi nhập thực phẩm, xu�
 
 - Cả team đọc mục 1–4 của tài liệu này, sau đó README.md trong repository.
 
-- Mở SchoolFood_Checklist_6_ThanhVien.xlsx, sheet Cong viec, lọc cột Người làm theo TV của mình.
+- Mở SchoolFood_Checklist.xlsx, sheet Cong viec, lọc cột Người làm theo TV của mình.
 
 - Tra đúng mã SF trong [hướng dẫn từng task](SchoolFood_HuongDan_Task.md). Chỉ thực hiện task đủ điều kiện bắt đầu.
 
@@ -278,7 +278,7 @@ Mỗi người 5–10 phút: mở task, chạy chức năng, giải thích đo�
 
 ### Cách dùng ba file tài liệu
 
-File 1 là hướng dẫn chung này. File 2 SchoolFood_HuongDan_Task.md chứa thẻ SF01–SF42; Ctrl+F mã task để tìm. File 3 SchoolFood_Checklist_6_ThanhVien.xlsx có Team, Cong viec, Nghiem thu. Sheet Team điền tên và xem tổng; Cong viec lọc theo TV; Nghiem thu ghi actual và bằng chứng. Ô vàng là phần cập nhật, cột được tính xong là công thức. Tỷ lệ theo số task không đại diện số giờ hoặc độ khó.
+File 1 là hướng dẫn chung này. File 2 SchoolFood_HuongDan_Task.md chứa thẻ SF01–SF42; Ctrl+F mã task để tìm. File 3 SchoolFood_Checklist.xlsx (tạo lại 01/10/2026 theo plan_final.md) có Team, Cong viec (BE-xx, FE-xx, SF), Nghiem thu (mã NT), Loi. Sheet Team điền tên và xem tổng; Cong viec lọc theo TV; Nghiem thu ghi actual và bằng chứng. Ô vàng là phần cập nhật, cột được tính xong là công thức. Tỷ lệ theo số task không đại diện số giờ hoặc độ khó.
 
 Bộ này thay hướng dẫn phân công cũ 5 người trong outputs/project-foundation-update. Giữ bản cũ để tham khảo, không dùng hai checklist song song. README hướng dẫn chạy, architecture.md ghi quyết định kỹ thuật, plan_final.md ghi kế hoạch, trạng thái và lỗi mở; chỉ sửa đúng nơi khi có thay đổi.
 

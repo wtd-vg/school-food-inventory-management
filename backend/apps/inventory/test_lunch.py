@@ -167,7 +167,7 @@ class MealSF46APITests(TestCase):
         self.manager.groups.add(manager_group)
 
         self.viewer = User.objects.create_user(username="viewer", password="pwd")
-        viewer_group, _ = Group.objects.get_or_create(name="viewer")
+        viewer_group, _ = Group.objects.get_or_create(name="principal")  # 01/10: Hiệu trưởng chỉ đọc
         self.viewer.groups.add(viewer_group)
 
         self.class_1a = SchoolClass.objects.create(code="1A", name="Lớp 1A", enrolled=30)
@@ -175,10 +175,17 @@ class MealSF46APITests(TestCase):
 
         self.date_str = "2026-10-15"
 
+    def open_day(self):
+        return self.client.post(f"/api/lunch-days/{self.date_str}/open/")
+
     def test_get_counts_creates_day(self):
+        """ISSUE-011: GET chỉ đọc; mở ngày bằng POST open."""
         self.client.force_login(self.manager)
         response = self.client.get(f"/api/lunch-days/{self.date_str}/counts/")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "not_open")
+        self.assertFalse(LunchDay.objects.filter(date=date(2026, 10, 15)).exists())
+        response = self.open_day()
+        self.assertEqual(response.status_code, 201)
         data = response.json()
         self.assertEqual(data["date"], self.date_str)
         self.assertEqual(len(data["lines"]), 2)
@@ -189,8 +196,7 @@ class MealSF46APITests(TestCase):
 
     def test_put_counts_updates_data(self):
         self.client.force_login(self.manager)
-        # GET first to create day
-        get_res = self.client.get(f"/api/lunch-days/{self.date_str}/counts/").json()
+        get_res = self.open_day().json()
         version = get_res["version"]
 
         put_data = {
@@ -212,7 +218,7 @@ class MealSF46APITests(TestCase):
 
     def test_lock_and_reopen_planned(self):
         self.client.force_login(self.manager)
-        self.client.get(f"/api/lunch-days/{self.date_str}/counts/")
+        self.open_day()
         day = LunchDay.objects.get(date=date(2026, 10, 15))
         
         # Nhập đủ dữ liệu bằng PUT endpoint để trigger tự tăng version
@@ -249,9 +255,12 @@ class MealSF46APITests(TestCase):
         self.assertIsNone(day.planned_confirmed_at)
 
     def test_viewer_permissions(self):
+        self.client.force_login(self.manager)
+        self.open_day()
         self.client.force_login(self.viewer)
         get_res = self.client.get(f"/api/lunch-days/{self.date_str}/counts/")
         self.assertEqual(get_res.status_code, 200)
+        self.assertEqual(self.open_day().status_code, 403)
         
         # Viewer ko được PUT
         put_data = {"version": get_res.json()["version"], "staff_planned": 5}

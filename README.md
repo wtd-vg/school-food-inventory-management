@@ -3,14 +3,14 @@
 SchoolFood quản lý kho thực phẩm và bữa trưa cho một trường, viết bằng React/TypeScript, Django và PostgreSQL.
 
 - **Đã có:** nhập–xuất–kiểm kê dùng chung một sổ kho, báo cáo, nền lớp/ngày ăn, món ăn, giao diện "Bếp Nhà Trường". Bản production chạy tại https://schoolfoodusth.store.
-- **Đang làm:** bảo mật (vai trò Quản lý/Hiệu trưởng, khóa đăng nhập, nhật ký thao tác), thực đơn cố định theo thứ, gửi thực đơn cho phụ huynh qua Zalo.
+- **Đang làm:** bảo mật (vai trò Quản lý/Hiệu trưởng, khóa đăng nhập, nhật ký thao tác), thực đơn cố định theo thứ, gửi email thực đơn cho phụ huynh mỗi sáng.
 - **Kế hoạch, hiện trạng và lỗi mở:** [plan_final.md](plan_final.md).
 
 ## Bắt đầu theo vai trò
 
 - **AI/agent:** đọc [CLAUDE.md](CLAUDE.md) và [plan_final.md](plan_final.md), rồi khảo sát code liên quan trước khi trình kế hoạch.
 - **Thành viên:** đọc [hướng dẫn chung](outputs/team-6/SchoolFood_HuongDan_Chung.md), [task được giao](outputs/team-6/SchoolFood_HuongDan_Task.md), [quy chuẩn Git](GIT_WORKFLOW.md) và [hướng dẫn giao diện](frontend/UI_GUIDE.md).
-- **Leader/reviewer:** xem [plan_final.md](plan_final.md), [kiến trúc](architecture.md), [kế hoạch G2](outputs/team-6/GiaiDoan2_KeHoach.md) và [checklist](SchoolFood_Checklist_6_ThanhVien.xlsx).
+- **Leader/reviewer:** xem [plan_final.md](plan_final.md), [kiến trúc](architecture.md), [kế hoạch G2](outputs/team-6/GiaiDoan2_KeHoach.md) và [checklist](SchoolFood_Checklist.xlsx).
 
 "Có code", "test đạt" và "đã nghiệm thu" là ba trạng thái khác nhau. Không tự đánh dấu Excel.
 
@@ -26,7 +26,16 @@ docker compose exec backend python manage.py createsuperuser
 docker compose exec backend python manage.py seed_demo
 ```
 
-**DB cũ:** DB từng migrate tại `f00048d` không nâng cấp thẳng được (ISSUE-001 trong [plan_final.md](plan_final.md) §5). Không tự xóa volume hoặc fake migration.
+**Nâng cấp DB cũ (ISSUE-001):** DB từng migrate tại `f00048d` sẽ dừng ở `0008_issue_contract` với lỗi `relation "inventory_issue" already exists`. Không xóa volume, không `--fake`. Chạy lần lượt:
+
+```powershell
+docker compose exec backend python manage.py sf_legacy_db_check            # chỉ kiểm tra
+docker compose exec backend python manage.py sf_legacy_db_check --apply    # xóa 2 bảng phiếu xuất cũ nếu còn rỗng
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py sf31_ledger_audit --strict
+```
+
+Lệnh chỉ xóa hai bảng `inventory_issue`/`inventory_issueline` của bản cũ khi chúng rỗng và đúng schema cũ. Nếu bảng còn dữ liệu, bị bảng khác tham chiếu hoặc schema lạ, lệnh dừng với exit 1 và không sửa gì; khi đó cần kế hoạch chuyển dữ liệu riêng. DB sạch hoặc đã nâng cấp: lệnh báo `clean`/`up_to_date`.
 
 Chỉ migrate/seed trên DB local đã xác nhận. Tài khoản thường được gán group trong Django admin `/admin/`. Không ghi mật khẩu vào repo.
 
