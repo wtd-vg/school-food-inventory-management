@@ -7,12 +7,15 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.db import IntegrityError, connection, transaction
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings
 
+from . import menu_services
+from .http_input import InputError
 from .models import (
     AuditLog, Category, DayMenuSnapshot, Dish, FoodItem, MenuVersion,
     MenuVersionItem, RecipeComponent, SchoolHoliday,
 )
+from .recipe_services import convert_to_base
 from .test_security import CsrfClientMixin, make_user
 
 
@@ -39,6 +42,41 @@ def dong_ho_postgres(ngay):
             yield
         finally:
             transaction.set_rollback(True)
+
+
+class QuyDoiDonViTests(SimpleTestCase):
+    """BE-06: quy đổi thuần Decimal, không cần DB."""
+
+    def test_quy_doi_dung_sau_so_le(self):
+        for food_unit, luong, don_vi, expected in [
+            ("kg", "60", "g", "0.060000"),
+            ("kg", "0.4", "g", "0.000400"),
+            ("kg", "0.06", "kg", "0.060000"),
+            ("lit", "150", "ml", "0.150000"),
+            ("lit", "0.2", "lit", "0.200000"),
+            ("piece", "1", "piece", "1.000000"),
+        ]:
+            with self.subTest(luong=luong, don_vi=don_vi, food_unit=food_unit):
+                ket_qua = convert_to_base(food_unit, Decimal(luong), don_vi)
+                self.assertEqual(str(ket_qua), expected)
+                self.assertEqual(ket_qua.as_tuple().exponent, -6)
+
+    def test_chan_kg_lit_va_qua_sau_so_le(self):
+        for food_unit, luong, don_vi, truong in [
+            ("kg", "1", "lit", "unit"),
+            ("kg", "100", "ml", "unit"),
+            ("lit", "1", "kg", "unit"),
+            ("lit", "60", "g", "unit"),
+            ("piece", "60", "g", "unit"),
+            ("kg", "0.0004", "g", "quantity"),
+            ("kg", "0", "g", "quantity"),
+            ("kg", "-60", "g", "quantity"),
+        ]:
+            with self.subTest(luong=luong, don_vi=don_vi, food_unit=food_unit):
+                with self.assertRaises(InputError) as caught:
+                    convert_to_base(food_unit, Decimal(luong), don_vi)
+                self.assertEqual(caught.exception.status, 400)
+                self.assertIn(truong, caught.exception.errors)
 
 
 @override_settings(TIME_ZONE="Asia/Ho_Chi_Minh")
@@ -103,7 +141,9 @@ class ThucDonApiTests(CsrfClientMixin, TestCase):
         for components in [
             [{**hop_le, "quantity": "0.0004"}],
             [{**hop_le, "unit": "ml"}],
+            [{**hop_le, "quantity": "1", "unit": "lit"}],  # kg → lít
             [{**hop_le, "food_id": self.sua.id}],
+            [{**hop_le, "food_id": self.sua.id, "quantity": "1", "unit": "kg"}],  # lít → kg
             [hop_le, hop_le],
             [{**hop_le, "quantity": 0.4}],  # Cố ý gửi float để kiểm tra từ chối.
             [{**hop_le, "quantity": "NaN"}],
@@ -264,6 +304,89 @@ class ThucDonApiTests(CsrfClientMixin, TestCase):
         self.mon.refresh_from_db()
         self.assertTrue(self.mon.is_active)
 
+    def test_phien_ban_a_tu_0110_b_tu_1510_chon_dung_ngay(self):
+        """BE-07: 14/10 (T4) còn dùng A, 15/10 (T5) chuyển sang B — cùng một tuần."""
+        a = self.phien_ban_hien_hanh()
+        mon_b = Dish.objects.create(code="MON_B", name="Món phiên bản B")
+        RecipeComponent.objects.create(dish=mon_b, food=self.trung, quantity=Decimal("1"))
+        b = self.tao_phien_ban("2026-10-15", mon_b.id)
+        self.assertEqual(menu_services.version_for(date(2026, 9, 30)), None)
+        self.assertEqual(menu_services.version_for(date(2026, 10, 14)).id, a.id)
+        self.assertEqual(menu_services.version_for(date(2026, 10, 15)).id, b["id"])
+        tuan = {d["date"]: d for d in self.gui("GET", "/api/menu/week/?date=2026-10-14")["days"]}
+        self.assertEqual(tuan["2026-10-14"]["menu_version_id"], a.id)
+        self.assertEqual([m["dish_id"] for m in tuan["2026-10-14"]["dishes"]], [self.mon.id])
+        self.assertEqual(tuan["2026-10-15"]["menu_version_id"], b["id"])
+        self.assertEqual([m["dish_id"] for m in tuan["2026-10-15"]["dishes"]], [mon_b.id])
+        # Lịch sử: A có effective_to = 14/10, B chưa có ngày kết thúc; A là bản hiện hành, không sửa được.
+        lich_su = {v["id"]: v for v in self.gui("GET", "/api/menu/versions/")["results"]}
+        self.assertEqual(lich_su[a.id]["effective_to"], "2026-10-14")
+        self.assertEqual((lich_su[a.id]["is_current"], lich_su[a.id]["is_editable"]), (True, False))
+        self.assertEqual((lich_su[b["id"]]["effective_to"], lich_su[b["id"]]["is_editable"]), (None, True))
+        # Xem tuần tương lai không chụp bản nào.
+        self.assertFalse(DayMenuSnapshot.objects.filter(date__gt=NGAY).exists())
+
+    def test_trang_thai_ngay_t7_cn_ngay_le_ngay_hoc(self):
+        SchoolHoliday.objects.create(date=date(2026, 10, 2), name="Nghỉ lễ", created_by=self.quan_ly)
+        for ngay, expected in [
+            (date(2026, 10, 1), "menu"),
+            (date(2026, 10, 2), "holiday"),
+            (date(2026, 10, 3), "weekend"),
+            (date(2026, 10, 4), "weekend"),
+            (date(2026, 10, 5), "menu"),
+        ]:
+            with self.subTest(ngay=ngay):
+                self.assertEqual(menu_services.day_status(ngay), expected)
+
+    def test_khong_chup_ngay_nghi_ngay_tuong_lai_va_chup_mot_lan(self):
+        self.phien_ban_hien_hanh()
+        self.assertIsNone(menu_services.snapshot_day(date(2026, 10, 2)))  # ngày mai
+        self.assertIsNone(menu_services.snapshot_day(date(2026, 9, 27)))  # Chủ nhật
+        mot = menu_services.snapshot_day(NGAY)
+        hai = menu_services.snapshot_day(NGAY)
+        self.assertEqual(mot.pk, hai.pk)
+        self.assertEqual(DayMenuSnapshot.objects.count(), 1)
+
+    def test_sua_cong_thuc_ngay_da_chup_khong_doi_qua_service(self):
+        """BE-07: snapshot ngày đã qua giữ nguyên dù công thức đổi về sau."""
+        self.phien_ban_hien_hanh()
+        truoc = menu_services.menu_for_date(NGAY)
+        self.assertEqual(truoc["source"], "snapshot")
+        comp = RecipeComponent.objects.get(dish=self.mon)
+        comp.quantity = Decimal("0.100000")
+        comp.save(update_fields=["quantity"])
+        sau = menu_services.menu_for_date(NGAY)
+        self.assertEqual(sau["dishes"], truoc["dishes"])
+        self.assertEqual(sau["dishes"][0]["components"][0]["quantity"], "0.060000")
+
+    def test_hieu_truong_moi_thao_tac_ghi_thuc_don_tra_403(self):
+        version = self.tao_phien_ban()
+        holiday = self.gui("POST", "/api/holidays/", {"date": "2026-10-05", "name": "Nghỉ bù"}, status=201)
+        self.client = self.csrf_client(self.hieu_truong)
+        truoc = (MenuVersion.objects.count(), SchoolHoliday.objects.count(), Dish.objects.count(),
+                 RecipeComponent.objects.get(dish=self.mon).quantity, AuditLog.objects.count())
+        for method, url, body in [
+            ("DELETE", f"/api/menu/versions/{version['id']}/", None),
+            ("DELETE", f"/api/holidays/{holiday['id']}/", None),
+            ("POST", "/api/dishes/", {"code": "HT", "name": "Món HT",
+                                      "components": [{"food_id": self.thit.id, "quantity": "60", "unit": "g"}]}),
+            ("PATCH", f"/api/dishes/{self.mon.id}/",
+             {"components": [{"food_id": self.thit.id, "quantity": "80", "unit": "g"}]}),
+        ]:
+            with self.subTest(method=method, url=url):
+                self.gui(method, url, body, status=403)
+        self.assertEqual((MenuVersion.objects.count(), SchoolHoliday.objects.count(), Dish.objects.count(),
+                          RecipeComponent.objects.get(dish=self.mon).quantity, AuditLog.objects.count()), truoc)
+
+    def test_ghi_thuc_don_co_nhat_ky(self):
+        version = self.tao_phien_ban()
+        holiday = self.gui("POST", "/api/holidays/", {"date": "2026-10-05", "name": "Nghỉ bù"}, status=201)
+        self.gui("DELETE", f"/api/holidays/{holiday['id']}/")
+        self.gui("DELETE", f"/api/menu/versions/{version['id']}/")
+        actions = set(AuditLog.objects.filter(actor=self.quan_ly).values_list("action", flat=True))
+        self.assertTrue({"menu_version_create", "menu_version_delete", "holiday_create", "holiday_delete"} <= actions,
+                        actions)
+
 
 class ThucDonTriggerTests(TransactionTestCase):
     """Thử ORM trực tiếp, kiểm SQLSTATE và tên guard để tránh nhầm lỗi FK/unique."""
@@ -309,6 +432,33 @@ class ThucDonTriggerTests(TransactionTestCase):
         self.bi_chan(lambda: MenuVersionItem.objects.create(version=self.version, weekday=4, dish=self.mon),
                      "menu_version_immutable")
         self.assertEqual(self.version.items.count(), 1)
+
+    def test_phien_ban_tuong_lai_sua_duoc_nhung_khong_doi_ve_qua_khu(self):
+        tuong_lai = MenuVersion.objects.create(effective_from=date(2026, 10, 12), created_by=self.version.created_by)
+        MenuVersion.objects.filter(pk=tuong_lai.pk).update(note="Sửa trước khi áp dụng")
+        MenuVersionItem.objects.create(version=tuong_lai, weekday=0, dish=self.mon)
+        self.bi_chan(lambda: MenuVersion.objects.filter(pk=tuong_lai.pk).update(effective_from=NGAY),
+                     "menu_version_future_only")
+        tuong_lai.refresh_from_db()
+        self.assertEqual((tuong_lai.effective_from, tuong_lai.note), (date(2026, 10, 12), "Sửa trước khi áp dụng"))
+
+    def test_item_khong_chuyen_sang_phien_ban_khac(self):
+        a = MenuVersion.objects.create(effective_from=date(2026, 10, 12), created_by=self.version.created_by)
+        b = MenuVersion.objects.create(effective_from=date(2026, 10, 19), created_by=self.version.created_by)
+        item = MenuVersionItem.objects.create(version=a, weekday=0, dish=self.mon)
+        self.bi_chan(lambda: MenuVersionItem.objects.filter(pk=item.pk).update(version=b),
+                     "menu_item_version_immutable")
+
+    def test_cong_thuc_so_luong_0_bi_db_chan(self):
+        thit = FoodItem.objects.create(code="THIT_TRG", name="Thịt", unit="kg",
+                                       category=Category.objects.create(code="NL_TRG", name="NL"))
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                RecipeComponent.objects.create(dish=self.mon, food=thit, quantity=Decimal("0"))
+        # 0,4 g = 0.0004 kg lưu đúng, không bị cắt về 0.
+        comp = RecipeComponent.objects.create(dish=self.mon, food=thit, quantity=Decimal("0.000400"))
+        comp.refresh_from_db()
+        self.assertEqual(comp.quantity, Decimal("0.000400"))
 
     def test_update_ban_chup(self):
         snap = DayMenuSnapshot.objects.create(date=NGAY, menu_version=self.version, items=[])
