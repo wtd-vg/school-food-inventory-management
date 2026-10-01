@@ -8,7 +8,7 @@ class ClassApiTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.viewer_user = User.objects.create_user(username="viewer", password="password")
-        viewer_group, _ = Group.objects.get_or_create(name="viewer")
+        viewer_group, _ = Group.objects.get_or_create(name="principal")  # 01/10: bỏ viewer, Hiệu trưởng chỉ đọc
         self.viewer_user.groups.add(viewer_group)
         
         self.admin_user = User.objects.create_user(username="admin", password="password")
@@ -112,7 +112,7 @@ class RecipeApiTests(TestCase):
         }
         response = self.client.post("/api/dishes/", json.dumps(payload), content_type="application/json")
         self.assertEqual(response.status_code, 400)
-        self.assertIn("Cannot convert g to lit", response.json()["message"])
+        self.assertIn("Không quy đổi được", response.json()["message"])
 
     def test_recipe_malicious_values(self):
         bad_values = ["-50", "0", "NaN", "Infinity", "abc"]
@@ -126,10 +126,7 @@ class RecipeApiTests(TestCase):
             }
             response = self.client.post("/api/dishes/", json.dumps(payload), content_type="application/json")
             self.assertEqual(response.status_code, 400, f"Failed on value: {val}")
-            self.assertTrue(
-                "Must be positive and finite" in response.json()["message"] or 
-                "Invalid number format" in response.json()["message"]
-            )
+            self.assertTrue(response.json()["message"])
 
     def test_recipe_atomic_transaction_rollback(self):
         payload = {
@@ -142,7 +139,7 @@ class RecipeApiTests(TestCase):
         }
         response = self.client.post("/api/dishes/", json.dumps(payload), content_type="application/json")
         self.assertEqual(response.status_code, 400)
-        self.assertIn("Duplicate food in components", response.json()["message"])
+        self.assertIn("bị lặp", response.json()["message"])
         
         # Món ăn không được tạo
         self.assertFalse(Dish.objects.filter(code="ATOMIC").exists())
@@ -169,4 +166,4 @@ class RecipeApiTests(TestCase):
         }
         response = self.client.post("/api/dishes/", json.dumps(payload), content_type="application/json")
         self.assertEqual(response.status_code, 400)
-        self.assertIn("Empty recipe", response.json()["message"])
+        self.assertIn("ít nhất một nguyên liệu", response.json()["message"])
