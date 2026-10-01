@@ -36,8 +36,10 @@ FROM backend AS backend-prod
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
-# Gom file tĩnh của admin; giá trị env ở đây chỉ để settings nạp được lúc build.
+# Gom file tĩnh của admin; giá trị env ở đây chỉ để settings nạp được lúc build (BE-04 bắt buộc có
+# khóa mã hóa khi DEBUG=False). Không phải bí mật, không nằm trong image lúc chạy.
 RUN DEBUG=False SECRET_KEY=build-only-not-secret-build-only-not-secret-build-only ALLOWED_HOSTS=localhost \
+    FIELD_ENCRYPTION_KEYS=build-only-not-a-key CONTACT_HASH_KEY=build-only-not-a-key \
     python manage.py collectstatic --noinput
 
 # Không chạy tiến trình web bằng root.

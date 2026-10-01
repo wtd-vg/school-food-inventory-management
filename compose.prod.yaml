@@ -4,7 +4,7 @@
 name: schoolfood-prod
 
 services:
-  # PostgreSQL 17, không publish cổng ra ngoài; chỉ backend trong mạng nội bộ gọi được.
+  # PostgreSQL 17, không publish cổng ra ngoài; backend/scheduler gọi qua mạng nội bộ.
   db:
     image: postgres:17-alpine
     environment:
@@ -22,27 +22,43 @@ services:
 
   # Django + gunicorn.
   backend:
+    <<: &backend-runtime
+      image: schoolfood-backend:prod
+      env_file:
+        - .env.prod
+      environment:
+        DEBUG: "False"
+        SECRET_KEY: ${SECRET_KEY:?Thiếu SECRET_KEY}
+        ALLOWED_HOSTS: ${ALLOWED_HOSTS:?Thiếu ALLOWED_HOSTS}
+        CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?Thiếu CSRF_TRUSTED_ORIGINS}
+        SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-True}
+        COOKIE_SECURE: ${COOKIE_SECURE:-True}
+        SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-3600}
+        WEB_CONCURRENCY: ${WEB_CONCURRENCY:-3}
+        DB_NAME: ${POSTGRES_DB}
+        DB_USER: ${POSTGRES_USER}
+        DB_PASSWORD: ${POSTGRES_PASSWORD}
+        DB_HOST: db
+        DB_PORT: "5432"
+      depends_on:
+        db:
+          condition: service_healthy
+      restart: unless-stopped
     build:
       context: .
       target: backend-prod
-    environment:
-      DEBUG: "False"
-      SECRET_KEY: ${SECRET_KEY:?Thiếu SECRET_KEY}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?Thiếu ALLOWED_HOSTS}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?Thiếu CSRF_TRUSTED_ORIGINS}
-      SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-True}
-      COOKIE_SECURE: ${COOKIE_SECURE:-True}
-      SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-3600}
-      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-3}
-      DB_NAME: ${POSTGRES_DB}
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_HOST: db
-      DB_PORT: "5432"
+
+  # BE-17: lịch gửi email thực đơn 06:30 (run_scheduler). Cùng image/env với backend,
+  # không build lại, không publish cổng. Đổi .env.prod thì chạy lại `npm run ec2:up`.
+  scheduler:
+    <<: *backend-runtime
+    command: ["python", "manage.py", "run_scheduler"]
     depends_on:
       db:
         condition: service_healthy
-    restart: unless-stopped
+      backend:
+        condition: service_started
+    stop_grace_period: 30s
 
   # nginx: SPA + chuyển /api, /admin sang backend.
   # Chỉ mở cổng trên 127.0.0.1 để thử bằng SSH tunnel; người dùng đi vào qua Cloudflare Tunnel.
