@@ -1,7 +1,8 @@
 """BE-08: API email thực đơn.
 
 GET  /api/notifications/?date=YYYY-MM-DD   nhật ký gửi (email đã che)        Quản lý + Hiệu trưởng
-POST /api/notifications/send/   {date?}     xếp lịch gửi lại phần còn thiếu    Quản lý
+GET  /api/notifications/preview/?date=      xem trước thư (HTML, ảnh data:)     Quản lý + Hiệu trưởng
+POST /api/notifications/send/   {date?}     Quản lý bấm gửi (SF74): xếp lịch, scheduler gửi phần còn thiếu
 POST /api/notifications/test/   {date?}     gửi thử tới email của người đang đăng nhập
 POST /api/unsubscribe/<token>/              công khai: hủy nhận (token ký số, không cần đăng nhập/CSRF)
 """
@@ -19,7 +20,7 @@ from .http_input import Conflict, InputError, error, json_api, method_not_allowe
 from .mailer import read_unsubscribe_token
 from .menu_services import today
 from .models import ParentContact
-from .notifications import day_logs, request_resend, send_test_email
+from .notifications import check_sendable, day_logs, preview, request_resend, send_test_email
 
 
 @inventory_permission_required
@@ -45,10 +46,21 @@ def notifications_send(request):
     if request.method != "POST":
         return method_not_allowed()
     day = _date_from_body(request)
+    problem = check_sendable(day)
+    if problem:
+        raise Conflict(problem)
     with transaction.atomic():
         request_resend(day)
-        audit.record(request, "email_resend", "notification", day.isoformat(), f"Xếp lịch gửi lại email thực đơn {day:%d/%m/%Y}")
-    return JsonResponse({"message": "Đã xếp lịch gửi lại, hệ thống sẽ gửi phần còn thiếu trong khoảng 1 phút."}, status=202)
+        audit.record(request, "email_send", "notification", day.isoformat(), f"Bấm gửi email thực đơn {day:%d/%m/%Y}")
+    return JsonResponse({"message": "Đã xếp lịch gửi, hệ thống gửi thư cho phụ huynh trong khoảng 1 phút."}, status=202)
+
+
+@inventory_permission_required
+@json_api
+def notifications_preview(request):
+    if request.method != "GET":
+        return method_not_allowed()
+    return JsonResponse(preview(query_date(request, "date") or today()))
 
 
 @inventory_permission_required

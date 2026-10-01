@@ -420,7 +420,7 @@ class HocSinhEmailTests(CsrfClientMixin, TestCase):
             call_command("run_scheduler", "--once", stdout=stdout, stderr=stderr)
         self.assertEqual(stderr.getvalue(), "")
 
-    @override_settings(EMAIL_MODE="smtp")
+    @override_settings(EMAIL_MODE="smtp", MENU_AUTO_SEND=True)
     def test_scheduler_0629_chua_gui_0631_gui_va_khong_gui_lap(self):
         self.tao_thuc_don()
         self.tao_hoc_sinh()
@@ -676,7 +676,7 @@ class HocSinhEmailTests(CsrfClientMixin, TestCase):
         self.assertIn("SMTPServerDisconnected", response.json()["message"])
         self.assertFalse(AuditLog.objects.filter(action="email_test").exists())
 
-    @override_settings(EMAIL_MODE="smtp")
+    @override_settings(EMAIL_MODE="smtp", MENU_AUTO_SEND=True)
     def test_scheduler_thu_bay_ghi_skipped_khong_gui(self):
         self.tao_thuc_don()
         self.tao_hoc_sinh()

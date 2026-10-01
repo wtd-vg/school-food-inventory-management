@@ -186,6 +186,8 @@ EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "SchoolFood <noreply@localhost>")
 EMAIL_DAILY_LIMIT = int(os.getenv("EMAIL_DAILY_LIMIT", "450"))
 MENU_SEND_TIME = os.getenv("MENU_SEND_TIME", "06:30")
+# SF74 (01/10/2026): mặc định KHÔNG tự gửi lúc MENU_SEND_TIME; Quản lý bấm gửi sau khi tải ảnh suất ăn.
+MENU_AUTO_SEND = _env_bool("MENU_AUTO_SEND", False)
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:5173").rstrip("/")
 SCHOOL_NAME = os.getenv("SCHOOL_NAME", "Nhà trường")
 if EMAIL_MODE not in {"dry_run", "smtp"}:
