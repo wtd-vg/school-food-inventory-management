@@ -6,9 +6,12 @@ from apps.inventory import (
     audit_views,
     auth_views,
     class_views,
+    day_views,
+    demand_views,
     meal_views,
     menu_views,
     notification_views,
+    purchase_views,
     recipe_views,
     student_views,
     user_views,
@@ -90,4 +93,23 @@ urlpatterns = [
     path("notifications/send/", notification_views.notifications_send, name="notifications_send"),
     path("notifications/test/", notification_views.notifications_test, name="notifications_test"),
     path("unsubscribe/<str:token>/", notification_views.unsubscribe, name="unsubscribe"),
+
+    # Đợt 2 — SF58 nhu cầu & đề xuất
+    path("lunch-days/<str:date_str>/demand/", demand_views.lunch_day_demand, name="lunch_day_demand"),
+    path("lunch-days/<str:date_str>/demand/calculate/", demand_views.lunch_day_demand_calculate, name="lunch_day_demand_calculate"),
+    path("demand-revisions/<int:revision_id>/approve/", demand_views.demand_approve, name="demand_approve"),
+
+    # Đợt 2 — SF64 đơn đặt, nhận theo đơn
+    path("purchase-orders/", purchase_views.purchase_orders, name="purchase_orders"),
+    path("purchase-orders/from-demand/", purchase_views.purchase_order_from_demand, name="purchase_order_from_demand"),
+    path("purchase-orders/<int:po_id>/", purchase_views.purchase_order_detail, name="purchase_order_detail"),
+    path("purchase-orders/<int:po_id>/receipts/", purchase_views.purchase_order_receipts, name="purchase_order_receipts"),
+    path("purchase-orders/<int:po_id>/<str:action>/", purchase_views.purchase_order_action, name="purchase_order_action"),
+
+    # Đợt 2 — SF68/70 xuất theo ngày, chi phí, đóng ngày, báo cáo ngày
+    path("lunch-days/<str:date_str>/issue/", day_views.lunch_day_issue, name="lunch_day_issue"),
+    path("lunch-days/<str:date_str>/cost/", day_views.lunch_day_cost, name="lunch_day_cost"),
+    path("lunch-days/<str:date_str>/close/", day_views.lunch_day_close, name="lunch_day_close"),
+    path("lunch-days/<str:date_str>/reopen-close/", day_views.lunch_day_reopen_close, name="lunch_day_reopen_close"),
+    path("reports/daily/", day_views.reports_daily, name="reports_daily"),
 ]

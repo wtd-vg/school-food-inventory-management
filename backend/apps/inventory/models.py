@@ -92,6 +92,9 @@ class ReceiptLine(models.Model):
     unit_price = models.DecimalField(
         max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))],
     )
+    # SF61/62: dòng nhận theo đơn đặt (null = nhập lẻ ngoài đơn).
+    po_line = models.ForeignKey("PurchaseOrderLine", on_delete=models.PROTECT, null=True, blank=True,
+                                related_name="receipt_lines")
 
     class Meta:
         ordering = ["id"]
@@ -271,6 +274,8 @@ class Issue(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="issues_created"
     )
     posted_at = models.DateTimeField(null=True, blank=True, editable=False)
+    # SF67/68: phiếu xuất cho bếp theo ngày ăn (null = xuất khác, không được dùng phần đã giữ).
+    lunch_day = models.ForeignKey("LunchDay", on_delete=models.PROTECT, null=True, blank=True, related_name="issues")
 
     class Meta:
         ordering = ["id"]
@@ -697,3 +702,209 @@ class NotificationLog(models.Model):
     class Meta:
         ordering = ["-date", "id"]
         constraints = [models.UniqueConstraint(fields=["date", "email_hash"], name="notification_unique_per_day")]
+
+
+# =========================================================================
+# ĐỢT 2 — SF55 NHU CẦU & PHÂN BỔ · SF61 ĐƠN ĐẶT · SF67 XUẤT THEO NGÀY & ĐÓNG NGÀY
+# Thứ tự khóa (plan_final §3): đầu chứng từ → LunchDay/DemandRevision/PurchaseOrder → FoodItem (id tăng)
+# → StockAllocation (id tăng) → PurchaseOrderLine (id tăng).
+# =========================================================================
+QTY_LIMIT = Decimal("100000000000")
+
+
+class DemandRevision(models.Model):
+    """Một lần tính nhu cầu nguyên liệu cho một ngày ăn (SF55/56).
+
+    draft: bản tính, chưa giữ hàng · approved: đã duyệt và giữ hàng (StockAllocation) · stale: lỗi thời vì số
+    suất/thực đơn/tồn đã đổi hoặc có bản mới. Mỗi ngày tối đa một bản approved.
+    """
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Bản tính"
+        APPROVED = "approved", "Đã duyệt"
+        STALE = "stale", "Lỗi thời"
+
+    lunch_day = models.ForeignKey(LunchDay, on_delete=models.PROTECT, related_name="demand_revisions")
+    revision = models.PositiveIntegerField()
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    servings = models.PositiveIntegerField()
+    lunch_day_version = models.PositiveIntegerField()
+    menu_version = models.ForeignKey(MenuVersion, on_delete=models.PROTECT, null=True, blank=True,
+                                     related_name="demand_revisions")
+    menu_items = models.JSONField(default=list)
+    stale_reason = models.CharField(max_length=255, blank=True, default="")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                                   related_name="demand_revisions_created")
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                                    related_name="demand_revisions_approved")
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["lunch_day_id", "-revision"]
+        constraints = [
+            models.UniqueConstraint(fields=["lunch_day", "revision"], name="demand_revision_unique"),
+            models.UniqueConstraint(fields=["lunch_day"], condition=models.Q(status="approved"),
+                                    name="demand_one_approved_per_day"),
+            models.CheckConstraint(
+                condition=(models.Q(status="approved", approved_at__isnull=False, approved_by__isnull=False)
+                           | ~models.Q(status="approved")),
+                name="demand_approved_has_actor",
+            ),
+        ]
+
+
+class DemandLine(models.Model):
+    """Nhu cầu một nguyên liệu: required = Σ(suất × định lượng) làm tròn 3 số lẻ SAU khi cộng (ROUND_HALF_UP).
+
+    Khi duyệt: from_stock (giữ từ tồn) + from_pending (giữ từ đơn đang chờ về) + to_buy = required + reserve.
+    """
+
+    revision = models.ForeignKey(DemandRevision, on_delete=models.CASCADE, related_name="lines")
+    food = models.ForeignKey(FoodItem, on_delete=models.PROTECT, related_name="demand_lines")
+    required_qty = models.DecimalField(max_digits=14, decimal_places=3)
+    reserve_qty = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    reserve_reason = models.CharField(max_length=255, blank=True, default="")
+    from_stock_qty = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    from_pending_qty = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    to_buy_qty = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+
+    class Meta:
+        ordering = ["revision_id", "food_id"]
+        constraints = [
+            models.UniqueConstraint(fields=["revision", "food"], name="demand_line_unique_food"),
+            models.CheckConstraint(
+                condition=models.Q(required_qty__gte=0, required_qty__lt=QTY_LIMIT, reserve_qty__gte=0,
+                                   reserve_qty__lt=QTY_LIMIT, from_stock_qty__gte=0, from_pending_qty__gte=0,
+                                   to_buy_qty__gte=0),
+                name="demand_line_quantities_valid",
+            ),
+            models.CheckConstraint(condition=models.Q(reserve_qty=0) | ~models.Q(reserve_reason=""),
+                                   name="demand_line_reserve_needs_reason"),
+        ]
+
+
+class PurchaseOrder(models.Model):
+    """Đơn đặt hàng (SF61): draft → approved → sent → closed; draft/approved hủy được; đóng/hủy cần lý do."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Nháp"
+        APPROVED = "approved", "Đã duyệt"
+        SENT = "sent", "Đã gửi NCC"
+        CLOSED = "closed", "Đã đóng"
+        CANCELLED = "cancelled", "Đã hủy"
+
+    code = models.CharField(max_length=32, unique=True)
+    supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name="purchase_orders")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    expected_date = models.DateField()
+    note = models.TextField(blank=True, default="")
+    demand_revision = models.ForeignKey(DemandRevision, on_delete=models.PROTECT, null=True, blank=True,
+                                        related_name="purchase_orders")
+    version = models.PositiveIntegerField(default=1)
+    close_reason = models.CharField(max_length=255, blank=True, default="")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                                   related_name="purchase_orders_created")
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(version__gte=1), name="purchase_order_version_positive"),
+            models.CheckConstraint(
+                condition=~models.Q(status__in=["closed", "cancelled"]) | ~models.Q(close_reason=""),
+                name="purchase_order_close_needs_reason",
+            ),
+        ]
+
+
+class PurchaseOrderLine(models.Model):
+    order = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name="lines")
+    food = models.ForeignKey(FoodItem, on_delete=models.PROTECT, related_name="purchase_order_lines")
+    qty_ordered = models.DecimalField(max_digits=14, decimal_places=3)
+    qty_received = models.DecimalField(max_digits=14, decimal_places=3, default=0)
+    unit_price_est = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+
+    class Meta:
+        ordering = ["order_id", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["order", "food"], name="po_line_unique_food"),
+            models.CheckConstraint(condition=models.Q(qty_ordered__gt=0, qty_ordered__lt=QTY_LIMIT),
+                                   name="po_line_ordered_positive"),
+            models.CheckConstraint(
+                condition=models.Q(qty_received__gte=0, qty_received__lte=models.F("qty_ordered")),
+                name="po_line_received_not_over",
+            ),
+        ]
+
+    @property
+    def qty_open(self):
+        return self.qty_ordered - self.qty_received
+
+
+class StockAllocation(models.Model):
+    """Lượng giữ cho một ngày ăn (SF55/58). Tồn giữ vẫn nằm trong FoodItem.quantity.
+
+    source stock: giữ từ tồn · source po_line: giữ từ đơn đang chờ về (po_line bắt buộc).
+    reserved → consumed (xuất cho ngày đó) hoặc released (bỏ giữ: duyệt lại, hủy đơn, đóng phần còn lại).
+    Nhận hàng chuyển phần po_line đã về sang stock (không tính đôi).
+    """
+
+    class Source(models.TextChoices):
+        STOCK = "stock", "Tồn kho"
+        PO_LINE = "po_line", "Đơn đang chờ"
+
+    class Status(models.TextChoices):
+        RESERVED = "reserved", "Đang giữ"
+        CONSUMED = "consumed", "Đã dùng"
+        RELEASED = "released", "Đã bỏ giữ"
+
+    lunch_day = models.ForeignKey(LunchDay, on_delete=models.PROTECT, related_name="allocations")
+    demand_line = models.ForeignKey(DemandLine, on_delete=models.PROTECT, related_name="allocations")
+    food = models.ForeignKey(FoodItem, on_delete=models.PROTECT, related_name="allocations")
+    source = models.CharField(max_length=10, choices=Source.choices)
+    po_line = models.ForeignKey(PurchaseOrderLine, on_delete=models.PROTECT, null=True, blank=True,
+                                related_name="allocations")
+    qty = models.DecimalField(max_digits=14, decimal_places=3)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.RESERVED)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["id"]
+        indexes = [models.Index(fields=["food", "status", "source"], name="allocation_food_status_idx")]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(qty__gt=0, qty__lt=QTY_LIMIT), name="allocation_qty_positive"),
+            models.CheckConstraint(
+                condition=(models.Q(source="stock", po_line__isnull=True)
+                           | models.Q(source="po_line", po_line__isnull=False)),
+                name="allocation_source_matches_po_line",
+            ),
+        ]
+
+
+class LunchDayClose(models.Model):
+    """Đóng ngày (SF67): đã chốt số thực tế, mọi phiếu xuất của ngày đã chốt; chênh lệch cần giải thích.
+    Mở lại giữ lịch sử (reopened_*); mỗi ngày tối đa một lần đóng đang hiệu lực."""
+
+    lunch_day = models.ForeignKey(LunchDay, on_delete=models.PROTECT, related_name="closes")
+    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="lunch_days_closed")
+    closed_at = models.DateTimeField(auto_now_add=True)
+    note = models.TextField(blank=True, default="")
+    summary = models.JSONField(default=dict)
+    reopened_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                                    related_name="lunch_days_reopened")
+    reopened_at = models.DateTimeField(null=True, blank=True)
+    reopen_reason = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        ordering = ["lunch_day_id", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["lunch_day"], condition=models.Q(reopened_at__isnull=True),
+                                    name="lunch_day_one_active_close"),
+            models.CheckConstraint(condition=models.Q(reopened_at__isnull=True) | ~models.Q(reopen_reason=""),
+                                   name="lunch_day_reopen_close_needs_reason"),
+        ]
