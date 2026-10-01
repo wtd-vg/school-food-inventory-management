@@ -28,6 +28,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # BE-10: phiên tối đa 12 giờ kể từ lúc đăng nhập (đặt sau AuthenticationMiddleware).
+    "apps.inventory.session_security.AbsoluteSessionTimeoutMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -91,8 +93,13 @@ if "test" in sys.argv:
             "Bỏ DATABASE_URL và đặt DB_HOST=127.0.0.1 (xem README.md §4)."
         )
 
-# Skeleton chưa làm form đăng ký nên chưa cần password validator.
-AUTH_PASSWORD_VALIDATORS: list[dict[str, str]] = []
+# BE-10 (R12): mật khẩu ≥ 10 ký tự, không phổ biến, không giống tên đăng nhập, không toàn số.
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 10}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
 
 LANGUAGE_CODE = "vi"
 TIME_ZONE = "Asia/Ho_Chi_Minh"
@@ -108,6 +115,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
+# BE-10 (R12): hết hạn sau 30 phút không thao tác (cookie gia hạn mỗi request), tối đa 12 giờ.
+SESSION_COOKIE_AGE = int(os.getenv("SESSION_IDLE_SECONDS", "1800"))
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_ABSOLUTE_MAX_AGE = int(os.getenv("SESSION_ABSOLUTE_SECONDS", str(12 * 3600)))
 CSRF_COOKIE_SAMESITE = "Lax"
 
 CSRF_TRUSTED_ORIGINS = [
@@ -141,6 +152,43 @@ else:
         raise ImproperlyConfigured("DEBUG=False cần ALLOWED_HOSTS là danh sách domain cụ thể, không dùng '*'.")
 
 CSRF_TRUSTED_ORIGINS += _env_list("CSRF_TRUSTED_ORIGINS")
+
+# BE-04: khóa mã hóa email phụ huynh. Production bắt buộc đặt riêng (docs/SECURITY.md); local/test dùng
+# khóa suy ra từ SECRET_KEY và in cảnh báo.
+FIELD_ENCRYPTION_KEYS = os.getenv("FIELD_ENCRYPTION_KEYS", "")
+CONTACT_HASH_KEY = os.getenv("CONTACT_HASH_KEY", "")
+if not FIELD_ENCRYPTION_KEYS or not CONTACT_HASH_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured("DEBUG=False cần FIELD_ENCRYPTION_KEYS và CONTACT_HASH_KEY (xem docs/SECURITY.md).")
+    import base64
+    import hashlib
+    import warnings
+
+    warnings.warn("Dùng khóa mã hóa dev suy từ SECRET_KEY; KHÔNG dùng cho dữ liệu thật.", RuntimeWarning)
+    FIELD_ENCRYPTION_KEYS = FIELD_ENCRYPTION_KEYS or base64.urlsafe_b64encode(
+        hashlib.sha256(("field:" + SECRET_KEY).encode()).digest()).decode()
+    CONTACT_HASH_KEY = CONTACT_HASH_KEY or hashlib.sha256(("contact:" + SECRET_KEY).encode()).hexdigest()
+
+# BE-08 (R11): email thực đơn cho phụ huynh qua SMTP (Gmail App Password, đổi sang SES chỉ cần đổi env).
+# EMAIL_MODE=dry_run (mặc định) chỉ ghi nhật ký, không gửi thư thật.
+EMAIL_MODE = os.getenv("EMAIL_MODE", "dry_run").strip().lower()
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "SchoolFood <noreply@localhost>")
+EMAIL_DAILY_LIMIT = int(os.getenv("EMAIL_DAILY_LIMIT", "450"))
+MENU_SEND_TIME = os.getenv("MENU_SEND_TIME", "06:30")
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:5173").rstrip("/")
+SCHOOL_NAME = os.getenv("SCHOOL_NAME", "Nhà trường")
+if EMAIL_MODE not in {"dry_run", "smtp"}:
+    raise ImproperlyConfigured("EMAIL_MODE chỉ nhận dry_run hoặc smtp.")
+
+# BE-10: chỉ tin header X-Real-IP khi đứng sau nginx/Cloudflare (production); local dùng REMOTE_ADDR.
+TRUST_PROXY_IP = _env_bool("TRUST_PROXY_IP", False)
 
 if not DEBUG:
     # nginx chuyển tiếp X-Forwarded-Proto=https do Cloudflare gửi qua tunnel.

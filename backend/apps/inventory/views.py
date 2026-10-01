@@ -1,504 +1,279 @@
-from django.core.exceptions import ValidationError, PermissionDenied
-from .models import StockTake, StockTakeItem, StockTransaction, Receipt, ReceiptLine, Issue, IssueLine
-from .services import (
-    create_stocktake, update_stocktake_item, post_stocktake,
-    create_receipt_draft, post_receipt, post_issue, InventoryConflict
-)
-import json
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+"""API kho: danh mục, mặt hàng, nhà cung cấp, nhập, xuất, kiểm kê, báo cáo.
 
-from django.db import connection, IntegrityError, transaction
+Đầu vào đọc qua http_input (BE-09), tiền làm tròn qua services.money/line_value (BE-05), mọi thao tác
+ghi có nhật ký audit.record trong cùng transaction (BE-15). Lỗi: {"message", "errors"}.
+"""
+
+from django.db import IntegrityError, transaction
+from django.db.models import Count
 from django.http import JsonResponse
 from django.utils import timezone
-from .models import Category, FoodItem, Supplier
+
+from . import audit
 from .auth_views import inventory_permission_required
+from .http_input import (
+    Conflict,
+    InputError,
+    check_decimal,
+    check_int,
+    error,
+    field_error,
+    json_api,
+    method_not_allowed,
+    only_fields,
+    opt_bool,
+    query_date,
+    query_int,
+    read_object,
+    req_date,
+    req_id,
+    req_list,
+    req_str,
+)
+from .models import (
+    Category,
+    FoodItem,
+    Issue,
+    IssueLine,
+    Receipt,
+    StockTake,
+    StockTakeItem,
+    StockTransaction,
+    Supplier,
+)
+from .services import (
+    create_receipt_draft,
+    create_stocktake,
+    document_total,
+    line_value,
+    money,
+    post_issue,
+    post_receipt,
+    post_stocktake,
+    update_stocktake_item,
+)
+
+QTY = (14, 3)
+PRICE = (14, 2)
 
 
 def hello(request):
-    """Kiểm tra Django và PostgreSQL."""
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT 1")
-        database_result = cursor.fetchone()[0]
+    """Healthcheck công khai: không lộ thông tin hệ thống."""
+    return JsonResponse({"ok": True})
 
-    return JsonResponse(
-        {
-            "message": "React đã gọi được Django.",
-            "database": (
-                "PostgreSQL đã kết nối."
-                if database_result == 1
-                else "Có lỗi."
-            ),
-        }
-    )
+
+# =========================================================================
+# DANH MỤC
+# =========================================================================
+def _category(c):
+    return {"id": c.id, "code": c.code, "name": c.name, "is_active": c.is_active}
 
 
 @inventory_permission_required
+@json_api
 def categories(request):
-    # GET /api/categories/
     if request.method == "GET":
-        list_category = Category.objects.all().order_by("id")
+        return JsonResponse({"results": [_category(c) for c in Category.objects.order_by("id")]})
+    if request.method != "POST":
+        return method_not_allowed()
 
-        results = []
-        for cat in list_category:
-            results.append({
-                "id": cat.id,
-                "code": cat.code,
-                "name": cat.name,
-                "is_active": cat.is_active,
-            })
-
-        return JsonResponse({"results": results})
-
-    # POST /api/categories/
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-        raw_code = data.get("code")
-        raw_name = data.get("name")
-
-        if not isinstance(raw_code, str) or not isinstance(raw_name, str):
-            return JsonResponse({"error": "code and name must be strings"}, status=400)
-
-        code = raw_code.strip().upper()
-        name = raw_name.strip()
-
-        if not code or not name:
-            return JsonResponse(
-                {"error": "code and name are required and cannot be empty"},
-                status=400,
-            )
-
-        try:
-            category = Category.objects.create(
-                code=code,
-                name=name,
-                is_active=data.get("is_active", True),
-            )
-        except IntegrityError:
-            return JsonResponse({"error": "code already exists"}, status=400)
-
-        # 2. An toàn rồi mới lưu xuống DB
-        #category = Category.objects.create(
-           # code=code,
-           # name=name,
-           # is_active=data.get("is_active", True)
-       # )
-        return JsonResponse(
-            {
-                "id": category.id,
-                "code": category.code,
-                "name": category.name,
-                "is_active": category.is_active,
-            },
-            status=201,
-        )
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    data = read_object(request)
+    only_fields(data, {"code", "name", "is_active"})
+    code = req_str(data, "code", 32, upper=True, label="Mã nhóm")
+    name = req_str(data, "name", 120, label="Tên nhóm")
+    is_active = opt_bool(data, "is_active")
+    try:
+        with transaction.atomic():
+            c = Category.objects.create(code=code, name=name, is_active=True if is_active is None else is_active)
+            audit.record(request, "category_create", "category", c.id, f"Tạo nhóm {c.code}", after=_category(c))
+    except IntegrityError:
+        raise Conflict(f"Mã nhóm {code} đã tồn tại.", {"code": "Đã tồn tại."})
+    return JsonResponse(_category(c), status=201)
 
 
 @inventory_permission_required
+@json_api
 def category_detail(request, category_id):
+    if request.method != "PATCH":
+        return method_not_allowed()
+    data = read_object(request)
+    only_fields(data, {"code", "name", "is_active"})
+    with transaction.atomic():
+        c = Category.objects.select_for_update().get(id=category_id)
+        before = _category(c)
+        if "code" in data:
+            c.code = req_str(data, "code", 32, upper=True, label="Mã nhóm")
+        if "name" in data:
+            c.name = req_str(data, "name", 120, label="Tên nhóm")
+        is_active = opt_bool(data, "is_active")
+        if is_active is not None:
+            if is_active is False and c.is_active and c.food_items.filter(is_active=True).exists():
+                raise Conflict("Không thể ngừng dùng nhóm đang có mặt hàng hoạt động.")
+            c.is_active = is_active
+        try:
+            with transaction.atomic():
+                c.save()
+        except IntegrityError:
+            raise Conflict(f"Mã nhóm {c.code} đã tồn tại.", {"code": "Đã tồn tại."})
+        audit.record(request, "category_update", "category", c.id, f"Sửa nhóm {c.code}", before=before, after=_category(c))
+    return JsonResponse(_category(c))
+
+
+# =========================================================================
+# MẶT HÀNG
+# =========================================================================
+STOCK_FIELDS = {"quantity", "avg_cost", "stock_version"}
+
+
+def _food(f):
+    return {
+        "id": f.id,
+        "code": f.code,
+        "name": f.name,
+        "category_id": f.category_id,
+        "unit": f.unit,
+        "is_active": f.is_active,
+        "quantity": str(f.quantity),
+        "avg_cost": str(f.avg_cost),
+        "stock_version": f.stock_version,
+    }
+
+
+def _reject_stock_fields(data):
+    blocked = sorted(STOCK_FIELDS & set(data))
+    if blocked:
+        raise InputError("Không được sửa trực tiếp tồn kho, giá vốn, version.", {k: "Chỉ đổi qua phiếu nhập/xuất/kiểm kê." for k in blocked})
+
+
+def _category_for(data):
+    category_id = req_id(data, "category_id", label="Nhóm")
     try:
-        category = Category.objects.get(id=category_id)
+        return Category.objects.get(id=category_id)
     except Category.DoesNotExist:
-        return JsonResponse({"error": "Category not found"}, status=404)
-
-    # PATCH /api/categories/<id>/
-    if request.method == "PATCH":
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-        allowed_fields = {"code", "name", "is_active"}
-        invalid_fields = set(data.keys()) - allowed_fields
-
-        if invalid_fields:
-            return JsonResponse(
-                {"error": "Invalid fields", "fields": list(invalid_fields)},
-                status=400,
-            )
-
-        # Không cho vô hiệu hóa Category nếu còn FoodItem tham chiếu tới
-        if data.get("is_active") is False:
-            if category.food_items.exists():
-                return JsonResponse(
-                    {
-                        "error": (
-                            "Cannot deactivate category "
-                            "because it is referenced by FoodItem"
-                        )
-                    },
-                    status=400,
-                )
-
-        if "code" in data:
-            if not isinstance(data["code"], str) or not data["code"].strip():
-                return JsonResponse({"error": "code cannot be empty"}, status=400)
-            category.code = data["code"].strip().upper()
-
-        if "name" in data:
-            if not isinstance(data["name"], str) or not data["name"].strip():
-                return JsonResponse({"error": "name cannot be empty"}, status=400)
-            category.name = data["name"].strip()
-
-        if "is_active" in data:
-            category.is_active = bool(data["is_active"])
-
-        try:
-            category.save()
-        except IntegrityError:
-            return JsonResponse({"error": "code already exists"}, status=400)
-
-        return JsonResponse({
-            "id": category.id,
-            "code": category.code,
-            "name": category.name,
-            "is_active": category.is_active,
-        })
-
-    if request.method == "DELETE":
-        return JsonResponse({"error": "DELETE is not allowed"}, status=405)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+        raise field_error("category_id", "Không tồn tại.", "Nhóm hàng không tồn tại.")
 
 
 @inventory_permission_required
+@json_api
 def foods(request):
-    # GET /api/foods/
     if request.method == "GET":
-        food_items = FoodItem.objects.all().order_by("id")
+        return JsonResponse({"results": [_food(f) for f in FoodItem.objects.order_by("id")]})
+    if request.method != "POST":
+        return method_not_allowed()
 
-        results = []
-        for food in food_items:
-            results.append({
-                "id": food.id,
-                "code": food.code,
-                "name": food.name,
-                "category_id": food.category_id,
-                "unit": food.unit,
-                "is_active": food.is_active,
-                "quantity": str(food.quantity),
-                "avg_cost": str(food.avg_cost),
-                "stock_version": food.stock_version,
-            })
-
-        return JsonResponse({"results": results})
-
-    # POST /api/foods/
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-        # 1. Chặn client can thiệp trực tiếp các trường kho
-        if "quantity" in data or "avg_cost" in data or "stock_version" in data:
-            return JsonResponse(
-                {"error": "quantity, avg_cost and stock_version cannot be set by client"},
-                status=400,
-            )
-
-        # Tương thích linh hoạt: chấp nhận cả category_id hoặc category
-        if "category_id" not in data and "category" in data:
-            data["category_id"] = data["category"]
-
-        # 2. Kiểm tra trường bắt buộc trước để tránh KeyError
-        required_fields = ["code", "name", "category_id", "unit"]
-        missing_fields = [f for f in required_fields if f not in data]
-
-        if missing_fields:
-            return JsonResponse(
-                {"error": "Missing required fields", "fields": missing_fields},
-                status=400,
-            )
-
-        # 3. Kiểm tra kiểu dữ liệu an toàn
-        if not isinstance(data["code"], str):
-            return JsonResponse({"error": "code must be a string"}, status=400)
-        if not isinstance(data["name"], str):
-            return JsonResponse({"error": "name must be a string"}, status=400)
-        if not isinstance(data["unit"], str):
-            return JsonResponse({"error": "unit must be a string"}, status=400)
-        if not isinstance(data["category_id"], int):
-            return JsonResponse({"error": "category_id must be an integer"}, status=400)
-
-        # 4. Chuẩn hóa chuỗi và kiểm tra không rỗng sau khi strip
-        code = data["code"].strip().upper()
-        name = data["name"].strip()
-        unit = data["unit"].strip().lower()
-
-        if not code or not name or not unit:
-            return JsonResponse(
-                {"error": "code, name and unit cannot be empty"},
-                status=400,
-            )
-
-        try:
-            category = Category.objects.get(id=data["category_id"])
-        except Category.DoesNotExist:
-            return JsonResponse({"error": "Category not found"}, status=400)
-
-        try:
-            food = FoodItem.objects.create(
-                code=code,
-                name=name,
-                category=category,
-                unit=unit,
-                is_active=data.get("is_active", True),
-            )
-        except IntegrityError:
-            return JsonResponse({"error": "code already exists"}, status=400)
-
-        return JsonResponse(
-            {
-                "id": food.id,
-                "code": food.code,
-                "name": food.name,
-                "category_id": food.category_id,
-                "unit": food.unit,
-                "is_active": food.is_active,
-                "quantity": str(food.quantity),
-                "avg_cost": str(food.avg_cost),
-                "stock_version": food.stock_version,
-            },
-            status=201,
-        )
-
-    if request.method == "DELETE":
-        return JsonResponse({"error": "DELETE is not allowed"}, status=405)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    data = read_object(request)
+    _reject_stock_fields(data)
+    only_fields(data, {"code", "name", "category_id", "unit", "is_active"})
+    code = req_str(data, "code", 32, upper=True, label="Mã hàng")
+    name = req_str(data, "name", 120, label="Tên hàng")
+    unit = req_str(data, "unit", 32, lower=True, label="Đơn vị")
+    category = _category_for(data)
+    is_active = opt_bool(data, "is_active")
+    try:
+        with transaction.atomic():
+            f = FoodItem.objects.create(code=code, name=name, category=category, unit=unit,
+                                        is_active=True if is_active is None else is_active)
+            audit.record(request, "food_create", "food", f.id, f"Tạo mặt hàng {f.code}", after=_food(f))
+    except IntegrityError:
+        raise Conflict(f"Mã hàng {code} đã tồn tại.", {"code": "Đã tồn tại."})
+    return JsonResponse(_food(f), status=201)
 
 
 @inventory_permission_required
+@json_api
 def food_detail(request, food_id):
-    try:
-        food = FoodItem.objects.get(id=food_id)
-    except FoodItem.DoesNotExist:
-        return JsonResponse({"error": "FoodItem not found"}, status=404)
-
-    # PATCH /api/foods/<id>/
-    if request.method == "PATCH":
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-        # Chặn client tự sửa các trường kho
-        if "quantity" in data or "avg_cost" in data or "stock_version" in data:
-            return JsonResponse(
-                {"error": "Stock fields cannot be modified directly"},
-                status=400,
-            )
-
-        if "category_id" not in data and "category" in data:
-            data["category_id"] = data["category"]
-            del data["category"]
-
-        allowed_fields = {"code", "name", "category_id", "unit", "is_active"}
-        invalid_fields = set(data.keys()) - allowed_fields
-
-        if invalid_fields:
-            return JsonResponse(
-                {"error": "Invalid fields", "fields": list(invalid_fields)},
-                status=400,
-            )
-
+    if request.method != "PATCH":
+        return method_not_allowed()
+    data = read_object(request)
+    _reject_stock_fields(data)
+    only_fields(data, {"code", "name", "category_id", "unit", "is_active"})
+    with transaction.atomic():
+        f = FoodItem.objects.select_for_update().get(id=food_id)
+        before = _food(f)
         if "category_id" in data:
-            if not isinstance(data["category_id"], int):
-                return JsonResponse({"error": "category_id must be an integer"}, status=400)
-            try:
-                category = Category.objects.get(id=data["category_id"])
-            except Category.DoesNotExist:
-                return JsonResponse({"error": "Category not found"}, status=400)
-            food.category = category
-
+            f.category = _category_for(data)
         if "code" in data:
-            if not isinstance(data["code"], str) or not data["code"].strip():
-                return JsonResponse({"error": "code cannot be empty"}, status=400)
-            food.code = data["code"].strip().upper()
-
+            f.code = req_str(data, "code", 32, upper=True, label="Mã hàng")
         if "name" in data:
-            if not isinstance(data["name"], str) or not data["name"].strip():
-                return JsonResponse({"error": "name cannot be empty"}, status=400)
-            food.name = data["name"].strip()
-
+            f.name = req_str(data, "name", 120, label="Tên hàng")
         if "unit" in data:
-            if not isinstance(data["unit"], str) or not data["unit"].strip():
-                return JsonResponse({"error": "unit cannot be empty"}, status=400)
-            food.unit = data["unit"].strip().lower()
-
-        if "is_active" in data:
-            food.is_active = bool(data["is_active"])
-
+            unit = req_str(data, "unit", 32, lower=True, label="Đơn vị")
+            if unit != f.unit and (f.quantity != 0 or f.recipe_components.exists()):
+                raise Conflict("Không đổi đơn vị khi mặt hàng còn tồn hoặc đang dùng trong công thức.")
+            f.unit = unit
+        is_active = opt_bool(data, "is_active")
+        if is_active is not None:
+            f.is_active = is_active
         try:
-            food.save()
+            with transaction.atomic():
+                f.save()
         except IntegrityError:
-            return JsonResponse({"error": "code already exists"}, status=400)
+            raise Conflict(f"Mã hàng {f.code} đã tồn tại.", {"code": "Đã tồn tại."})
+        audit.record(request, "food_update", "food", f.id, f"Sửa mặt hàng {f.code}", before=before, after=_food(f))
+    return JsonResponse(_food(f))
 
-        return JsonResponse({
-            "id": food.id,
-            "code": food.code,
-            "name": food.name,
-            "category_id": food.category_id,
-            "unit": food.unit,
-            "is_active": food.is_active,
-            "quantity": str(food.quantity),
-            "avg_cost": str(food.avg_cost),
-            "stock_version": food.stock_version,
-        })
 
-    if request.method == "DELETE":
-        return JsonResponse({"error": "DELETE is not allowed"}, status=405)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+# =========================================================================
+# NHÀ CUNG CẤP
+# =========================================================================
+def _supplier(s):
+    return {"id": s.id, "code": s.code, "name": s.name, "phone": s.phone, "is_active": s.is_active}
 
 
 @inventory_permission_required
+@json_api
 def suppliers(request):
-    # GET /api/suppliers/
     if request.method == "GET":
-        supplier_list = Supplier.objects.all().order_by("id")
+        return JsonResponse({"results": [_supplier(s) for s in Supplier.objects.order_by("id")]})
+    if request.method != "POST":
+        return method_not_allowed()
 
-        results = []
-        for supplier in supplier_list:
-            results.append({
-                "id": supplier.id,
-                "code": supplier.code,
-                "name": supplier.name,
-                "phone": supplier.phone,
-                "is_active": supplier.is_active,
-            })
-
-        return JsonResponse({"results": results})
-
-    # POST /api/suppliers/
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-        if "quantity" in data or "avg_cost" in data or "stock_version" in data:
-            return JsonResponse(
-                {"error": "Stock fields cannot be modified directly"},
-                status=400,
-            )
-
-        allowed_fields = {"code", "name", "phone", "is_active"}
-        invalid_fields = set(data.keys()) - allowed_fields
-
-        if invalid_fields:
-            return JsonResponse(
-                {"error": "Invalid fields", "fields": list(invalid_fields)},
-                status=400,
-            )
-
-        raw_code = data.get("code")
-        raw_name = data.get("name")
-        phone = str(data.get("phone", "")).strip()
-
-        if not isinstance(raw_code, str) or not isinstance(raw_name, str):
-            return JsonResponse({"error": "code and name must be strings"}, status=400)
-
-        code = raw_code.strip().upper()
-        name = raw_name.strip()
-
-        if not code or not name:
-            return JsonResponse(
-                {"error": "code and name are required and cannot be empty"},
-                status=400,
-            )
-
-        try:
-            supplier = Supplier.objects.create(
-                code=code,
-                name=name,
-                phone=phone,
-                is_active=data.get("is_active", True),
-            )
-        except IntegrityError:
-            return JsonResponse({"error": "code already exists"}, status=400)
-
-        return JsonResponse(
-            {
-                "id": supplier.id,
-                "code": supplier.code,
-                "name": supplier.name,
-                "phone": supplier.phone,
-                "is_active": supplier.is_active,
-            },
-            status=201,
-        )
-
-    if request.method == "DELETE":
-        return JsonResponse({"error": "DELETE is not allowed"}, status=405)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    data = read_object(request)
+    only_fields(data, {"code", "name", "phone", "is_active"})
+    code = req_str(data, "code", 32, upper=True, label="Mã nhà cung cấp")
+    name = req_str(data, "name", 120, label="Tên nhà cung cấp")
+    phone = req_str(data, "phone", 32, required=False, allow_blank=True, label="Số điện thoại") or ""
+    is_active = opt_bool(data, "is_active")
+    try:
+        with transaction.atomic():
+            s = Supplier.objects.create(code=code, name=name, phone=phone, is_active=True if is_active is None else is_active)
+            audit.record(request, "supplier_create", "supplier", s.id, f"Tạo nhà cung cấp {s.code}", after=_supplier(s))
+    except IntegrityError:
+        raise Conflict(f"Mã nhà cung cấp {code} đã tồn tại.", {"code": "Đã tồn tại."})
+    return JsonResponse(_supplier(s), status=201)
 
 
 @inventory_permission_required
+@json_api
 def supplier_detail(request, supplier_id):
-    try:
-        supplier = Supplier.objects.get(id=supplier_id)
-    except Supplier.DoesNotExist:
-        return JsonResponse({"error": "Supplier not found"}, status=404)
-
-    # PATCH /api/suppliers/<id>/
-    if request.method == "PATCH":
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-        allowed_fields = {"code", "name", "phone", "is_active"}
-        invalid_fields = set(data.keys()) - allowed_fields
-
-        if invalid_fields:
-            return JsonResponse(
-                {"error": "Invalid fields", "fields": list(invalid_fields)},
-                status=400,
-            )
-
+    if request.method != "PATCH":
+        return method_not_allowed()
+    data = read_object(request)
+    only_fields(data, {"code", "name", "phone", "is_active"})
+    with transaction.atomic():
+        s = Supplier.objects.select_for_update().get(id=supplier_id)
+        before = _supplier(s)
         if "code" in data:
-            if not isinstance(data["code"], str) or not data["code"].strip():
-                return JsonResponse({"error": "code cannot be empty"}, status=400)
-            supplier.code = data["code"].strip().upper()
-
+            s.code = req_str(data, "code", 32, upper=True, label="Mã nhà cung cấp")
         if "name" in data:
-            if not isinstance(data["name"], str) or not data["name"].strip():
-                return JsonResponse({"error": "name cannot be empty"}, status=400)
-            supplier.name = data["name"].strip()
-
+            s.name = req_str(data, "name", 120, label="Tên nhà cung cấp")
         if "phone" in data:
-            supplier.phone = str(data["phone"]).strip()
-
-        if "is_active" in data:
-            supplier.is_active = bool(data["is_active"])
-
+            s.phone = req_str(data, "phone", 32, allow_blank=True, label="Số điện thoại")
+        is_active = opt_bool(data, "is_active")
+        if is_active is not None:
+            s.is_active = is_active
         try:
-            supplier.save()
+            with transaction.atomic():
+                s.save()
         except IntegrityError:
-            return JsonResponse({"error": "code already exists"}, status=400)
-
-        return JsonResponse({
-            "id": supplier.id,
-            "code": supplier.code,
-            "name": supplier.name,
-            "phone": supplier.phone,
-            "is_active": supplier.is_active,
-        })
-
-    if request.method == "DELETE":
-        return JsonResponse({"error": "DELETE is not allowed"}, status=405)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+            raise Conflict(f"Mã nhà cung cấp {s.code} đã tồn tại.", {"code": "Đã tồn tại."})
+        audit.record(request, "supplier_update", "supplier", s.id, f"Sửa nhà cung cấp {s.code}", before=before, after=_supplier(s))
+    return JsonResponse(_supplier(s))
 
 
+# =========================================================================
+# KIỂM KÊ (SF31/SF32)
+# =========================================================================
 def _stocktake_payload(st):
     items = list(st.items.select_related("food").order_by("id"))
     return {
@@ -525,81 +300,53 @@ def _stocktake_payload(st):
 
 
 @inventory_permission_required
+@json_api
 def stocktakes(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-        if not isinstance(data, dict):
-            return JsonResponse({"error": "Request body must be a JSON object"}, status=400)
-
-        food_ids = data.get("food_ids", [])
-        if not isinstance(food_ids, list) or not food_ids:
-            return JsonResponse({"error": "food_ids list is required"}, status=400)
-        note = data.get("note", "")
-        if not isinstance(note, str):
-            return JsonResponse({"error": "note must be a string"}, status=400)
-
-        try:
-            st = create_stocktake(food_ids, request.user, note=note.strip())
-        except ValidationError as e:
-            return JsonResponse({"error": " ".join(e.messages)}, status=400)
-        return JsonResponse(_stocktake_payload(st), status=201)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    if request.method != "POST":
+        return method_not_allowed()
+    data = read_object(request)
+    only_fields(data, {"food_ids", "note"})
+    food_ids = req_list(data, "food_ids", label="Danh sách mặt hàng")
+    for i, food_id in enumerate(food_ids):
+        check_int(food_id, f"food_ids[{i}]", minimum=1, label="Mã mặt hàng")
+    note = req_str(data, "note", 2000, required=False, allow_blank=True) or ""
+    with transaction.atomic():
+        st = create_stocktake(food_ids, request.user, note=note)
+        audit.record(request, "stocktake_create", "stocktake", st.id, f"Mở kiểm kê {len(food_ids)} mặt hàng")
+    return JsonResponse(_stocktake_payload(st), status=201)
 
 
 @inventory_permission_required
+@json_api
 def stocktake_items(request, item_id):
-    if request.method == "PATCH":
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-        if not isinstance(data, dict) or set(data) != {"counted_qty"}:
-            return JsonResponse({"error": "Chỉ nhận field counted_qty."}, status=400)
-
-        try:
-            item = update_stocktake_item(item_id, data["counted_qty"])
-        except StockTakeItem.DoesNotExist:
-            return JsonResponse({"error": "Item not found"}, status=404)
-        except InventoryConflict as e:
-            return JsonResponse({"error": " ".join(e.messages)}, status=409)
-        except ValidationError as e:
-            return JsonResponse({"error": " ".join(e.messages)}, status=400)
-        # Decimal gửi dạng chuỗi (architecture.md §4), không dùng float.
-        return JsonResponse({
-            "id": item.id,
-            "counted_qty": str(item.counted_qty),
-            "variance": str(item.variance),
-        }, status=200)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    if request.method != "PATCH":
+        return method_not_allowed()
+    data = read_object(request)
+    only_fields(data, {"counted_qty"})
+    if "counted_qty" not in data:
+        raise field_error("counted_qty", "Trường này là bắt buộc.", "Thiếu số đếm.")
+    counted = check_decimal(data["counted_qty"], "counted_qty", *QTY, allow_zero=True, label="Số đếm")
+    with transaction.atomic():
+        item = update_stocktake_item(item_id, str(counted))
+        audit.record(request, "stocktake_count", "stocktake", item.stock_take_id,
+                     f"Nhập số đếm mặt hàng #{item.food_id}", changes={"counted_qty": [None, str(item.counted_qty)]})
+    return JsonResponse({"id": item.id, "counted_qty": str(item.counted_qty), "variance": str(item.variance)})
 
 
 @inventory_permission_required
+@json_api
 def stocktake_post(request, stocktake_id):
-    if request.method == "POST":
-        try:
-            st = post_stocktake(stocktake_id, request.user)
-        except StockTake.DoesNotExist:
-            return JsonResponse({"error": "StockTake not found"}, status=404)
-        except InventoryConflict as e:
-            return JsonResponse({"error": " ".join(e.messages)}, status=409)
-        except ValidationError as e:
-            return JsonResponse({"error": " ".join(e.messages)}, status=400)
-        return JsonResponse(_stocktake_payload(st), status=200)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    if request.method != "POST":
+        return method_not_allowed()
+    with transaction.atomic():
+        st = post_stocktake(stocktake_id, request.user)
+        audit.record(request, "stocktake_post", "stocktake", st.id, "Chốt kiểm kê")
+    return JsonResponse(_stocktake_payload(st))
 
 
-from django.db.models import Count
-from decimal import Decimal
-from django.utils.dateparse import parse_date
-from django.utils.timezone import make_aware
-import datetime
-
+# =========================================================================
+# BÁO CÁO (đọc sổ kho duy nhất StockTransaction)
+# =========================================================================
 def _transaction_reference(tx):
     if tx.receipt_line_id:
         return f"Receipt #{tx.receipt_line.receipt_id}"
@@ -611,60 +358,44 @@ def _transaction_reference(tx):
 
 
 @inventory_permission_required
+@json_api
 def reports_stock(request):
-    if request.method == "GET":
-        # SF31: số giao dịch đếm trên sổ kho duy nhất StockTransaction.
-        foods = FoodItem.objects.select_related('category').annotate(
-            transaction_count=Count('stock_transactions')
-        ).order_by('id')
-
-        results = []
-        for f in foods:
-            stock_value = (f.quantity * f.avg_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-            results.append({
-                "id": f.id,
-                "code": f.code,
-                "name": f.name,
-                "category_name": f.category.name if f.category else "",
-                "unit": f.unit,
-                "quantity": str(f.quantity),
-                "avg_cost": str(f.avg_cost),
-                "stock_value": str(stock_value),
-                "transaction_count": f.transaction_count
-            })
-        return JsonResponse({"results": results})
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    if request.method != "GET":
+        return method_not_allowed()
+    rows = FoodItem.objects.select_related("category").annotate(transaction_count=Count("stock_transactions")).order_by("id")
+    return JsonResponse({"results": [
+        {
+            "id": f.id,
+            "code": f.code,
+            "name": f.name,
+            "category_name": f.category.name if f.category else "",
+            "unit": f.unit,
+            "quantity": str(f.quantity),
+            "avg_cost": str(f.avg_cost),
+            "stock_value": str(money(f.quantity * f.avg_cost)),
+            "transaction_count": f.transaction_count,
+        }
+        for f in rows
+    ]})
 
 
 @inventory_permission_required
+@json_api
 def reports_transactions(request):
-    """SF31: sổ giao dịch đọc StockTransaction (IN/OUT/ADJUST), lọc theo ngày chứng từ.
-
-    Giữ các field cũ (transaction_type, quantity_change, cost, reference, created_at) để
-    ReportPage chạy nguyên; thêm value_delta, date, source.
-    """
+    """Sổ giao dịch IN/OUT/ADJUST, lọc theo mặt hàng và ngày chứng từ."""
     if request.method != "GET":
-        return JsonResponse({"error": "Method not allowed"}, status=405)
-
-    txs = StockTransaction.objects.select_related(
-        "receipt_line", "issue_line__issue", "stocktake_item",
-    )
-    food_id = request.GET.get('food')
+        return method_not_allowed()
+    txs = StockTransaction.objects.select_related("receipt_line", "issue_line__issue", "stocktake_item")
+    food_id = query_int(request, "food")
     if food_id:
-        if not food_id.isdigit():
-            return JsonResponse({"error": "food must be an integer id"}, status=400)
-        txs = txs.filter(food_id=int(food_id))
-    for param, lookup in (("from", "date__gte"), ("to", "date__lte")):
-        raw = request.GET.get(param)
-        if raw:
-            parsed = parse_date(raw)
-            if parsed is None:
-                return JsonResponse({"error": f"{param} must be YYYY-MM-DD"}, status=400)
-            txs = txs.filter(**{lookup: parsed})
-
-    results = []
-    for tx in txs.order_by('date', 'id'):
-        results.append({
+        txs = txs.filter(food_id=food_id)
+    date_from, date_to = query_date(request, "from"), query_date(request, "to")
+    if date_from:
+        txs = txs.filter(date__gte=date_from)
+    if date_to:
+        txs = txs.filter(date__lte=date_to)
+    return JsonResponse({"results": [
+        {
             "id": tx.id,
             "food_id": tx.food_id,
             "transaction_type": tx.type,
@@ -674,390 +405,212 @@ def reports_transactions(request):
             "date": str(tx.date),
             "source": "receipt" if tx.receipt_line_id else "issue" if tx.issue_line_id else "stocktake",
             "reference": _transaction_reference(tx),
-            "created_at": (tx.created_at.isoformat() if tx.created_at else f"{tx.date}T00:00:00"),
-        })
-    return JsonResponse({"results": results})
+            "created_at": tx.created_at.isoformat() if tx.created_at else f"{tx.date}T00:00:00",
+        }
+        for tx in txs.order_by("date", "id")
+    ]})
 
 
 # =========================================================================
-# SF22: API TẠO NHÁP, XEM VÀ CHỐT NHẬP KHO
+# PHIẾU NHẬP (SF22)
 # =========================================================================
+def _receipt_payload(r, with_names=True):
+    lines = list(r.lines.all())
+    payload = {
+        "id": r.id,
+        "supplier_id": r.supplier_id,
+        "date": str(r.date),
+        "note": r.note,
+        "status": r.status.upper(),
+        "posted_at": r.posted_at.isoformat() if r.posted_at else None,
+        "total_value": str(document_total(lines, "unit_price")),
+        "lines": [
+            {
+                "id": line.id,
+                "food_id": line.food_id,
+                "quantity": str(line.quantity),
+                "unit_price": str(line.unit_price),
+                "line_total": str(line_value(line.quantity, line.unit_price)),
+                **({"food_name": line.food.name} if with_names else {}),
+            }
+            for line in lines
+        ],
+    }
+    if with_names:
+        payload["supplier_name"] = r.supplier.name if r.supplier else ""
+    return payload
+
+
+def _alias(obj, old, new):
+    """Client cũ gửi `supplier`/`food`; nhận như `supplier_id`/`food_id` (không được gửi cả hai)."""
+    if isinstance(obj, dict) and old in obj:
+        if new in obj:
+            raise field_error(old, f"Dùng {new}, không gửi cả {old}.", f"Chỉ gửi {new}.")
+        obj[new] = obj.pop(old)
+
+
+def _read_lines(data, with_price):
+    raw = req_list(data, "lines", label="Dòng hàng")
+    for line in raw:
+        _alias(line, "food", "food_id")
+    lines, seen = [], set()
+    allowed = {"food_id", "quantity", "unit_price"} if with_price else {"food_id", "quantity"}
+    for i, line in enumerate(raw):
+        key = f"lines[{i}]"
+        if not isinstance(line, dict):
+            raise field_error(key, "Phải là object.", f"Dòng {i + 1} không hợp lệ.")
+        extra = sorted(set(line) - allowed)
+        if extra:
+            raise field_error(key, "Trường không được phép: " + ", ".join(extra), f"Dòng {i + 1} có trường không được phép.")
+        food_id = check_int(line.get("food_id"), f"{key}.food_id", minimum=1, label=f"Mặt hàng dòng {i + 1}")
+        if food_id in seen:
+            raise field_error(f"{key}.food_id", "Trùng mặt hàng.", f"Dòng {i + 1}: mỗi mặt hàng chỉ một dòng.")
+        seen.add(food_id)
+        if "quantity" not in line:
+            raise field_error(f"{key}.quantity", "Trường này là bắt buộc.", f"Dòng {i + 1}: thiếu số lượng.")
+        item = {"food_id": food_id,
+                "quantity": check_decimal(line["quantity"], f"{key}.quantity", *QTY, label=f"Số lượng dòng {i + 1}")}
+        if with_price:
+            if "unit_price" not in line:
+                raise field_error(f"{key}.unit_price", "Trường này là bắt buộc.", f"Dòng {i + 1}: thiếu đơn giá.")
+            item["unit_price"] = check_decimal(line["unit_price"], f"{key}.unit_price", *PRICE, label=f"Đơn giá dòng {i + 1}")
+        lines.append(item)
+    return lines
+
+
 @inventory_permission_required
+@json_api
 def receipts(request):
-    # GET /api/receipts/
     if request.method == "GET":
-        receipt_list = Receipt.objects.select_related("supplier", "created_by").prefetch_related("lines__food").order_by("-id")
-        results = []
-        for r in receipt_list:
-            total_value = sum((line.quantity * line.unit_price for line in r.lines.all()), Decimal("0.00"))
-            results.append({
-                "id": r.id,
-                "supplier_id": r.supplier_id,
-                "supplier_name": r.supplier.name if r.supplier else "",
-                "date": str(r.date),
-                "note": r.note,
-                "status": r.status.upper(),
-                "posted_at": r.posted_at.isoformat() if r.posted_at else None,
-                "total_value": str(round(total_value, 2)),
-                "lines": [
-                    {
-                        "id": line.id,
-                        "food_id": line.food_id,
-                        "food_name": line.food.name if line.food else "",
-                        "quantity": str(line.quantity),
-                        "unit_price": str(line.unit_price),
-                        "line_total": str(round(line.quantity * line.unit_price, 2)),
-                    }
-                    for line in r.lines.all()
-                ],
-            })
-        return JsonResponse({"results": results})
+        rows = Receipt.objects.select_related("supplier").prefetch_related("lines__food").order_by("-id")
+        return JsonResponse({"results": [_receipt_payload(r) for r in rows]})
+    if request.method != "POST":
+        return method_not_allowed()
 
-    # POST /api/receipts/
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-        if not isinstance(data, dict):
-            return JsonResponse({"error": "Request body must be a JSON object"}, status=400)
-
-        supplier_id = data.get("supplier_id")
-        if supplier_id is None and "supplier" in data:
-            supplier_id = data["supplier"]
-
-        if isinstance(supplier_id, bool) or not isinstance(supplier_id, int) or supplier_id <= 0:
-            return JsonResponse({"error": "supplier_id must be a positive integer"}, status=400)
-
-        date_val = data.get("date")
-        if not date_val or not isinstance(date_val, str):
-            return JsonResponse({"error": "date is required and must be YYYY-MM-DD"}, status=400)
-
-        note = data.get("note", "")
-        if not isinstance(note, str):
-            return JsonResponse({"error": "note must be a string"}, status=400)
-
-        raw_lines = data.get("lines")
-        if not isinstance(raw_lines, list) or not raw_lines:
-            return JsonResponse({"error": "lines must be a non-empty list"}, status=400)
-
-        norm_lines = []
-        for line in raw_lines:
-            if not isinstance(line, dict):
-                return JsonResponse({"error": "Each line must be an object"}, status=400)
-            food_id = line.get("food_id") if "food_id" in line else line.get("food")
-            if isinstance(food_id, bool) or not isinstance(food_id, int) or food_id <= 0:
-                return JsonResponse({"error": "food_id must be a positive integer"}, status=400)
-            qty = line.get("quantity")
-            price = line.get("unit_price")
-            if qty is None or price is None:
-                return JsonResponse({"error": "quantity and unit_price are required"}, status=400)
-            norm_lines.append({
-                "food_id": food_id,
-                "quantity": str(qty),
-                "unit_price": str(price),
-            })
-
-        try:
-            receipt = create_receipt_draft(
-                supplier_id=supplier_id,
-                date=date_val,
-                lines=norm_lines,
-                user=request.user,
-                note=note,
-            )
-        except ValidationError as e:
-            msg = e.message_dict if hasattr(e, "message_dict") else (e.messages if hasattr(e, "messages") else str(e))
-            return JsonResponse({"error": msg}, status=400)
-        except PermissionDenied as e:
-            return JsonResponse({"error": str(e)}, status=403)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-
-        total_val = sum((l.quantity * l.unit_price for l in receipt.lines.all()), Decimal("0.00"))
-        return JsonResponse({
-            "id": receipt.id,
-            "supplier_id": receipt.supplier_id,
-            "date": str(receipt.date),
-            "note": receipt.note,
-            "status": receipt.status.upper(),
-            "total_value": str(round(total_val, 2)),
-            "lines": [
-                {
-                    "id": l.id,
-                    "food_id": l.food_id,
-                    "quantity": str(l.quantity),
-                    "unit_price": str(l.unit_price),
-                }
-                for l in receipt.lines.all()
-            ],
-        }, status=201)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    data = read_object(request)
+    _alias(data, "supplier", "supplier_id")
+    only_fields(data, {"supplier_id", "date", "note", "lines"})
+    supplier_id = req_id(data, "supplier_id", label="Nhà cung cấp")
+    receipt_date = req_date(data, "date", label="Ngày nhập")
+    note = req_str(data, "note", 2000, required=False, allow_blank=True) or ""
+    lines = _read_lines(data, with_price=True)
+    for line in lines:
+        line["quantity"], line["unit_price"] = str(line["quantity"]), str(line["unit_price"])
+    with transaction.atomic():
+        r = create_receipt_draft(supplier_id=supplier_id, date=receipt_date, lines=lines, user=request.user, note=note)
+        audit.record(request, "receipt_create", "receipt", r.id, f"Tạo phiếu nhập nháp {len(lines)} dòng")
+    return JsonResponse(_receipt_payload(r, with_names=False), status=201)
 
 
 @inventory_permission_required
+@json_api
 def receipt_detail(request, receipt_id):
-    try:
-        r = Receipt.objects.select_related("supplier", "created_by").prefetch_related("lines__food").get(id=receipt_id)
-    except Receipt.DoesNotExist:
-        return JsonResponse({"error": "Receipt not found"}, status=404)
-
-    if request.method == "GET":
-        total_value = sum((line.quantity * line.unit_price for line in r.lines.all()), Decimal("0.00"))
-        return JsonResponse({
-            "id": r.id,
-            "supplier_id": r.supplier_id,
-            "supplier_name": r.supplier.name if r.supplier else "",
-            "date": str(r.date),
-            "note": r.note,
-            "status": r.status.upper(),
-            "posted_at": r.posted_at.isoformat() if r.posted_at else None,
-            "total_value": str(round(total_value, 2)),
-            "lines": [
-                {
-                    "id": line.id,
-                    "food_id": line.food_id,
-                    "food_name": line.food.name if line.food else "",
-                    "quantity": str(line.quantity),
-                    "unit_price": str(line.unit_price),
-                    "line_total": str(round(line.quantity * line.unit_price, 2)),
-                }
-                for line in r.lines.all()
-            ],
-        })
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    if request.method != "GET":
+        return method_not_allowed()
+    r = Receipt.objects.select_related("supplier").prefetch_related("lines__food").get(id=receipt_id)
+    return JsonResponse(_receipt_payload(r))
 
 
 @inventory_permission_required
+@json_api
 def receipt_post(request, receipt_id):
     if request.method != "POST":
-        return JsonResponse({"error": "Method not allowed"}, status=405)
-
-    try:
-        receipt = Receipt.objects.get(id=receipt_id)
-    except Receipt.DoesNotExist:
-        return JsonResponse({"error": "Receipt not found"}, status=404)
-
-    if receipt.status != Receipt.Status.DRAFT:
-        return JsonResponse({"error": "Phiếu nhập đã được chốt trước đó hoặc không ở trạng thái nháp."}, status=409)
-
-    try:
+        return method_not_allowed()
+    with transaction.atomic():
         posted = post_receipt(receipt_id, request.user)
-        return JsonResponse({
-            "id": posted.id,
-            "status": posted.status.upper(),
-            "posted_at": posted.posted_at.isoformat() if posted.posted_at else None,
-            "message": "Chốt phiếu nhập thành công."
-        }, status=200)
-    except ValidationError as e:
-        msg = str(e.message_dict if hasattr(e, "message_dict") else (e.messages if hasattr(e, "messages") else str(e)))
-        if "chốt" in msg or "xử lý" in msg or "draft" in msg.lower():
-            return JsonResponse({"error": msg}, status=409)
-        return JsonResponse({"error": msg}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        audit.record(request, "receipt_post", "receipt", posted.id, "Chốt phiếu nhập")
+    return JsonResponse({
+        "id": posted.id,
+        "status": posted.status.upper(),
+        "posted_at": posted.posted_at.isoformat() if posted.posted_at else None,
+        "message": "Chốt phiếu nhập thành công.",
+    })
 
 
 # =========================================================================
-# SF28: API PHIẾU XUẤT KHO
+# PHIẾU XUẤT (SF28)
 # =========================================================================
+def _issue_payload(iss, with_totals=True):
+    lines = list(iss.lines.all())
+    return {
+        "id": iss.id,
+        "code": iss.code,
+        "date": str(iss.date),
+        "note": iss.note,
+        "status": iss.status.upper(),
+        "posted_at": iss.posted_at.isoformat() if iss.posted_at else None,
+        "total_value": str(document_total(lines, "unit_cost")),
+        "lines": [
+            {
+                "id": line.id,
+                "food_id": line.food_id,
+                "food_name": line.food.name,
+                "quantity": str(line.quantity),
+                "unit_cost": str(line.unit_cost),
+                "line_total": str(line_value(line.quantity, line.unit_cost)),
+            }
+            for line in lines
+        ],
+    }
+
+
 @inventory_permission_required
+@json_api
 def issues(request):
-    # GET /api/issues/
     if request.method == "GET":
-        issue_list = Issue.objects.select_related("created_by").prefetch_related("lines__food").order_by("-id")
-        results = []
-        for iss in issue_list:
-            total_value = sum((line.quantity * line.unit_cost for line in iss.lines.all()), Decimal("0.00"))
-            results.append({
-                "id": iss.id,
-                "code": iss.code,
-                "date": str(iss.date),
-                "note": iss.note,
-                "status": iss.status.upper(),
-                "posted_at": iss.posted_at.isoformat() if iss.posted_at else None,
-                "total_value": str(round(total_value, 2)),
-                "lines": [
-                    {
-                        "id": line.id,
-                        "food_id": line.food_id,
-                        "food_name": line.food.name if line.food else "",
-                        "quantity": str(line.quantity),
-                        "unit_cost": str(line.unit_cost),
-                        "line_total": str(round(line.quantity * line.unit_cost, 2)),
-                    }
-                    for line in iss.lines.all()
-                ],
-            })
-        return JsonResponse({"results": results})
+        rows = Issue.objects.prefetch_related("lines__food").order_by("-id")
+        return JsonResponse({"results": [_issue_payload(i) for i in rows]})
+    if request.method != "POST":
+        return method_not_allowed()
 
-    # POST /api/issues/
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
+    data = read_object(request)
+    only_fields(data, {"code", "date", "note", "lines"})
+    issue_date = req_date(data, "date", label="Ngày xuất")
+    code = req_str(data, "code", 32, required=False, upper=True, label="Mã phiếu")
+    note = req_str(data, "note", 2000, required=False, allow_blank=True) or ""
+    lines = _read_lines(data, with_price=False)
+    foods = {f.id: f for f in FoodItem.objects.filter(id__in=[l["food_id"] for l in lines])}
+    missing = [l["food_id"] for l in lines if l["food_id"] not in foods]
+    if missing:
+        raise InputError(f"Mặt hàng không tồn tại: {missing}.", {"lines": "Có mặt hàng không tồn tại."})
+    if not code:
+        code = f"XK{timezone.now().strftime('%Y%m%d%H%M%S%f')[:17]}"
 
-        if not isinstance(data, dict):
-            return JsonResponse({"error": "Request body must be a JSON object"}, status=400)
-
-        date_val = data.get("date")
-        if not date_val or not isinstance(date_val, str):
-            return JsonResponse({"error": "date is required and must be YYYY-MM-DD"}, status=400)
-
-        code = data.get("code")
-        if code and isinstance(code, str):
-            code = code.strip().upper()
-            if Issue.objects.filter(code=code).exists():
-                return JsonResponse({"error": f"Mã phiếu xuất '{code}' đã tồn tại."}, status=409)
-        else:
-            code = f"XK{timezone.now().strftime('%Y%m%d%H%M%S%f')[:17]}"
-
-        note = data.get("note", "")
-        if not isinstance(note, str):
-            return JsonResponse({"error": "note must be a string"}, status=400)
-
-        raw_lines = data.get("lines")
-        if not isinstance(raw_lines, list) or not raw_lines:
-            return JsonResponse({"error": "lines must be a non-empty list"}, status=400)
-
-        validated_lines = []
-        seen_foods = set()
-        for idx, line in enumerate(raw_lines, start=1):
-            if not isinstance(line, dict):
-                return JsonResponse({"error": f"Dòng {idx} phải là một object"}, status=400)
-            food_id = line.get("food_id") if "food_id" in line else line.get("food")
-            if isinstance(food_id, bool) or not isinstance(food_id, int) or food_id <= 0:
-                return JsonResponse({"error": f"food_id tại dòng {idx} không hợp lệ"}, status=400)
-
-            try:
-                food = FoodItem.objects.get(id=food_id)
-            except FoodItem.DoesNotExist:
-                return JsonResponse({"error": f"Thực phẩm ID {food_id} không tồn tại."}, status=400)
-
-            if food_id in seen_foods:
-                return JsonResponse({"error": f"Thực phẩm '{food.name}' bị trùng lặp trong phiếu."}, status=400)
-            seen_foods.add(food_id)
-
-            qty_raw = line.get("quantity")
-            if qty_raw is None or isinstance(qty_raw, bool):
-                return JsonResponse({"error": f"Số lượng tại dòng {idx} là bắt buộc."}, status=400)
-            try:
-                qty_dec = Decimal(str(qty_raw))
-                if not qty_dec.is_finite() or qty_dec <= Decimal("0"):
-                    return JsonResponse({"error": f"Số lượng xuất tại dòng {idx} phải lớn hơn 0."}, status=400)
-            except (InvalidOperation, TypeError):
-                return JsonResponse({"error": f"Số lượng tại dòng {idx} không hợp lệ."}, status=400)
-
-            validated_lines.append({
-                "food": food,
-                "quantity": qty_dec,
-            })
-
-        with transaction.atomic():
-            issue = Issue.objects.create(
-                code=code,
-                date=date_val,
-                note=note.strip(),
-                created_by=request.user,
-                status=Issue.Status.DRAFT,
-            )
-            created_lines = []
-            for item in validated_lines:
-                line_obj = IssueLine.objects.create(
-                    issue=issue,
-                    food=item["food"],
-                    quantity=item["quantity"],
-                    unit_cost=Decimal("0.00"),
-                )
-                created_lines.append(line_obj)
-
-        return JsonResponse({
-            "id": issue.id,
-            "code": issue.code,
-            "date": str(issue.date),
-            "note": issue.note,
-            "status": issue.status.upper(),
-            "total_value": "0.00",
-            "lines": [
-                {
-                    "id": l.id,
-                    "food_id": l.food_id,
-                    "food_name": l.food.name,
-                    "quantity": str(l.quantity),
-                    "unit_cost": str(l.unit_cost),
-                }
-                for l in created_lines
-            ]
-        }, status=201)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
-
-
-@inventory_permission_required
-def issue_detail(request, issue_id):
     try:
-        iss = Issue.objects.select_related("created_by").prefetch_related("lines__food").get(id=issue_id)
-    except Issue.DoesNotExist:
-        return JsonResponse({"error": "Issue not found"}, status=404)
-
-    if request.method == "GET":
-        total_value = sum((line.quantity * line.unit_cost for line in iss.lines.all()), Decimal("0.00"))
-        return JsonResponse({
-            "id": iss.id,
-            "code": iss.code,
-            "date": str(iss.date),
-            "note": iss.note,
-            "status": iss.status.upper(),
-            "posted_at": iss.posted_at.isoformat() if iss.posted_at else None,
-            "total_value": str(round(total_value, 2)),
-            "lines": [
-                {
-                    "id": line.id,
-                    "food_id": line.food_id,
-                    "food_name": line.food.name if line.food else "",
-                    "quantity": str(line.quantity),
-                    "unit_cost": str(line.unit_cost),
-                    "line_total": str(round(line.quantity * line.unit_cost, 2)),
-                }
-                for line in iss.lines.all()
-            ],
-        })
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+        with transaction.atomic():
+            iss = Issue.objects.create(code=code, date=issue_date, note=note, created_by=request.user)
+            IssueLine.objects.bulk_create([
+                IssueLine(issue=iss, food=foods[l["food_id"]], quantity=l["quantity"]) for l in lines
+            ])
+            audit.record(request, "issue_create", "issue", iss.id, f"Tạo phiếu xuất nháp {iss.code}")
+    except IntegrityError:
+        raise Conflict(f"Mã phiếu xuất {code} đã tồn tại.", {"code": "Đã tồn tại."})
+    iss = Issue.objects.prefetch_related("lines__food").get(id=iss.id)
+    return JsonResponse(_issue_payload(iss), status=201)
 
 
 @inventory_permission_required
+@json_api
+def issue_detail(request, issue_id):
+    if request.method != "GET":
+        return method_not_allowed()
+    return JsonResponse(_issue_payload(Issue.objects.prefetch_related("lines__food").get(id=issue_id)))
+
+
+@inventory_permission_required
+@json_api
 def issue_post(request, issue_id):
     if request.method != "POST":
-        return JsonResponse({"error": "Method not allowed"}, status=405)
-
-    try:
-        issue = Issue.objects.get(id=issue_id)
-    except Issue.DoesNotExist:
-        return JsonResponse({"error": "Phiếu xuất không tồn tại."}, status=404)
-
-    if issue.status != Issue.Status.DRAFT:
-        return JsonResponse({"error": "Phiếu xuất đã được chốt trước đó hoặc không ở trạng thái nháp."}, status=409)
-
-    try:
+        return method_not_allowed()
+    with transaction.atomic():
         posted = post_issue(issue_id, request.user)
-        total_val = sum((l.quantity * l.unit_cost for l in posted.lines.all()), Decimal("0.00"))
-        return JsonResponse({
-            "id": posted.id,
-            "code": posted.code,
-            "status": posted.status.upper(),
-            "posted_at": posted.posted_at.isoformat() if posted.posted_at else None,
-            "total_value": str(round(total_val, 2)),
-            "message": "Chốt phiếu xuất thành công."
-        }, status=200)
-    except Issue.DoesNotExist:
-        return JsonResponse({"error": "Phiếu xuất không tồn tại."}, status=404)
-    except InventoryConflict as e:
-        msg = " ".join(e.messages)
-        return JsonResponse({"error": msg, "message": msg}, status=409)
-    except ValidationError as e:
-        return JsonResponse({"error": " ".join(e.messages)}, status=400)
+        audit.record(request, "issue_post", "issue", posted.id, f"Chốt phiếu xuất {posted.code}")
+    lines = list(posted.lines.all())
+    return JsonResponse({
+        "id": posted.id,
+        "code": posted.code,
+        "status": posted.status.upper(),
+        "posted_at": posted.posted_at.isoformat() if posted.posted_at else None,
+        "total_value": str(document_total(lines, "unit_cost")),
+        "message": "Chốt phiếu xuất thành công.",
+    })

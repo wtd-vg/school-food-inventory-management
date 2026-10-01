@@ -1,77 +1,84 @@
-import json
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from .models import SchoolClass
-from .auth_views import inventory_permission_required
+"""API lớp học (SF44, BE-12/ISSUE-002): mã, tên, khối, sĩ số hiện hành, trạng thái.
 
-@require_http_methods(["GET", "POST"])
+Đổi sĩ số chỉ ảnh hưởng ngày mở sau đó; ngày đã mở giữ enrolled_snapshot.
+"""
+
+from django.db import IntegrityError, transaction
+from django.http import JsonResponse
+
+from . import audit
+from .auth_views import inventory_permission_required
+from .http_input import Conflict, json_api, method_not_allowed, only_fields, opt_bool, read_object, req_int, req_str
+from .models import MAX_CLASS_SIZE, SchoolClass
+
+FIELDS = {"code", "name", "grade", "enrolled", "is_active"}
+
+
+def _class(c):
+    return {"id": c.id, "code": c.code, "name": c.name, "grade": c.grade, "enrolled": c.enrolled, "is_active": c.is_active}
+
+
+def _grade(data):
+    return req_int(data, "grade", minimum=1, maximum=12, required=False, nullable=True, label="Khối")
+
+
+def _enrolled(data):
+    return req_int(data, "enrolled", minimum=0, maximum=MAX_CLASS_SIZE, required=False, label="Sĩ số")
+
+
 @inventory_permission_required
+@json_api
 def class_list(request):
     if request.method == "GET":
-        classes = SchoolClass.objects.all().order_by("id")
-        results = [
-            {"id": c.id, "code": c.code, "name": c.name, "enrolled": c.enrolled, "is_active": c.is_active}
-            for c in classes
-        ]
-        return JsonResponse({"results": results})
-    
-    elif request.method == "POST":
-        # Viewer only has GET access (checked by decorator, but we enforce explicitly for POST)
-        if request.user.groups.filter(name="viewer").exists():
-            return JsonResponse({"message": "Permission denied"}, status=403)
-            
-        try:
-            data = json.loads(request.body)
-            code = str(data.get("code", "")).strip().upper()
-            name = str(data.get("name", "")).strip()
-            enrolled = data.get("enrolled", 0)
-            
-            if not code or not name:
-                return JsonResponse({"message": "Code and name are required"}, status=400)
-                
-            if SchoolClass.objects.filter(code=code).exists():
-                return JsonResponse({"message": "Class code already exists"}, status=409)
-                
-            c = SchoolClass.objects.create(code=code, name=name, enrolled=enrolled)
-            return JsonResponse({"id": c.id, "code": c.code, "name": c.name, "enrolled": c.enrolled, "is_active": c.is_active}, status=201)
-            
-        except json.JSONDecodeError:
-            return JsonResponse({"message": "Invalid JSON"}, status=400)
+        return JsonResponse({"results": [_class(c) for c in SchoolClass.objects.order_by("code")]})
+    if request.method != "POST":
+        return method_not_allowed()
+    data = read_object(request)
+    only_fields(data, FIELDS)
+    code = req_str(data, "code", 32, upper=True, label="Mã lớp")
+    name = req_str(data, "name", 120, label="Tên lớp")
+    grade = _grade(data)
+    enrolled = _enrolled(data)
+    is_active = opt_bool(data, "is_active")
+    try:
+        with transaction.atomic():
+            c = SchoolClass.objects.create(
+                code=code, name=name, grade=grade, enrolled=0 if enrolled is None else enrolled,
+                is_active=True if is_active is None else is_active,
+            )
+            audit.record(request, "class_create", "class", c.id, f"Tạo lớp {c.code}", after=_class(c))
+    except IntegrityError:
+        raise Conflict(f"Mã lớp {code} đã tồn tại.", {"code": "Đã tồn tại."})
+    return JsonResponse(_class(c), status=201)
 
-@require_http_methods(["GET", "PATCH"])
+
 @inventory_permission_required
+@json_api
 def class_detail(request, class_id):
     if request.method == "GET":
-        try:
-            c = SchoolClass.objects.get(id=class_id)
-            return JsonResponse({"id": c.id, "code": c.code, "name": c.name, "enrolled": c.enrolled, "is_active": c.is_active})
-        except SchoolClass.DoesNotExist:
-            return JsonResponse({"message": "Class not found"}, status=404)
-
-    # request.method == "PATCH"
-    if request.user.groups.filter(name="viewer").exists():
-        return JsonResponse({"message": "Permission denied"}, status=403)
-        
-    try:
-        c = SchoolClass.objects.get(id=class_id)
-        data = json.loads(request.body)
-        
+        return JsonResponse(_class(SchoolClass.objects.get(id=class_id)))
+    if request.method != "PATCH":
+        return method_not_allowed()
+    data = read_object(request)
+    only_fields(data, FIELDS)
+    with transaction.atomic():
+        c = SchoolClass.objects.select_for_update().get(id=class_id)
+        before = _class(c)
+        if "code" in data:
+            c.code = req_str(data, "code", 32, upper=True, label="Mã lớp")
         if "name" in data:
-            name = str(data["name"]).strip()
-            if not name:
-                return JsonResponse({"message": "Name cannot be empty"}, status=400)
-            c.name = name
-            
+            c.name = req_str(data, "name", 120, label="Tên lớp")
+        if "grade" in data:
+            c.grade = _grade(data)
         if "enrolled" in data:
-            c.enrolled = int(data["enrolled"])
-
-        if "is_active" in data:
-            c.is_active = bool(data["is_active"])
-            
-        c.save()
-        return JsonResponse({"id": c.id, "code": c.code, "name": c.name, "enrolled": c.enrolled, "is_active": c.is_active})
-        
-    except SchoolClass.DoesNotExist:
-        return JsonResponse({"message": "Class not found"}, status=404)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({"message": "Invalid data format"}, status=400)
+            c.enrolled = _enrolled(data)
+        is_active = opt_bool(data, "is_active")
+        if is_active is not None:
+            c.is_active = is_active
+        try:
+            with transaction.atomic():
+                c.save()
+        except IntegrityError:
+            raise Conflict(f"Mã lớp {c.code} đã tồn tại.", {"code": "Đã tồn tại."})
+        audit.record(request, "class_update", "class", c.id, f"Sửa lớp {c.code}", before=before, after=_class(c))
+    return JsonResponse(_class(c))

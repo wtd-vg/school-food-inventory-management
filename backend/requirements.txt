@@ -6,3 +6,6 @@ psycopg[binary]==3.3.5
 
 # WSGI server cho production (SF38); dev vẫn dùng runserver.
 gunicorn==23.0.0
+
+# Mã hóa email phụ huynh (BE-04, đã duyệt 01/10/2026).
+cryptography==46.0.3
