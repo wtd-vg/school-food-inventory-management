@@ -1,130 +1,105 @@
 # SchoolFood Architecture
 
-## Mục tiêu hiện tại
+Cập nhật 30/09/2026. Hiện trạng dưới đây thuộc `origin/dev1@7df9bcf`; local `4a2c191` chưa pull. Các mục G2 phía sau gồm thiết kế đã có một phần và phần dự kiến, không thay bằng chứng triển khai. Hiện trạng mới nhất, lỗi mở và lộ trình: [plan_final.md](plan_final.md).
 
-Tạo một skeleton mà thành viên mới có thể tự giải thích:
+## 1. Hiện trạng và công nghệ
+
+React 19 + TypeScript + Vite → Django 5.2.17 → PostgreSQL 17. Session/CSRF, manager/viewer; một app inventory. Frontend dùng state Screen; router/design “Bếp Nhà Trường” đã được duyệt R5, chưa có shell mới. Không tự thêm DRF/UI kit/queue.
+
+| Phần | Code trên dev1 | Giới hạn |
+| --- | --- | --- |
+| Kho | Receipt/Line, Issue/Line, StockTake/Item, StockTransaction; create/post services, API, trigger | UI nhập/xuất chưa có; input/rounding có issue |
+| Báo cáo | Đọc StockTransaction; lọc DateField | Chưa thay cho đối chiếu dữ liệu thực/QA |
+| Lớp/ngày ăn | SF43 SchoolClass(enrolled,grade), LunchDay, ClassMealCount, LunchDayEvent; lunch.py | class_views chưa đồng bộ field; chưa có API số suất |
+| Món/công thức | Dish/RecipeComponent, API dishes | 3 số lẻ gây mất định lượng nhỏ; thiếu LunchPlan/snapshot |
+| Nhu cầu/đơn/chi phí | Thiết kế | Chưa có model/service đầy đủ |
+| Deploy | Config/script một phần | Chưa kiểm chứng môi trường production/restore |
+
+## 2. Nền kho đã hợp nhất và cổng G2.0 còn mở
+
+SF25/SF31 đã merge: StockTransaction dùng chung IN/OUT/ADJUST, nguồn chứng từ và trigger tương ứng. Service hiện hành không ghi InventoryLedger; báo cáo không đọc nguồn legacy đó. Xóa InventoryLedger là đề xuất P4, chưa làm.
+
+Nháp không đổi tồn; chốt atomic, khóa đầu phiếu rồi FoodItem theo id tăng dần; cập nhật quantity/avg_cost/stock_version và ledger cùng giao dịch. Không âm kho/chốt hai lần; kiểm kê dùng snapshot/version. OUT lưu value_delta âm; báo cáo chi phí chuyển về độ lớn dương, không thay quy ước sổ.
+
+Migration có hai nhánh 0008 nối bởi 0012, tới 0013. DB sạch chạy đủ 94 test và không drift model. DB từng chạy mixed-0008 tại f00048d bị trùng bảng khi nâng cấp: ISSUE-001 là việc phải xử lý trước đồng bộ DB cũ. Không xóa migration hoặc reset DB theo kế hoạch N1 lịch sử. Đối chiếu nguồn/giá/ngày/người thực hiện trên DB riêng; không tạo giả dữ liệu thiếu.
+
+Contract SF25/31/43 nằm trong outputs/team-6/contracts trên dev1; checkout cũ có thể chưa có. Dùng git ls-tree/git show origin/dev1 để đọc đúng ref. Cổng G2.0 chỉ đóng sau bằng chứng đối chiếu, sửa blocker và review; không chỉ dựa vào test DB sạch.
+
+## 3. Phạm vi G2 và sơ đồ dữ liệu dự kiến
+
+Một trường, một kho, chỉ bữa trưa, một thực đơn và một khẩu phần chuẩn/ngày. Manager nhập tổng theo lớp và suất nhân viên riêng; viewer chỉ đọc. Chưa quản lý học sinh, nhóm tuổi, nhiều bữa, dị ứng, AI, lô/hạn dùng, trả kho/hủy thức ăn sau xuất hoặc tích hợp gửi tin. Trường cần nhiều khẩu phần phải mở rộng phạm vi trước khi dùng thực tế.
 
 ```text
-React → Django → PostgreSQL
+SchoolClass → ClassMealCount → LunchDay (dự kiến, thực tế, chốt)
+Dish → RecipeLine(FoodItem) → LunchPlan → PlanRecipeSnapshot
+LunchDay + LunchPlan → DemandRevision → StockAllocation
+DemandRevision → PurchaseOrder → PurchaseOrderLine
+PurchaseOrderLine → ReceiptLine → StockTransaction(IN)
+LunchDay → Issue/IssueLine → StockTransaction(OUT)
+StockTakeItem → StockTransaction(ADJUST)
 ```
 
-## Công nghệ
+Sơ đồ gồm cả hiện trạng và đích thiết kế: SchoolClass/LunchDay/ClassMealCount và nền kho đã có; món hiện dùng tên RecipeComponent, chưa có LunchPlan/PlanRecipeSnapshot/DemandRevision/StockAllocation/PurchaseOrder. TV1 chốt SF49/55/61/67 trước triển khai; không tạo lại SF43 đã merge.
 
-- React + TypeScript + Vite cho giao diện.
-- Django cho backend.
-- PostgreSQL cho database.
-- Docker Compose để các máy chạy cùng môi trường.
+| Nhóm | Ràng buộc tối thiểu |
+| --- | --- |
+| Lớp và ngày ăn | Mã lớp unique; unique(class,date); sĩ số và suất nguyên không âm; suất lớp không vượt sĩ số snapshot; chưa nhập=null, nghỉ ăn=0 |
+| LunchDay | Ngày unique trong một trường; suất nhân viên riêng; dự kiến/thực tế độc lập, người chốt/thời điểm/version; lớp hoạt động phải nhập hoặc đánh dấu nghỉ |
+| RecipeLine | unique(dish,food); định lượng trước sơ chế mỗi suất >0; công thức ít nhất một dòng; food có đơn vị chuẩn |
+| LunchPlan | Ngày unique; nháp/chốt/phiên bản điều chỉnh; bản chụp món, food, định lượng, đơn vị khi chốt; ngày nghỉ tách khỏi thiếu thực đơn |
+| DemandRevision | Tham chiếu phiên bản số suất/thực đơn; lưu phần đóng góp, dự phòng/lý do, thời điểm tính; bản cũ không ghi đè |
+| Allocation | Liên kết nhu cầu với nguồn tồn hoặc phần chưa nhận của đơn; qty>0; tổng giữ không vượt nguồn; có trạng thái giải phóng/đã dùng |
+| PurchaseOrder | Supplier, ngày/giờ cần nhận, người tạo/duyệt, version; nháp phải có dòng; unique(order,food) |
+| Nhận hàng | Dòng nhập liên kết dòng đơn, food phải khớp; chỉ lượng chấp nhận đã chốt được tính; nhiều lần nhận; không nhận vượt trong bản đầu |
+| Xuất bữa trưa | Gắn ngày ăn; có thể nhiều phiếu bổ sung; không trừ kho khi tạo nháp; người chốt và lý do chênh lệch |
 
-## Cấu trúc
+Food đang dùng chỉ được ngừng sử dụng, không phá lịch sử tham chiếu. Chưa có quản lý lô/hạn dùng: không quảng bá tồn khả dụng là đã kiểm chứng hạn dùng; kho phải được đối chiếu trước khi lập kế hoạch.
 
-- Một Django project: `schoolfood`.
-- Một Django app: `inventory`.
-- Một React component chính: `App`.
-- Một API mẫu: `GET /api/hello/`.
+## 4. Phép tính, đơn vị và giá trị
 
-Không dùng router frontend, UI library, Django REST Framework, auth tùy chỉnh, CI hoặc cấu hình production trong skeleton.
+Decimal phía backend; API gửi decimal dưới dạng chuỗi. Không nhận float/bool/NaN/Infinity vào trường nghiệp vụ Decimal. Đích contract dùng kg, l, cái; code recipe hiện nhận kg, lit, piece nên SF49 phải chốt mã/mapping rõ; g→kg và ml→l chia 1000. Không quy đổi khối lượng sang thể tích. FoodItem.unit đang là text: SF49/50 phải có bước mapping dữ liệu cũ, từ chối mã không hỗ trợ thay vì đoán.
 
-## Nguyên tắc phát triển
+Định lượng quy đổi/cộng với độ chính xác đủ (đề xuất 6 số lẻ cho mỗi suất). Chỉ làm tròn cuối nhu cầu đến 0.001 đơn vị kho, ROUND_HALF_UP; đơn vị cái làm tròn lên nguyên chiếc. Tiền 2 số lẻ ROUND_HALF_UP; mọi field phải có kiểm tra tràn. Không làm tròn từng món trước khi cộng. Dự phòng nhập riêng, mặc định 0, có lý do khi >0; chưa thêm quy cách bao/gói tự động trong G2.
 
-1. Chỉ thêm file khi feature hiện tại cần nó.
-2. Một feature phải chạy từ database đến giao diện.
-3. Người viết code phải giải thích được code của mình.
-4. Không tạo abstraction trước khi có ít nhất hai chỗ sử dụng.
-5. Deploy và domain được làm sau feature nghiệp vụ đầu tiên.
+Nhu cầu food = tổng(số suất × định lượng food trong từng món).
 
-## Feature đầu tiên
+Mua thêm = max(0, nhu cầu + dự phòng − tồn được phân bổ − phần đơn chưa nhận được phân bổ và giao kịp).
 
-Sau khi skeleton chạy ổn, team làm `Category` theo thứ tự:
+Ví dụ kiểm thử: 300 suất × (60+10) g = 21 kg. Dự phòng 1 kg, tồn phân bổ 5, đang đặt phân bổ 4 → mua 13 kg. Đây không phải khuyến nghị dinh dưỡng.
 
-```text
-Model → Migration → API → React → Test
-```
+Chi phí nguyên liệu/ngày = tổng value_delta xuất cho ngày đó theo quy ước giá trị xuất dương của báo cáo. Chi phí/suất = tổng chi phí / số suất thực tế; 0 suất trả null kèm lý do. Xuất cho bếp không chứng minh lượng học sinh đã tiêu thụ; chênh lệch không tự kết luận thất thoát.
 
-## Kế hoạch của team 6 người
+## 5. Vòng đời và đồng thời
 
-Bộ tài liệu hiện hành nằm trong `outputs/team-6/` (19/09/2026).
-Đó là thiết kế cho các bước tiếp theo, không phải chức năng đã được cài vào skeleton.
+- Số suất: nháp → chốt; mở lại cần lý do và phiên bản mới; thay sĩ số lớp không thay snapshot cũ. Giờ chốt là cấu hình vận hành sẽ xác nhận trong SF43, không tự khóa ở giờ cố định chưa được trường chọn.
+- Thực đơn: nháp → chốt; điều chỉnh tạo revision giữ bản cũ. Sửa công thức không đổi món đã snapshot.
+- Đề xuất: tính nháp → duyệt phân bổ; khi version thực đơn/suất/tồn đổi phải kiểm tra lại. Bản xem trước chưa giữ hàng.
+- Đơn: nháp → duyệt → người dùng xác nhận đã gửi → nhận một phần → hoàn tất. Nháp/đơn chưa gửi có thể hủy; sau gửi phải ghi nhận lý do và xác nhận xử lý với nhà cung cấp. Đã nhận một phần thì đóng phần còn lại, không xóa lịch sử nhập.
+- Nhận: nháp → chốt. Trong cùng transaction, cập nhật receipt/ledger/tồn, đã nhận của đơn, chuyển allocation nguồn hàng đang chờ sang tồn. Không giữ cả hai nguồn cho cùng lượng.
+- Xuất: nháp → chốt; giảm tồn và allocation tương ứng. Phiếu xuất bổ sung = max(0, nhu cầu thực tế − đã xuất). Nếu đã xuất vượt nhu cầu, hiện chênh lệch và lý do, không tự trả kho.
+- Đóng ngày: số suất thực tế và thực đơn đã chốt; mọi phiếu liên quan đã xử lý; còn chênh lệch thì có giải thích. Mở lại có lịch sử; không sửa phiếu posted.
 
-- M0: cả 6 người tự chạy và giải thích khung.
-- M1: Category chỉ đọc trên local.
-- M2: danh mục và session/CSRF, quyền manager/viewer bằng Django mặc định.
-- M3: nhập kho và giá vốn bình quân bằng Decimal; nháp chưa đổi tồn, chốt atomic và có ledger.
-- M4: xuất kho có khóa hàng và không âm tồn; phiếu đã chốt chỉ đọc.
-- M5: kiểm kê có snapshot/version, báo cáo tồn và nghiệm thu toàn luồng.
-- M6: deploy/domain sau khi M5 đạt và chốt tài khoản/chi phí. Chưa chọn hoặc tạo tài nguyên cloud.
+SF55/61 phải duyệt một thứ tự khóa chung cho demand/order/receipt/food/allocation trước code, tương thích thứ tự đầu phiếu→food của nền kho; kiểm thử deadlock và rollback với hai kết nối. Kiểm tra version phía server, unique key cho thao tác tạo từ nguồn và idempotency cho request gửi lại. Không chỉ khóa nút frontend.
 
-Chỉ tạo file/model khi tới task tương ứng. Vẫn giữ một Django app và không thêm framework vào lượt viết tài liệu này.
-Hai hướng dẫn dùng Markdown (`.md`), không dùng Word: [hướng dẫn chung](outputs/team-6/SchoolFood_HuongDan_Chung.md) ghi schema và API contract; [hướng dẫn task](outputs/team-6/SchoolFood_HuongDan_Task.md) dùng mã SF01–SF42. Checklist Excel giữ owner, reviewer và bằng chứng.
+Tồn dành cho kế hoạch vẫn nằm trong quantity; nghiệp vụ xuất khác không được tiêu thụ phần đã giữ nếu chưa giải phóng hoặc phân bổ lại có lý do. Kiểm kê thiếu phải đánh dấu phân bổ không đủ và chặn duyệt phụ thuộc, không âm thầm coi nguồn vẫn đủ. Chỉ count hàng dự kiến nhận trước thời điểm cần dùng; hủy/giao muộn làm nhu cầu thiếu trở lại.
 
-## SF07 Thống nhất Category và chia việc M1
+## 6. Contract API và tổ chức mã
 
-Ngày chuẩn bị: 20/09/2026. TV1 chịu trách nhiệm, TV6 review. Đây là quyết định để triển khai SF08–SF12; API Category chưa có trong code. Chờ xác nhận SF01–SF06 và team đọc thống nhất trước khi nghiệm thu SF07.
+API trên dev1: /api/auth/*, /api/categories/, /api/foods/, /api/suppliers/, /api/receipts/, /api/issues/, /api/stocktakes/, /api/classes/, /api/dishes/, /api/reports/stock/, /api/reports/transactions/ và route chi tiết/chốt trong urls.py. Có thêm /api/lunch-days/<date>/counts|lock|reopen. Chưa có API thực đơn ngày, nhu cầu, đặt hàng. Lỗi Class/recipe API ghi trong plan_final.md §5.
 
-### Category là gì
+Khi mở task API, owner ghi route/method, JSON request/response, ví dụ lỗi và version trong thẻ task/architecture trước FE. GET danh sách dùng results; input sai 400, chưa đăng nhập 401, quyền/CSRF 403, không thấy 404, method sai 405, trạng thái/version xung đột 409. Không đổi API cũ chỉ để đồng bộ tên nếu ngoài task. created_by lấy từ session, không từ client; lỗi không chứa traceback hoặc bí mật.
 
-Category là nhóm thực phẩm, ví dụ `GAO` — Gạo và ngũ cốc, `RAU` — Rau củ. M1 chỉ cần đọc các nhóm từ PostgreSQL lên trang React. TV2 tạo dữ liệu thử bằng Django shell sau khi có model và chạy migration ở SF08.
+Giữ app inventory; có thể thêm meal_services.py, recipe_services.py, demand_services.py, purchase_services.py và view/test tương ứng khi đến nhiệm vụ. TV1 điều phối models/migrations; TV4 urls; TV3 App; người sửa file chung hẹn thứ tự merge. Task backend viết test cùng logic, QA viết case độc lập và E2E.
 
-### Thỏa thuận giữa backend và frontend
+## 7. Kiểm chứng và mở mốc
 
-Gọi `GET /api/categories/`, nhận HTTP `200` với `Content-Type: application/json`:
+G2.1/2 không cần chờ toàn bộ kho, nhưng G2.3 tích hợp tồn cần G2.0 đạt. G2.3 có thể chốt contract nguồn đơn và test bằng fixture; phải nghiệm thu lại bằng đơn thật ở SF66. FE dựng với JSON mẫu chỉ là đang làm, không phải hoàn tất API thật.
 
-```json
-{
-  "results": [
-    { "id": 1, "code": "GAO", "name": "Gạo và ngũ cốc", "is_active": true },
-    { "id": 2, "code": "RAU", "name": "Rau củ", "is_active": true }
-  ]
-}
-```
+Các ràng buộc liên bảng/concurrency kiểm tra bằng PostgreSQL; không SQLite. Trạng thái test hiện tại xem plan_final.md §2 và evidence, không lấy số test từ tài liệu lịch sử. M6/SF37–SF42 triển khai sau khi G2 được nghiệm thu và chi phí/tài khoản được chủ dự án duyệt. SF38 đã deploy lên EC2 + Cloudflare Tunnel (PR #33).
 
-Các id trên chỉ là ví dụ; frontend dùng id thực tế server trả, không gắn cứng 1 hoặc 2.
+## 8. Contract SF19 được giữ để bàn giao nền kho
 
-| Field | Kiểu JSON | Ý nghĩa và quy tắc |
-| --- | --- | --- |
-| `id` | number nguyên | Khóa chính do Django tự tạo. Frontend dùng làm key của dòng. |
-| `code` | string | Mã nhóm duy nhất, tối đa 32 ký tự; dữ liệu tạo bằng shell phải bỏ khoảng trắng đầu/cuối và viết hoa. |
-| `name` | string | Tên hiển thị, không rỗng sau khi bỏ khoảng trắng đầu/cuối, tối đa 120 ký tự. |
-| `is_active` | boolean | Còn sử dụng hay không; mặc định `true`. |
-
-- `results` luôn là mảng. Khi chưa có nhóm, trả `200` với `{"results": []}`.
-- Sắp xếp theo `id` tăng dần; trả cả nhóm đang dùng và ngừng dùng. M1 chưa lọc, tìm kiếm hoặc phân trang.
-- M1 chỉ đọc trên local, chưa yêu cầu đăng nhập. Chưa cung cấp API tạo, sửa hoặc xóa. Phương thức không hỗ trợ phải bị từ chối, không làm thay đổi dữ liệu.
-- Trong SF08/SF10, kiểm tra phương thức không hỗ trợ trả `405` khi request đã qua middleware. Với POST thiếu CSRF, Django có thể trả `403` trước khi tới view; không tắt CSRF để đổi mã lỗi.
-- React đọc `response.results`, hiển thị mã, tên và trạng thái sử dụng. Có ba trạng thái tải dữ liệu, danh sách rỗng và lỗi kết nối/API; lỗi không được hiển thị như danh sách rỗng.
-- Giữ `/api/hello/` và test hiện tại để cả team tiếp tục kiểm tra kết nối.
-
-### Ai sửa file nào
-
-Đường dẫn bên dưới tính từ thư mục gốc repository. File ghi “tạo mới” chỉ được tạo khi làm task tương ứng.
-
-| Task | Người làm / review | Phạm vi file |
-| --- | --- | --- |
-| SF07 | TV1 / TV6 | `architecture.md`, `task_on_progress.md`: thống nhất contract và thứ tự tích hợp. |
-| SF08 | TV2 / TV4 | `backend/apps/inventory/models.py` (tạo mới), migration sinh từ model; `views.py`, `urls.py` trong cùng app. |
-| SF09 | TV3 / TV5 | `frontend/src/CategoryPage.tsx` (tạo mới), `App.tsx`, `styles.css`. |
-| SF10 | TV4 / TV2 | `backend/apps/inventory/tests.py`: test danh sách rỗng, dữ liệu thật, mã trùng và phương thức không hỗ trợ. |
-| SF11 | TV5 / TV3 | Review giao diện SF09; sửa `CategoryPage.tsx`/`styles.css` nếu cần, phối hợp với TV3. |
-| SF12 | TV6 / TV1 | Chạy nghiệm thu trên máy khác, ghi AC02 trong checklist; sửa README nếu hướng dẫn còn thiếu. |
-
-TV1 duyệt thay đổi model/migration và quyết định merge. Trong M1, TV2 là người sửa URL backend; TV3 là người tích hợp vào `App.tsx`. Nếu cần sửa file do người khác đang làm, hẹn thứ tự và lấy bản mới sau khi PR trước được merge.
-
-### Nhánh và thứ tự tích hợp
-
-Theo quyết định ngày 20/09/2026, team lấy bản nền và tích hợp task trên `dev1`. TV1 đưa skeleton và checklist lên nhánh này; mỗi người lấy `dev1` mới nhất rồi tạo nhánh feature. Cần xác nhận chạy Docker/PostgreSQL ở M0 trước khi nghiệm thu bản nền. Việc đưa bản đã nghiệm thu sang `main` thực hiện sau.
-
-| Task | Tên nhánh khi bắt đầu | Bắt đầu sau |
-| --- | --- | --- |
-| SF08 | `feat/SF08-category` | SF07 được nghiệm thu và bản nền đã có trên `dev1`. |
-| SF09 | `feat/SF09-category-ui` | SF08 đã merge vào `dev1`. |
-| SF10 | `feat/SF10-category-tests` | SF08 đã merge vào `dev1`; có thể làm cùng lúc SF09. |
-| SF11 | `feat/SF11-category-ui-review` | SF09 đã merge vào `dev1`. |
-| SF12 | `feat/SF12-category-acceptance` | SF09, SF10 và SF11 đã merge; tạo nhánh nếu có file cần cập nhật. |
-
-Tên nhánh trên là quy ước, chưa phải nhánh hoặc PR đã tạo. Mỗi người lấy `dev1` mới, tạo nhánh của task mình, mở PR về `dev1`. PR ghi mã SF, thay đổi, cách thử và bằng chứng. Reviewer kiểm tra rồi TV1 quyết định merge; không sửa migration đã merge.
-
-### TV1 kiểm tra team đã hiểu
-
-TV2 giải thích cách tạo hai nhóm trong PostgreSQL và trả đủ bốn field. TV3 dùng JSON mẫu giải thích cách đọc `results`, hiển thị hai dòng và xử lý mảng rỗng. TV4 nêu cách kiểm tra code trùng bị chặn. TV6 xác nhận cả sáu người đã có bằng chứng M0 và đọc được hướng dẫn này. Khi các việc đó đạt, TV1 mở SF08.
+Nội dung dưới đây là contract SF19 ngày 28/09/2026. Các câu “chưa triển khai” mô tả thời điểm SF19 và phải đối chiếu mục hiện trạng phía trên khi bắt đầu task mới.
 
 ## SF19 — Phiếu nhập và sổ kho (28/09/2026)
 

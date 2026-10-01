@@ -1,24 +1,17 @@
 # SchoolFood — quản lý kho và bữa trưa trường học
 
-SchoolFood đang phát triển với React + TypeScript + Vite, Django và PostgreSQL. Bản local đã có đăng nhập, danh mục, cấu trúc phiếu nhập, kiểm kê và báo cáo; chưa hoàn thiện toàn bộ luồng nhập–xuất. Giai đoạn 2 bổ sung số suất, thực đơn, nhu cầu nguyên liệu, đặt/nhận hàng và đối chiếu bữa trưa.
+SchoolFood quản lý kho thực phẩm và bữa trưa cho một trường, viết bằng React/TypeScript, Django và PostgreSQL.
+
+- **Đã có:** nhập–xuất–kiểm kê dùng chung một sổ kho, báo cáo, nền lớp/ngày ăn, món ăn, giao diện "Bếp Nhà Trường". Bản production chạy tại https://schoolfoodusth.store.
+- **Đang làm:** bảo mật (vai trò Quản lý/Hiệu trưởng, khóa đăng nhập, nhật ký thao tác), thực đơn cố định theo thứ, gửi thực đơn cho phụ huynh qua Zalo.
+- **Kế hoạch, hiện trạng và lỗi mở:** [plan_final.md](plan_final.md).
 
 ## Bắt đầu theo vai trò
 
-- Thành viên: đọc [hướng dẫn chung](outputs/team-6/SchoolFood_HuongDan_Chung.md), [task được giao](outputs/team-6/SchoolFood_HuongDan_Task.md) và [quy chuẩn Git](GIT_WORKFLOW.md).
-- Leader/reviewer: xem [tiến độ](task_on_progress.md), [kiến trúc](architecture.md), [kế hoạch G2](outputs/team-6/GiaiDoan2_KeHoach.md) và [checklist](SchoolFood_Checklist_6_ThanhVien.xlsx).
+- **Thành viên:** đọc [hướng dẫn chung](outputs/team-6/SchoolFood_HuongDan_Chung.md), [task được giao](outputs/team-6/SchoolFood_HuongDan_Task.md), [quy chuẩn Git](GIT_WORKFLOW.md) và [hướng dẫn giao diện](frontend/UI_GUIDE.md).
+- **Leader/reviewer:** xem [plan_final.md](plan_final.md), [kiến trúc](architecture.md), [kế hoạch G2](outputs/team-6/GiaiDoan2_KeHoach.md) và [checklist](SchoolFood_Checklist_6_ThanhVien.xlsx).
 
-## Hiện trạng tại 94c733a (khảo sát 29/09/2026)
-
-| Chức năng | Có trong code | Việc còn lại |
-| --- | --- | --- |
-| Auth/danh mục | Session/CSRF, manager/viewer, Category/Food/Supplier API; UI login/category/food | Kiểm tra hồi quy và UI Supplier |
-| Nhập | Model Receipt/Line/StockTransaction, service tạo nháp, trigger/test | Chốt nhập, API/UI đầy đủ |
-| Xuất | Contract trong tài liệu | Model/service/API/UI và nghiệm thu |
-| Kiểm kê/báo cáo | Model/API, ReportPage | Thống nhất ledger với SF19; nghiệm thu tích hợp |
-| G2 bữa trưa | Kế hoạch SF43–SF72 | Chưa triển khai |
-| Deploy | Một phần cấu hình và script | Chưa xác nhận môi trường triển khai hoặc khôi phục |
-
-“Có code” khác “đã nghiệm thu”. Kết quả chạy mới nhất ở [tiến độ](task_on_progress.md). Không dùng README này để tự đánh dấu task hoàn tất.
+"Có code", "test đạt" và "đã nghiệm thu" là ba trạng thái khác nhau. Không tự đánh dấu Excel.
 
 ## Chạy local bằng Docker
 
@@ -32,11 +25,16 @@ docker compose exec backend python manage.py createsuperuser
 docker compose exec backend python manage.py seed_demo
 ```
 
-Chỉ migrate/seed trên DB local đã xác nhận. Seed hiện chỉ tạo/cập nhật ba Category, không tạo người dùng hoặc toàn bộ dữ liệu G2. Superuser dùng cho quản trị local; tài khoản thường được gán group manager/viewer trong Django admin `/admin/`. Không ghi mật khẩu vào repo.
+**DB cũ:** DB từng migrate tại `f00048d` không nâng cấp thẳng được (ISSUE-001 trong [plan_final.md](plan_final.md) §5). Không tự xóa volume hoặc fake migration.
 
-Mở http://localhost:5173 và đăng nhập. Django ở http://localhost:8001; DB host localhost:5433. Trong Docker, backend dùng db:5432 và Vite gọi backend:8000. Cổng host đổi bằng POSTGRES_HOST_PORT/BACKEND_HOST_PORT trong .env.
+Chỉ migrate/seed trên DB local đã xác nhận. Tài khoản thường được gán group trong Django admin `/admin/`. Không ghi mật khẩu vào repo.
 
-Chạy frontend ngoài Docker: cài dependency bằng npm ci trong frontend; đặt VITE_BACKEND_URL=http://localhost:8001 khi backend ở Compose. Backend ngoài Docker cần DB_HOST=127.0.0.1, DB_PORT=5433 cùng thông tin DB local tương ứng. Không dùng mặc định backend:8000 từ máy host.
+Mở http://localhost:5173 và đăng nhập. Các cổng:
+- Django: http://localhost:8001; DB: localhost:5433.
+- Trong Docker, backend dùng `db:5432` và Vite gọi `backend:8000`.
+- Đổi cổng host bằng `POSTGRES_HOST_PORT` / `BACKEND_HOST_PORT` trong `.env`.
+
+Chạy frontend ngoài Docker: chạy `npm ci` trong `frontend` và đặt `VITE_BACKEND_URL=http://localhost:8001`.
 
 ## Kiểm tra
 
@@ -47,7 +45,7 @@ docker compose exec frontend npm run build
 docker compose logs --tail 100 backend frontend
 ```
 
-Unit/integration tests: `python backend/manage.py test apps.inventory --noinput` khi đã cấu hình DB kiểm thử độc lập, hoặc lệnh tương ứng trong container kiểm thử. PostgreSQL bắt buộc vì SF19 có trigger; tài khoản test cần quyền tạo database. Xem hướng dẫn DB test trong [README.md](README.md). Bỏ DATABASE_URL trong process test và đặt rõ DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD; settings hiện chỉ đổi NAME khi thấy lệnh test, chưa bảo vệ host cloud. Không coi build thành công là đã test UI.
+Test backend chạy trên PostgreSQL riêng (bắt buộc vì có trigger PL/pgSQL). Lệnh đầy đủ ở [README.md §4](README.md). Settings từ chối chạy test khi host DB không phải local.
 
 ```powershell
 docker compose down
@@ -55,21 +53,26 @@ docker compose down
 
 Lệnh dừng trên giữ volume. Không thêm `-v` nếu cần giữ dữ liệu.
 
+## Deploy
+
+EC2 + Docker Compose + Cloudflare Tunnel. Dùng các lệnh `npm run ec2:*` trong [package.json](package.json), xem [README.md §4](README.md). `.env.prod` chỉ nằm trên server.
+
 ## Cấu trúc chính
 
 | Đường dẫn | Trách nhiệm |
 | --- | --- |
-| backend/apps/inventory/models.py, migrations/ | Model và schema PostgreSQL |
-| backend/apps/inventory/services.py | Giao dịch nghiệp vụ |
-| backend/apps/inventory/views.py, urls.py, auth_views.py | HTTP, validation, auth/CSRF |
-| backend/apps/inventory/tests.py, test_receipts.py | Test logic/API/ràng buộc/concurrency |
-| frontend/src/App.tsx và các Page | Màn hình và điều hướng hiện tại |
-| frontend/src/utils/api.ts | Session/CSRF và xử lý hết phiên |
-| compose.yaml, Dockerfile | Môi trường local |
-| outputs/team-6/ | Task, checklist, kế hoạch và bằng chứng |
+| `backend/apps/inventory/models.py`, `migrations/` | Model và schema PostgreSQL (trigger) |
+| `backend/apps/inventory/services.py`, `lunch.py` | Giao dịch kho, ngày ăn/số suất |
+| `backend/apps/inventory/*views.py`, `urls.py` | HTTP API, validation, quyền/CSRF |
+| `backend/apps/inventory/test*.py` | Test logic/API/ràng buộc/concurrency |
+| `frontend/src/features/` | Màn hình theo nghiệp vụ |
+| `frontend/src/components/`, `lib/`, `services/` | Component dùng chung, định dạng/Decimal/HTTP, gọi API |
+| `compose.yaml`, `compose.prod.yaml`, `Dockerfile`, `deploy/` | Môi trường local và production |
+| `design/` | Mẫu giao diện gốc |
+| `outputs/team-6/` | Thẻ task, kế hoạch G2, contract, checklist, bằng chứng |
 
 ## Quy trình phát triển
 
-Khảo sát → kế hoạch → chủ dự án duyệt → sửa trên nhánh task → tự kiểm tra → review → PR về dev1. Approval đã có giữ nguyên trong phạm vi; không xin lại mỗi thao tác. Không tự commit/push/merge khi chưa có yêu cầu tương ứng. Dữ liệu, mật khẩu, .env, venv, node_modules và log tạm không đưa lên Git.
+Khảo sát → kế hoạch → chủ dự án duyệt → sửa trên nhánh task → tự kiểm tra → review → PR về dev1. Không tự commit/push/merge khi chưa có yêu cầu tương ứng. Dữ liệu, mật khẩu, `.env*`, `venv`, `node_modules` và log tạm không đưa lên Git.
 
-Mã SF01–SF42 được giữ. Giai đoạn 2 dùng G2.1–G2.5, SF43–SF72; G2.0 là kiểm tra nền kho, không phải M2 danh mục/auth. Xem checklist để nhận task; task mới đều chưa nghiệm thu.
+Mã SF01–SF42 được giữ. Giai đoạn 2 dùng G2.1–G2.5, SF43–SF72.

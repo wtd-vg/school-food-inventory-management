@@ -1,4 +1,4 @@
-/* Design tokens "Bếp Nhà Trường" (design/FRONTEND_PROMPT.md §3).
+/* Design tokens "Bếp Nhà Trường" (mẫu gốc design/*.html, quy tắc frontend/UI_GUIDE.md).
    Đây là nơi DUY NHẤT được khai báo mã màu. Component chỉ dùng var(--...). */
 :root {
   /* nền & bề mặt */

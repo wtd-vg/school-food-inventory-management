@@ -1,6 +1,6 @@
 /**
- * Bộ icon SVG inline (FRONTEND_PROMPT §6). 24×24, stroke currentColor, nét 2, đầu tròn.
- * Path của icon điều hướng lấy nguyên từ design/reference/*.html.
+ * Bộ icon SVG inline (UI_GUIDE.md). 24×24, stroke currentColor, nét 2, đầu tròn.
+ * Path của icon điều hướng lấy nguyên từ design/*.html.
  * Icon trang trí: để mặc định aria-hidden. Icon mang nghĩa: truyền `title`.
  */
 import type { ReactNode, SVGProps } from 'react';
