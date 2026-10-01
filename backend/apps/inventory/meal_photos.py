@@ -105,3 +105,26 @@ def photo_payload(photo):
         "created_at": photo.created_at.isoformat(),
         "url": f"/api/meal-photos/{photo.id}/image/",
     }
+
+
+EMAIL_SIDE = 1040  # ảnh trong thư: đủ nét trên màn retina 520px, mỗi ảnh ~100 KB
+
+
+def email_photos(day_date):
+    """Ảnh của ngày để nhúng vào thư: [{"cid", "data", "note", "width", "height"}], theo thứ tự tải lên.
+
+    Ảnh mất file trên ổ (sự cố) thì bỏ qua, không làm hỏng cả đợt gửi.
+    """
+    result = []
+    for photo in MealPhoto.objects.filter(lunch_day__date=day_date).order_by("id"):
+        try:
+            with photo.image.open("rb") as f, Image.open(f) as img:
+                img = img.convert("RGB")
+                img.thumbnail((EMAIL_SIDE, EMAIL_SIDE))
+                out = BytesIO()
+                img.save(out, "JPEG", quality=78, optimize=True)
+        except (OSError, ValueError):
+            continue
+        result.append({"cid": f"anh{photo.id}@schoolfood", "data": out.getvalue(), "note": photo.note,
+                       "width": img.width, "height": img.height})
+    return result

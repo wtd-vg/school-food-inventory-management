@@ -1,0 +1,17 @@
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+
+/* Thư xem trước: nền thư tự có màu, khung chỉ viền nhẹ; chiều cao đặt theo nội dung khi tải xong. */
+.preview {
+  display: block;
+  width: 100%;
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
