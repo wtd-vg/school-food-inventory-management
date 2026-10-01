@@ -380,6 +380,21 @@ class G2KichBanTests(G2Fixture, TestCase):
         self.gui("POST", f"{url}/reopen/", {"kind": "planned", "version": day["version"], "reason": "Đổi số"})
         self.assertTrue(self.gui("GET", f"{url}/demand/")["is_outdated"])
 
+    def test_7_chot_thuc_te_khong_lam_ban_da_duyet_loi_thoi(self):
+        """Nhập/chốt số thực tế làm tăng version ngày nhưng không đổi nhu cầu → is_outdated vẫn False.
+        (Lỗi tìm thấy khi đi kịch bản trên giao diện: màn Hôm nay báo "Cần xem lại" cho ngày đã đóng.)"""
+        self.den_buoc_duyet()
+        self.chot_so_suat(self.D, "actual", tong_lop=285)
+        self.assertFalse(self.gui("GET", f"/api/lunch-days/{self.D}/demand/")["is_outdated"])
+        # Mở lại dự kiến → lỗi thời; chốt lại với tổng khác vẫn lỗi thời, cùng tổng thì hết lỗi thời.
+        url = f"/api/lunch-days/{self.D}"
+        day = self.gui("GET", f"{url}/counts/")
+        day = self.gui("POST", f"{url}/reopen/", {"kind": "actual", "version": day["version"], "reason": "Sửa thực tế"})
+        day = self.gui("POST", f"{url}/reopen/", {"kind": "planned", "version": day["version"], "reason": "Đổi dự kiến"})
+        self.assertTrue(self.gui("GET", f"{url}/demand/")["is_outdated"])
+        self.gui("POST", f"{url}/lock/", {"kind": "planned", "version": day["version"]})
+        self.assertFalse(self.gui("GET", f"{url}/demand/")["is_outdated"])
+
     def test_7_duyet_lai_ban_moi_bo_giu_ban_cu(self):
         self.den_buoc_duyet()
         moi = self.tinh_nhu_cau(du_phong=False)
