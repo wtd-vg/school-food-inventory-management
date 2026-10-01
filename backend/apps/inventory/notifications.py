@@ -31,16 +31,26 @@ Status = NotificationLog.Status
 
 
 def recipients():
-    """OrderedDict email_hash → {"email", "children": [...]}, chỉ học sinh đang học, đã đồng ý, chưa hủy."""
+    """OrderedDict email_hash → {"email", "children": [...]}, chỉ học sinh đang học, đã đồng ý, chưa hủy.
+
+    Gom theo email; mỗi BÉ (theo id) đếm một lần — hai bé trùng họ tên ở hai lớp vẫn là hai bé, khi đó tên kèm
+    mã lớp để phụ huynh phân biệt.
+    """
     groups = OrderedDict()
     contacts = (ParentContact.objects.filter(student__is_active=True, unsubscribed_at__isnull=True)
-                .select_related("student").order_by("email_hash", "student__full_name"))
+                .select_related("student__school_class")
+                .order_by("email_hash", "student__full_name", "student__school_class__code", "student_id"))
     for c in contacts:
         group = groups.get(c.email_hash)
         if group is None:
-            group = groups[c.email_hash] = {"email": decrypt(c.email_encrypted), "children": []}
-        if c.student.full_name not in group["children"]:
-            group["children"].append(c.student.full_name)
+            group = groups[c.email_hash] = {"email": decrypt(c.email_encrypted), "children": [], "_students": {}}
+        group["_students"].setdefault(c.student_id, c.student)
+    for group in groups.values():
+        students = list(group.pop("_students").values())
+        names = [s.full_name for s in students]
+        group["children"] = [
+            f"{s.full_name} ({s.school_class.code})" if names.count(s.full_name) > 1 else s.full_name for s in students
+        ]
     return groups
 
 
