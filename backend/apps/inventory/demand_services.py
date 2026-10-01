@@ -184,10 +184,16 @@ def current_revision(day):
 
 
 def is_outdated(revision):
+    """Bản tính không còn khớp ngày ăn: số suất DỰ KIẾN đổi (mở lại hoặc tổng khác) hoặc thực đơn đổi.
+
+    LunchDay.version tăng cả khi nhập/chốt số thực tế; nhu cầu chỉ phụ thuộc tổng dự kiến nên version khác mà
+    dự kiến vẫn chốt với cùng tổng thì không coi là lỗi thời (duyệt vẫn đòi đúng version, xem approve()).
+    """
     if revision is None:
         return False
     day = revision.lunch_day
-    if day.version != revision.lunch_day_version:
+    if day.version != revision.lunch_day_version and (
+            day.planned_confirmed_at is None or day.planned_total != revision.servings):
         return True
     menu = menu_for_date(day.date, take_snapshot=False)
     return [d["dish_id"] for d in menu["dishes"]] != [d["dish_id"] for d in revision.menu_items]
