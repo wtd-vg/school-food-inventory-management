@@ -10,6 +10,24 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
 
+CENT = Decimal("0.01")
+
+
+def money(value):
+    """Tiền 2 số lẻ ROUND_HALF_UP (BE-05/ISSUE-007). Không dùng round(): Python làm tròn kiểu ngân hàng."""
+    return Decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def line_value(quantity, unit_price):
+    """Giá trị một dòng = lượng × đơn giá, làm tròn từng dòng (đúng như value_delta ghi sổ kho)."""
+    return money(quantity * unit_price)
+
+
+def document_total(lines, price_attr):
+    """Tổng phiếu = Σ giá trị từng dòng đã làm tròn → khớp tổng value_delta trên sổ kho."""
+    return sum((line_value(l.quantity, getattr(l, price_attr)) for l in lines), Decimal("0.00"))
+
+
 class InventoryConflict(ValidationError):
     """Xung đột trạng thái/tồn kho → view trả 409.
 
@@ -112,7 +130,7 @@ def post_receipt(receipt_id, user=None):
         new_qty = food.quantity + line.quantity
         new_avg = (food.quantity * food.avg_cost + line.quantity * line.unit_price) / new_qty
         food.quantity = new_qty
-        food.avg_cost = new_avg.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        food.avg_cost = money(new_avg)
         food.stock_version += 1
         food.save(update_fields=["quantity", "avg_cost", "stock_version"])
 
@@ -122,7 +140,7 @@ def post_receipt(receipt_id, user=None):
             type=StockTransaction.Type.IN,
             quantity_delta=line.quantity,
             unit_cost=line.unit_price,
-            value_delta=(line.quantity * line.unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            value_delta=line_value(line.quantity, line.unit_price),
             date=receipt.date,
             created_by=actor,
         )
@@ -247,7 +265,7 @@ def post_stocktake(stocktake_id, user=None):
             type=StockTransaction.Type.ADJUST,
             quantity_delta=variance,
             unit_cost=item.snapshot_cost,
-            value_delta=(variance * item.snapshot_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            value_delta=money(variance * item.snapshot_cost),
             date=st.date,
             created_by=poster,
         )
@@ -309,7 +327,7 @@ def post_issue(issue_id, user=None):
             type=StockTransaction.Type.OUT,
             quantity_delta=-line.quantity,
             unit_cost=unit_cost,
-            value_delta=-(line.quantity * unit_cost).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            value_delta=-line_value(line.quantity, unit_cost),
             date=issue.date,
             created_by=actor,
         )

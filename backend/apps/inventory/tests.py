@@ -5,7 +5,7 @@ from django.db import IntegrityError
 from .models import Category
 from .models import Supplier, Receipt, ReceiptLine, Issue, IssueLine
 from decimal import Decimal
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from .services import post_receipt, post_issue
 from django.core.exceptions import ValidationError
 from .models import (
@@ -28,7 +28,8 @@ class HelloApiTest(TestCase):
         response = Client().get("/api/hello/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["database"], "PostgreSQL đã kết nối.")
+        # BE-09: healthcheck công khai không lộ thông tin hệ thống.
+        self.assertEqual(response.json(), {"ok": True})
 
 class CategoryModelTest(TestCase): 
 
@@ -52,6 +53,7 @@ class CategoryModelTest(TestCase):
         Category.objects.create(code="RICE", name="Gạo")
         Category.objects.create(code="MEAT", name="Thịt")
         user = User.objects.create_user(username="cat_tester", password="pwd")
+        user.groups.add(Group.objects.get_or_create(name="manager")[0])  # 01/10: tài khoản phải có vai trò
         self.client.force_login(user)
         response = self.client.get('/api/categories/')
         self.assertEqual(response.status_code, 200)
@@ -134,6 +136,7 @@ class ReceiptAPISF22Tests(TestCase):
     def setUp(self):
         self.manager = User.objects.create_superuser(username="admin_api", password="pwd")
         self.viewer = User.objects.create_user(username="viewer_api", password="pwd")
+        self.viewer.groups.add(Group.objects.get_or_create(name="principal")[0])  # Hiệu trưởng: chỉ đọc
         self.cat = Category.objects.create(code="CAT_API", name="Test Cat API")
         self.supplier = Supplier.objects.create(code="SUP_API", name="NCC API")
         self.food = FoodItem.objects.create(
@@ -318,13 +321,14 @@ class ReceiptAPISF22Tests(TestCase):
         bad_res = self.client.post('/api/receipts/', data="invalid json string", content_type='application/json')
         self.assertEqual(bad_res.status_code, 400)
         self.assertIn('application/json', bad_res['Content-Type'])
-        self.assertIn('error', bad_res.json())
+        self.assertIn('message', bad_res.json())
 
 
 class IssueAPISF28Tests(TestCase):
     def setUp(self):
         self.manager = User.objects.create_superuser(username="admin_issue", password="pwd")
         self.viewer = User.objects.create_user(username="viewer_issue", password="pwd")
+        self.viewer.groups.add(Group.objects.get_or_create(name="principal")[0])  # Hiệu trưởng: chỉ đọc
         self.cat = Category.objects.create(code="CAT_ISSUE", name="Test Cat Issue")
         self.food = FoodItem.objects.create(
             code="FOOD_ISSUE", name="Thịt Bò", category=self.cat, unit="kg",
@@ -516,4 +520,4 @@ class IssueAPISF28Tests(TestCase):
         bad_res = self.client.post('/api/issues/', data="bad json", content_type='application/json')
         self.assertEqual(bad_res.status_code, 400)
         self.assertIn('application/json', bad_res['Content-Type'])
-        self.assertIn('error', bad_res.json())
+        self.assertIn('message', bad_res.json())
