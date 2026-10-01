@@ -4,8 +4,10 @@ from datetime import date as CalendarDate, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.utils import timezone
 from .models import (
-    FoodItem, Issue, IssueLine, Receipt, ReceiptLine, StockTake, StockTakeItem, StockTransaction,
+    FoodItem, Issue, IssueLine, LunchDayClose, PurchaseOrder, PurchaseOrderLine, Receipt, ReceiptLine,
+    StockAllocation, StockTake, StockTakeItem, StockTransaction,
 )
+from django.db.models import F, Sum
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 
@@ -117,8 +119,20 @@ def post_receipt(receipt_id, user=None):
     if not lines:
         raise ValidationError("Phiếu nhập không có dòng hàng nào.")
 
+    # SF62: thứ tự khóa đầu phiếu → đơn đặt → food → allocation → dòng đơn (plan_final §3).
+    po_line_ids = sorted({line.po_line_id for line in lines if line.po_line_id})
+    if po_line_ids:
+        order_ids = sorted(set(PurchaseOrderLine.objects.filter(id__in=po_line_ids).values_list("order_id", flat=True)))
+        orders = list(PurchaseOrder.objects.filter(id__in=order_ids).order_by("id").select_for_update())
+        if any(o.status != PurchaseOrder.Status.SENT for o in orders):
+            raise InventoryConflict("Chỉ nhận hàng cho đơn đã gửi nhà cung cấp và chưa đóng.")
+
     food_ids = sorted({line.food_id for line in lines})
     foods = {f.id: f for f in FoodItem.objects.filter(id__in=food_ids).order_by("id").select_for_update()}
+    if po_line_ids:
+        list(StockAllocation.objects.filter(po_line_id__in=po_line_ids, status=StockAllocation.Status.RESERVED)
+             .order_by("id").select_for_update())
+        po_lines = {pl.id: pl for pl in PurchaseOrderLine.objects.filter(id__in=po_line_ids).order_by("id").select_for_update()}
 
     for line in lines:
         food = foods[line.food_id]
@@ -144,11 +158,58 @@ def post_receipt(receipt_id, user=None):
             date=receipt.date,
             created_by=actor,
         )
+        if line.po_line_id:
+            _receive_po_line(po_lines[line.po_line_id], line.quantity)
 
+    if po_line_ids:
+        _close_fully_received(order_ids)
     receipt.status = Receipt.Status.POSTED
     receipt.posted_at = timezone.now()
     receipt.save(update_fields=["status", "posted_at"])
     return receipt
+
+
+def _receive_po_line(po_line, quantity):
+    """Cộng đã nhận; chuyển phần giữ "đơn đang chờ" của dòng đơn sang "tồn" đúng bằng lượng vừa về."""
+    if po_line.qty_received + quantity > po_line.qty_ordered:
+        raise InventoryConflict(
+            f"Nhận vượt số đặt: đã đặt {po_line.qty_ordered}, đã nhận {po_line.qty_received}, nhận thêm {quantity}."
+        )
+    po_line.qty_received += quantity
+    po_line.save(update_fields=["qty_received"])
+    remaining = quantity
+    allocations = (StockAllocation.objects.filter(po_line=po_line, status=StockAllocation.Status.RESERVED)
+                   .select_related("lunch_day").order_by("lunch_day__date", "id"))
+    for alloc in allocations:
+        if remaining <= 0:
+            break
+        take = min(alloc.qty, remaining)
+        if take == alloc.qty:
+            alloc.source, alloc.po_line = StockAllocation.Source.STOCK, None
+            alloc.save(update_fields=["source", "po_line", "updated_at"])
+        else:
+            alloc.qty -= take
+            alloc.save(update_fields=["qty", "updated_at"])
+            StockAllocation.objects.create(lunch_day_id=alloc.lunch_day_id, demand_line_id=alloc.demand_line_id,
+                                           food_id=alloc.food_id, source=StockAllocation.Source.STOCK, qty=take)
+        remaining -= take
+
+
+def _close_fully_received(order_ids):
+    for order in PurchaseOrder.objects.filter(id__in=order_ids, status=PurchaseOrder.Status.SENT):
+        if not order.lines.exclude(qty_received=F("qty_ordered")).exists():
+            order.status, order.close_reason, order.closed_at = PurchaseOrder.Status.CLOSED, "Đã nhận đủ", timezone.now()
+            order.version += 1
+            order.save(update_fields=["status", "close_reason", "closed_at", "version"])
+
+
+def reserved_stock(food_id, exclude_day_id=None):
+    """Tổng đang giữ từ tồn cho các ngày ăn (trừ ngày exclude_day_id)."""
+    qs = StockAllocation.objects.filter(food_id=food_id, status=StockAllocation.Status.RESERVED,
+                                        source=StockAllocation.Source.STOCK)
+    if exclude_day_id is not None:
+        qs = qs.exclude(lunch_day_id=exclude_day_id)
+    return qs.aggregate(t=Sum("qty"))["t"] or Decimal("0")
 
 
 # =========================================================================
@@ -291,6 +352,8 @@ def post_issue(issue_id, user=None):
     issue = Issue.objects.select_for_update(of=("self",)).get(id=issue_id)
     if issue.status != Issue.Status.DRAFT:
         raise InventoryConflict("Phiếu xuất đã được chốt trước đó.")
+    if issue.lunch_day_id and LunchDayClose.objects.filter(lunch_day_id=issue.lunch_day_id, reopened_at__isnull=True).exists():
+        raise InventoryConflict("Ngày ăn đã đóng, không chốt phiếu xuất cho ngày này.")
     actor = user if user is not None and getattr(user, "is_authenticated", False) else issue.created_by
 
     lines = list(issue.lines.order_by("id"))
@@ -300,7 +363,8 @@ def post_issue(issue_id, user=None):
     food_ids = sorted({line.food_id for line in lines})
     foods = {f.id: f for f in FoodItem.objects.filter(id__in=food_ids).order_by("id").select_for_update()}
 
-    # 1. Kiểm tra toàn phiếu trước khi ghi bất kỳ dòng nào.
+    # 1. Kiểm tra toàn phiếu trước khi ghi bất kỳ dòng nào. SF68: tồn đã giữ cho ngày ăn khác không được xuất;
+    #    phiếu xuất cho bếp theo ngày (issue.lunch_day) được dùng phần giữ của chính ngày đó.
     for line in lines:
         food = foods[line.food_id]
         if line.quantity <= 0:
@@ -309,6 +373,16 @@ def post_issue(issue_id, user=None):
             raise InventoryConflict(
                 f"Không đủ tồn kho cho '{food.name}'. Tồn kho: {food.quantity}, yêu cầu xuất: {line.quantity}."
             )
+        held = reserved_stock(food.id, exclude_day_id=issue.lunch_day_id)
+        if food.quantity - held < line.quantity:
+            raise InventoryConflict(
+                f"'{food.name}': {held} đã giữ cho ngày ăn khác, chỉ còn xuất được {food.quantity - held}."
+            )
+    day_allocs = []
+    if issue.lunch_day_id:
+        day_allocs = list(StockAllocation.objects.filter(
+            lunch_day_id=issue.lunch_day_id, food_id__in=food_ids, status=StockAllocation.Status.RESERVED,
+            source=StockAllocation.Source.STOCK).order_by("id").select_for_update())
 
     # 2. Trừ tồn (giữ nguyên avg_cost) và ghi sổ kho OUT.
     for line in lines:
@@ -331,8 +405,28 @@ def post_issue(issue_id, user=None):
             date=issue.date,
             created_by=actor,
         )
+        _consume_allocations([a for a in day_allocs if a.food_id == line.food_id], line.quantity)
 
     issue.status = Issue.Status.POSTED
     issue.posted_at = timezone.now()
     issue.save(update_fields=["status", "posted_at"])
     return issue
+
+
+def _consume_allocations(allocations, quantity):
+    """Phần giữ từ tồn của ngày → đã dùng đúng bằng lượng xuất (tách dòng khi xuất một phần)."""
+    remaining = quantity
+    for alloc in allocations:
+        if remaining <= 0:
+            break
+        take = min(alloc.qty, remaining)
+        if take == alloc.qty:
+            alloc.status = StockAllocation.Status.CONSUMED
+            alloc.save(update_fields=["status", "updated_at"])
+        else:
+            alloc.qty -= take
+            alloc.save(update_fields=["qty", "updated_at"])
+            StockAllocation.objects.create(lunch_day_id=alloc.lunch_day_id, demand_line_id=alloc.demand_line_id,
+                                           food_id=alloc.food_id, source=alloc.source, qty=take,
+                                           status=StockAllocation.Status.CONSUMED)
+        remaining -= take
