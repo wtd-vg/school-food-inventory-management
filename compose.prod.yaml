@@ -4,7 +4,7 @@
 name: schoolfood-prod
 
 services:
-  # PostgreSQL 17, không publish cổng ra ngoài; chỉ backend trong mạng nội bộ gọi được.
+  # PostgreSQL 17, không publish cổng ra ngoài; backend/scheduler gọi qua mạng nội bộ.
   db:
     image: postgres:17-alpine
     environment:
@@ -21,10 +21,13 @@ services:
     restart: unless-stopped
 
   # Django + gunicorn.
-  backend:
+  backend: &backend-runtime
+    image: schoolfood-backend:prod
     build:
       context: .
       target: backend-prod
+    env_file:
+      - .env.prod
     environment:
       DEBUG: "False"
       SECRET_KEY: ${SECRET_KEY:?Thiếu SECRET_KEY}
@@ -43,6 +46,11 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+
+  # Cùng image, môi trường và điều kiện DB với backend; không publish cổng.
+  scheduler:
+    <<: *backend-runtime
+    command: ["python", "manage.py", "run_scheduler"]
 
   # nginx: SPA + chuyển /api, /admin sang backend.
   # Chỉ mở cổng trên 127.0.0.1 để thử bằng SSH tunnel; người dùng đi vào qua Cloudflare Tunnel.
