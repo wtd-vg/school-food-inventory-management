@@ -1,0 +1,41 @@
+# BE-17 — Các bước chủ dự án thực hiện trên production
+
+Thực hiện trong `~/schoolfood` trên EC2. Không gửi khóa, token, mật khẩu hoặc email phụ huynh vào chat/log. Không commit `.env.prod`; đặt quyền `chmod 600 .env.prod`. Không chạy `seed_demo` trên production.
+
+1. **Khóa đường vào máy chủ.** Security Group EC2 chỉ cho SSH TCP 22 từ **My IP** (cập nhật khi IP đổi), không mở 80/443/5432/8000. Cloudflare Tunnel kết nối ra ngoài, đích là `http://web:80`. Giữ cổng thử nginx ở `127.0.0.1`; backend và DB không publish cổng. Chỉ bật `TRUST_PROXY_IP=true` trong cấu hình này.
+
+2. **Xoay tunnel token đã lộ trong chat.** Trong Cloudflare Zero Trust → Networks → Tunnels/Connectors, chọn tunnel và xoay token. Tự thay `TUNNEL_TOKEN` trong `.env.prod`, rồi chạy `docker compose --env-file .env.prod -f compose.prod.yaml --profile tunnel up -d --force-recreate cloudflared`. Kiểm tra connector mới hoạt động; thu hồi/ngắt connector cũ theo hướng dẫn dashboard. Không chép token vào lệnh được lưu lịch sử hoặc tài liệu.
+
+3. **Bảo vệ `/admin*` bằng Cloudflare Access.** Zero Trust → Access → Applications → Add application → **Self-hosted**, hostname `schoolfoodusth.store`, path `/admin*`. Bật đăng nhập **One-time PIN**, tạo policy **Allow → Emails** với danh sách chính xác email được trường cho phép; không dùng Everyone/Bypass. Thử cửa sổ ẩn danh với email được phép và email ngoài danh sách; kiểm tra cả `/admin`, `/admin/`, `/admin/login/`. Xem [tạo ứng dụng self-hosted](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/) và [email OTP](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/).
+
+4. **Thêm Cloudflare rate limiting.** Tại phần Security/WAF → Rate limiting rules của domain, chọn hostname trên và URI Path **equals `/api/auth/login/`**, giới hạn theo IP; đặt 10 yêu cầu/phút và chặn tạm nếu gói hỗ trợ (nếu gói chỉ hỗ trợ cửa sổ ngắn hơn, chọn ngưỡng phù hợp trên dashboard). nginx vẫn giới hạn 10/phút, burst 5 và trả 429; backend có khóa đăng nhập riêng. Thử nhiều lần từ một IP và xác nhận IP khác không bị khóa theo IP của cloudflared.
+
+5. **Tạo và cất khóa ngoài server.** `npm run ec2:genkeys` chỉ in hướng dẫn và hai lệnh; tự chạy từng lệnh trong terminal riêng để tạo `FIELD_ENCRYPTION_KEYS` (Fernet) và `CONTACT_HASH_KEY` (HMAC), rồi điền `.env.prod`. Khi backend chưa chạy, dùng `docker compose --env-file .env.prod -f compose.prod.yaml run --rm --no-deps backend python -c '…'` với nội dung Python từ hướng dẫn. Lệnh tạo khóa chỉ import Python nên không cần khởi động Django, nhưng image backend phải build được và các biến Compose bắt buộc phải có.
+
+   Cất khóa trong kho mật khẩu/bản sao ngoại tuyến **ngoài EC2**, cùng kế hoạch khôi phục. **Mất khóa = không giải mã được email phụ huynh**, dù còn DB backup. Xoay Fernet bằng cách thêm khóa mới lên đầu `FIELD_ENCRYPTION_KEYS`, phân cách dấu phẩy; giữ các khóa cũ để đọc dữ liệu và backup cũ. Không tự đổi `CONTACT_HASH_KEY` khi đã có dữ liệu: HMAC dùng để chống trùng, cần kế hoạch chuyển đổi riêng. Sau đổi cấu hình, tạo lại cả backend và scheduler bằng `npm run ec2:up`.
+
+6. **Thiết lập email.** Tạo Gmail riêng do trường quản lý, bật xác minh 2 bước, tạo App Password 16 ký tự, điền các biến `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` trong `.env.prod` (không dùng mật khẩu đăng nhập Gmail). Ban đầu giữ `EMAIL_MODE=dry_run`, `EMAIL_DAILY_LIMIT=450`, `MENU_SEND_TIME=06:30`, URL `https://schoolfoodusth.store` và tên trường đúng. Chạy `npm run ec2:up`, rồi `npm run ec2:send-menu-dry` và xem nhật ký; lệnh này luôn ép chế độ thử, không gửi SMTP. Cần thực đơn đang áp dụng, ngày học và liên hệ đã đồng ý để có dòng thử.
+
+   Sau khi kiểm tra, đổi `EMAIL_MODE=smtp` và chạy `npm run ec2:up` để backend/scheduler nhận cấu hình mới. Dòng đã ghi dry_run trong ngày không gửi lại khi đổi mode; kiểm tra gửi thật vào ngày học tiếp theo. Gmail cá nhân có giới hạn khoảng **500 thư/ngày**, vì vậy theo dõi lỗi/quota và không dùng chung tài khoản cho tác vụ gửi hàng loạt khác ([giới hạn Gmail](https://support.google.com/mail/answer/22839?hl=en)).
+
+7. **Chuyển sang AWS SES SMTP khi cần.** Chọn một AWS Region, xác thực domain trong SES, thêm các bản ghi DKIM do SES cấp vào Cloudflare DNS (CNAME ở chế độ DNS only). Thiết lập custom MAIL FROM và các bản ghi MX/SPF theo SES; không tạo hai TXT SPF trên cùng hostname. Xin thoát sandbox trước khi gửi đến phụ huynh chưa xác minh. Tạo thông tin đăng nhập **SMTP** của SES, thay `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`, giữ cổng 587/TLS và đặt `EMAIL_DAILY_LIMIT` theo quota được duyệt; tạo lại backend/scheduler. Tham khảo [xác thực domain](https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html), [MAIL FROM/SPF](https://docs.aws.amazon.com/ses/latest/dg/mail-from.html), [thoát sandbox](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html).
+
+8. **Backup hằng ngày và diễn tập restore.** Đặt múi giờ EC2 `Asia/Ho_Chi_Minh` nếu muốn cron chạy 02:00 giờ Việt Nam (`sudo timedatectl set-timezone Asia/Ho_Chi_Minh`; cron dùng giờ máy chủ). Chạy `bash deploy/backup.sh`, rồi `npm run ec2:install-backup-cron` bằng cùng tài khoản có quyền Docker. Chạy lệnh cài cron hai lần vẫn chỉ có một dòng; xem `crontab -l` và `backups/cron.log`. Backup SQL gzip giữ 14 ngày, quyền file chỉ chủ sở hữu; thư mục/log cũng cần giới hạn quyền và theo dõi dung lượng. Script dùng đường dẫn tuyệt đối nên chạy được từ cron; cần Docker Compose trong PATH tiêu chuẩn. Định kỳ chép bản sao ra nơi lưu trữ riêng được bảo vệ cùng bản sao khóa, không chỉ giữ trên EC2.
+
+   Ví dụ restore **vào DB tạm mới**, không dùng tên DB production. Thay đường dẫn backup bằng file vừa tạo; nếu tên DB tạm đã có, dừng và chọn tên mới. Các lệnh sau chạy trong Bash:
+
+   ```bash
+   set -euo pipefail
+   docker compose --env-file .env.prod -f compose.prod.yaml exec -T db sh -c 'createdb -U "$POSTGRES_USER" schoolfood_restore_be17'
+   gzip -dc backups/schoolfood-YYYYmmdd-HHMMSS.sql.gz | docker compose --env-file .env.prod -f compose.prod.yaml exec -T db sh -c 'psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d schoolfood_restore_be17'
+   ```
+
+   Dừng ghi dữ liệu trong lần diễn tập có đối chiếu chính xác, tạo backup mới; đếm từng bảng nguồn và DB tạm để so khớp (không chỉ kiểm tra exit code). Đối chiếu thêm số dòng sổ kho, user, học sinh, liên hệ; dùng đúng bản sao khóa trong môi trường thử để xác nhận giải mã email. Chỉ xóa DB tạm sau khi ghi nhận kết quả và kiểm tra chính xác tên đích. Backup cũ của `ec2:db:backup` là `.dump` dạng custom, phải dùng `pg_restore`, không dùng `gzip/psql` như ví dụ trên.
+
+9. **Kiểm tra triển khai và tạo tài khoản đầu tiên.** Sau build/up/migrate, chạy `npm run ec2:check-deploy`, xử lý hoặc ghi nhận lý do từng cảnh báo (HSTS includeSubDomains/preload chỉ bật sau khi xác minh mọi subdomain dùng HTTPS). Thử SPA qua HTTPS, kiểm tra console không lỗi CSP; kiểm tra header ở `/`, `/assets/`, `/api/`, `/admin/` và phản hồi login 429. Dùng `npm run ec2:createsuperuser` tạo tài khoản quản trị đầu tiên cho Hiệu trưởng, sau đó tạo tài khoản vai trò **Hiệu trưởng** và **Quản lý** trong app. Superuser có toàn quyền, chỉ dùng cho quản trị hệ thống; tài khoản Hiệu trưởng thường ngày dùng group principal. `npm run ec2:logs` đã lấy log mọi service, bao gồm scheduler.
+
+10. **Xin đồng ý trước khi lưu email.** Mẫu ngắn để trường hoàn thiện và lưu bằng chứng:
+
+    > Tôi là phụ huynh/người giám hộ của …, lớp …, đồng ý để trường lưu email … và gửi thực đơn bữa trưa hằng ngày. Tôi có thể hủy nhận qua liên kết trong thư hoặc liên hệ nhà trường. Khi học sinh nghỉ học, trường xóa thông tin liên hệ khỏi hệ thống đang sử dụng; bản sao lưu được xử lý theo thời hạn lưu giữ của trường. Ngày …; họ tên và chữ ký/xác nhận … .
+
+    Chỉ đánh dấu đã đồng ý khi có xác nhận; không đưa phiếu chứa email thật vào Git. Demo local dùng `DEBUG=True`, `EMAIL_MODE=dry_run`, hai biến `DEMO_MANAGER_PASSWORD`/`DEMO_PRINCIPAL_PASSWORD` do người chạy tự đặt, rồi `python manage.py seed_demo --scenario security`; không có mật khẩu mặc định và không đổi mật khẩu tài khoản demo đã tồn tại.
