@@ -6,6 +6,8 @@ POST /api/notifications/test/   {date?}     gửi thử tới email của ngư�
 POST /api/unsubscribe/<token>/              công khai: hủy nhận (token ký số, không cần đăng nhập/CSRF)
 """
 
+import smtplib
+
 from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -56,7 +58,11 @@ def notifications_test(request):
     day = _date_from_body(request)
     if not request.user.email:
         raise InputError("Tài khoản của bạn chưa có email để nhận thư thử.")
-    send_test_email(request.user.email, day)
+    try:
+        send_test_email(request.user.email, day)
+    except (smtplib.SMTPException, OSError) as exc:
+        # Không trả traceback; báo loại lỗi để người dùng kiểm tra cấu hình EMAIL_* (§10.2).
+        return error(f"Không gửi được thư thử ({type(exc).__name__}). Kiểm tra cấu hình gửi thư (EMAIL_*) rồi thử lại.", 502)
     audit.record(request, "email_test", "notification", day.isoformat(), "Gửi thư thử tới email của chính mình")
     return JsonResponse({"message": f"Đã gửi thư thử tới {request.user.email}."})
 
