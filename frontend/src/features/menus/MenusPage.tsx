@@ -1,138 +1,548 @@
+/**
+ * FE-04/05 /mon-an/thuc-don: thực đơn cố định T2–T6 lặp hằng tuần (R10, menu_views.py).
+ * - Lưới tuần ?tuan=YYYY-MM-DD (tuần chứa ngày đó). Ngày đã qua/hôm nay hiện bản chụp, không đổi khi sửa công thức.
+ * - "Sửa thực đơn cố định" (?sua-thuc-don=1) tạo phiên bản mới áp dụng từ ngày mai trở đi; bản đã áp dụng là lịch sử.
+ * - Lịch sử phiên bản (?phien-ban=ID xem chi tiết), ngày nghỉ (?ngay-nghi=1 thêm). Định lượng hiện tới 6 số lẻ.
+ * Hiệu trưởng xem được mọi thứ; nút ghi khoá ("Hiệu trưởng chỉ xem").
+ */
 import { useState, type FormEvent } from 'react';
-import { Badge, Button, Callout, Checkbox, ConfirmDialog, DataTable, Drawer, EmptyState, ErrorState, PageHeader, SectionTitle, Skeleton, Stack, TextareaField, TextField, Toolbar, useToast } from '../../components/ui';
-import { formatDate, todayISO } from '../../lib/format';
+import { IconCalendar, IconChevronLeft, IconChevronRight, IconPencil, IconPlus } from '../../components/icons';
+import {
+  Badge,
+  Button,
+  Callout,
+  Checkbox,
+  ConfirmDialog,
+  DataTable,
+  Drawer,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  SectionTitle,
+  Skeleton,
+  Stack,
+  TextareaField,
+  TextField,
+  Toolbar,
+  tableText,
+  useToast,
+  type Column,
+} from '../../components/ui';
+import { formatDate, formatDateTime, formatShortDate, todayISO } from '../../lib/format';
 import { fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { catalogApi, type Dish } from '../../services/catalog';
-import { menusApi, type MenuVersion } from '../../services/menus';
+import { menusApi, shiftDate, WEEKDAY_LABELS, type Holiday, type MenuDay, type MenuVersion } from '../../services/menus';
+import { DishTabs } from '../common/FeatureLayouts';
+import { formatPortion } from '../dishes/DishesPage';
 import { useQueryParam, useUpdateParams } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
 import styles from './MenusPage.module.css';
 
-export function shiftDate(date: string, days: number): string {
-  const d = new Date(`${date}T12:00:00Z`);
-  if (Number.isNaN(d.getTime())) return todayISO();
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-const weekdays = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu'];
+type Deleting = { kind: 'version'; item: MenuVersion } | { kind: 'holiday'; item: Holiday };
 
 export function MenusPage() {
-  const [week, setWeek] = useQueryParam('tuan', todayISO());
-  const [create] = useQueryParam('sua-thuc-don');
-  const [holiday] = useQueryParam('ngay-nghi');
-  const update = useUpdateParams();
-  const q = useApiQuery(() => menusApi.week(week), [week]);
+  const today = todayISO();
+  const [week, setWeek] = useQueryParam('tuan', today);
+  const [editingMenu] = useQueryParam('sua-thuc-don');
+  const [addingHoliday] = useQueryParam('ngay-nghi');
+  const [versionId] = useQueryParam('phien-ban');
+  const updateParams = useUpdateParams();
+  const weekQ = useApiQuery(() => menusApi.week(week), [week]);
   const versions = useApiQuery(menusApi.versions, []);
-  const holidays = useApiQuery(menusApi.holidays, []);
-  const dishes = useApiQuery(catalogApi.dishes, []);
-  const [deleting, setDeleting] = useState<{ kind: 'version' | 'holiday'; id: number } | null>(null);
+  const holidays = useApiQuery(() => menusApi.holidays(), []);
+  const [deleting, setDeleting] = useState<Deleting | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
   const toast = useToast();
-  const reload = () => { q.reload(); versions.reload(); holidays.reload(); };
-  async function remove() {
+
+  const reloadAll = () => {
+    weekQ.reload();
+    versions.reload();
+    holidays.reload();
+  };
+  const viewing = versions.data?.find((v) => String(v.id) === versionId) ?? null;
+  const weekStart = weekQ.data?.week_start ?? week;
+
+  const remove = async () => {
     if (!deleting) return;
-    setBusy(true); setError('');
+    setBusy(true);
+    setDeleteError('');
     try {
-      if (deleting.kind === 'version') await menusApi.deleteVersion(deleting.id);
-      else await menusApi.deleteHoliday(deleting.id);
-      toast.show('Đã xóa.'); setDeleting(null); reload();
-    } catch (err) { setError(messageOf(err)); } finally { setBusy(false); }
-  }
-  const addMenu = <Button write onClick={() => update({ 'sua-thuc-don': '1' })}>Sửa thực đơn cố định</Button>;
-  const addHoliday = <Button write variant="secondary" onClick={() => update({ 'ngay-nghi': '1' })}>Thêm ngày nghỉ</Button>;
-  return <>
-    <PageHeader title="Thực đơn tuần" actions={addMenu} />
-    <Stack gap="lg">
-      <Toolbar>
-        <Button variant="secondary" onClick={() => setWeek(shiftDate(q.data?.week_start ?? week, -7))}>Tuần trước</Button>
-        <TextField label="Tuần chứa ngày" type="date" value={week} onChange={e => setWeek(e.target.value || todayISO())} />
-        <Button variant="secondary" onClick={() => setWeek(shiftDate(q.data?.week_start ?? week, 7))}>Tuần sau</Button>
-      </Toolbar>
-      {q.loading ? <Skeleton /> : q.error ? <ErrorState message={q.error} onRetry={q.reload} /> : q.data ? <>
-        <div className={styles.week}>{q.data.days.filter(d => d.weekday < 5).map(d => <section key={d.date} className={styles.day}>
-          <h2>{d.weekday_label}</h2><p>{formatDate(d.date)}</p>
-          {d.status === 'holiday' ? <Badge tone="warn">{d.holiday_name || 'Ngày nghỉ'}</Badge> : d.source === 'none' ? <p>Chưa lập thực đơn</p> : <ul>{d.dishes.map(dish => <li key={dish.dish_id}>{dish.dish_name}</li>)}</ul>}
-          {d.source === 'snapshot' ? <Badge tone="info">Đã chụp</Badge> : null}
-        </section>)}</div>
-        <details className={styles.weekend}><summary>Thứ Bảy / Chủ nhật · Nghỉ</summary>{q.data.days.filter(d => d.weekday >= 5).map(d => <p key={d.date}>{d.weekday_label} {formatDate(d.date)} — Nghỉ</p>)}</details>
-      </> : null}
-      <SectionTitle>Lịch sử thực đơn</SectionTitle>
-      {versions.loading ? <Skeleton /> : versions.error ? <ErrorState message={versions.error} onRetry={versions.reload} /> : !versions.data?.length ? <EmptyState title="Chưa có thực đơn cố định" action={addMenu} /> : <DataTable caption="Lịch sử thực đơn" rows={versions.data} rowKey={v => v.id} columns={[
-        { key: 'from', header: 'Áp dụng từ', cell: v => formatDate(v.effective_from) },
-        { key: 'to', header: 'Đến ngày', cell: v => v.effective_to ? formatDate(v.effective_to) : 'Chưa có ngày kết thúc' },
-        { key: 'state', header: 'Trạng thái', cell: v => <Badge tone={v.is_current ? 'ok' : 'neutral'}>{v.is_current ? 'Đang áp dụng' : v.is_editable ? 'Sắp áp dụng' : 'Lịch sử'}</Badge> },
-        { key: 'creator', header: 'Người tạo', cell: v => v.created_by },
-        { key: 'note', header: 'Ghi chú', wrap: true, cell: v => v.note || '—' },
-        { key: 'delete', header: 'Thao tác', cell: v => v.is_editable ? <Button write size="xs" variant="danger" onClick={() => { setError(''); setDeleting({ kind: 'version', id: v.id }); }}>Xóa</Button> : null },
-      ]} />}
-      <Toolbar><SectionTitle>Ngày nghỉ</SectionTitle>{addHoliday}</Toolbar>
-      {holidays.loading ? <Skeleton /> : holidays.error ? <ErrorState message={holidays.error} onRetry={holidays.reload} /> : !holidays.data?.length ? <EmptyState title="Chưa có ngày nghỉ bổ sung" action={addHoliday}>Thứ Bảy và Chủ nhật luôn nghỉ.</EmptyState> : <DataTable caption="Ngày nghỉ" rows={holidays.data} rowKey={h => h.id} columns={[
-        { key: 'date', header: 'Ngày', cell: h => formatDate(h.date) }, { key: 'name', header: 'Tên ngày nghỉ', cell: h => h.name },
-        { key: 'delete', header: 'Thao tác', cell: h => h.is_editable ? <Button write size="xs" variant="danger" onClick={() => { setError(''); setDeleting({ kind: 'holiday', id: h.id }); }}>Xóa</Button> : null },
-      ]} />}
-    </Stack>
-    {create ? dishes.loading || versions.loading ? <Drawer title="Sửa thực đơn cố định" onClose={() => update({ 'sua-thuc-don': null })}><Skeleton /></Drawer> : dishes.error || versions.error ? <Drawer title="Sửa thực đơn cố định" onClose={() => update({ 'sua-thuc-don': null })}><ErrorState message={dishes.error || versions.error!} onRetry={() => { dishes.reload(); versions.reload(); }} /></Drawer> : <MenuForm dishes={dishes.data ?? []} current={versions.data?.find(v => v.is_current)} onClose={() => update({ 'sua-thuc-don': null })} onSaved={() => { update({ 'sua-thuc-don': null }); reload(); }} /> : null}
-    {holiday ? <HolidayForm onClose={() => update({ 'ngay-nghi': null })} onSaved={() => { update({ 'ngay-nghi': null }); reload(); }} /> : null}
-    {deleting ? <ConfirmDialog title={deleting.kind === 'version' ? 'Xóa thực đơn chưa áp dụng?' : 'Xóa ngày nghỉ?'} confirmLabel="Xóa" tone="danger" busy={busy} onCancel={() => setDeleting(null)} onConfirm={remove}>{error ? <Callout tone="danger" role="alert">{error}</Callout> : <p>Thay đổi này sẽ cập nhật lịch cho các ngày tương lai.</p>}</ConfirmDialog> : null}
-  </>;
+      const res =
+        deleting.kind === 'version' ? await menusApi.deleteVersion(deleting.item.id) : await menusApi.deleteHoliday(deleting.item.id);
+      toast.show(res.message);
+      setDeleting(null);
+      reloadAll();
+    } catch (err) {
+      setDeleteError(messageOf(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const editButton = (
+    <Button write icon={<IconPencil size={18} />} onClick={() => updateParams({ 'sua-thuc-don': '1' })}>
+      Sửa thực đơn cố định
+    </Button>
+  );
+  const holidayButton = (
+    <Button write variant="secondary" icon={<IconPlus size={18} />} onClick={() => updateParams({ 'ngay-nghi': '1' })}>
+      Thêm ngày nghỉ
+    </Button>
+  );
+
+  const versionColumns: Column<MenuVersion>[] = [
+    {
+      key: 'range',
+      header: 'Áp dụng',
+      cell: (v) => (
+        <span className={tableText.strong}>
+          {formatDate(v.effective_from)} → {v.effective_to ? formatDate(v.effective_to) : 'nay'}
+        </span>
+      ),
+    },
+    {
+      key: 'state',
+      header: 'Trạng thái',
+      cell: (v) =>
+        v.is_current ? <Badge tone="ok">Đang áp dụng</Badge> : v.is_editable ? <Badge tone="info">Sắp áp dụng</Badge> : <Badge>Lịch sử</Badge>,
+    },
+    { key: 'note', header: 'Ghi chú', wrap: true, cell: (v) => v.note || '—' },
+    { key: 'by', header: 'Người lập', cell: (v) => <span className={tableText.muted}>{v.created_by} · {formatDateTime(v.created_at)}</span> },
+    {
+      key: 'actions',
+      header: <span className="sr-only">Thao tác</span>,
+      align: 'right',
+      cell: (v) => (
+        <span className={s.inlineGroup}>
+          <Button size="xs" variant="secondary" onClick={() => updateParams({ 'phien-ban': String(v.id) })}>
+            Xem
+          </Button>
+          {v.is_editable ? (
+            <Button
+              write
+              size="xs"
+              variant="danger"
+              onClick={() => {
+                setDeleteError('');
+                setDeleting({ kind: 'version', item: v });
+              }}
+            >
+              Xoá
+            </Button>
+          ) : null}
+        </span>
+      ),
+    },
+  ];
+
+  const holidayColumns: Column<Holiday>[] = [
+    { key: 'date', header: 'Ngày', cell: (h) => <span className={tableText.strong}>{formatDate(h.date)}</span> },
+    { key: 'name', header: 'Tên ngày nghỉ', wrap: true, cell: (h) => h.name },
+    {
+      key: 'actions',
+      header: <span className="sr-only">Thao tác</span>,
+      align: 'right',
+      cell: (h) =>
+        h.is_editable ? (
+          <Button
+            write
+            size="xs"
+            variant="danger"
+            onClick={() => {
+              setDeleteError('');
+              setDeleting({ kind: 'holiday', item: h });
+            }}
+          >
+            Xoá
+          </Button>
+        ) : (
+          <span className={tableText.muted}>Đã qua</span>
+        ),
+    },
+  ];
+
+  return (
+    <>
+      <PageHeader title="Thực đơn tuần" actions={editButton} />
+      <DishTabs />
+      <Stack gap="lg">
+        <Toolbar>
+          <span className={s.inlineGroup}>
+            <Button variant="secondary" icon={<IconChevronLeft size={18} />} onClick={() => setWeek(shiftDate(weekStart, -7))}>
+              Tuần trước
+            </Button>
+            <Button variant="ghost" icon={<IconCalendar size={18} />} onClick={() => setWeek(today)}>
+              Tuần này
+            </Button>
+            <Button variant="secondary" onClick={() => setWeek(shiftDate(weekStart, 7))}>
+              Tuần sau
+              <IconChevronRight size={18} />
+            </Button>
+          </span>
+          <TextField label="Xem tuần có ngày" type="date" value={week} onChange={(e) => setWeek(e.target.value || today)} />
+        </Toolbar>
+
+        {weekQ.loading ? (
+          <Skeleton rows={4} label="Đang tải thực đơn tuần" />
+        ) : weekQ.error ? (
+          <ErrorState message={weekQ.error} onRetry={weekQ.reload} />
+        ) : weekQ.data ? (
+          <WeekGrid days={weekQ.data.days} today={today} />
+        ) : null}
+
+        <SectionTitle>Lịch sử thực đơn cố định</SectionTitle>
+        {versions.loading ? (
+          <Skeleton rows={2} />
+        ) : versions.error ? (
+          <ErrorState message={versions.error} onRetry={versions.reload} />
+        ) : !versions.data?.length ? (
+          <EmptyState title="Chưa lập thực đơn cố định" action={editButton}>
+            Lập thực đơn cho Thứ Hai đến Thứ Sáu; thực đơn lặp lại mỗi tuần.
+          </EmptyState>
+        ) : (
+          <DataTable caption="Lịch sử thực đơn cố định" rows={versions.data} rowKey={(v) => v.id} columns={versionColumns} minWidth="720px" />
+        )}
+
+        <div className={styles.sectionHead}>
+          <SectionTitle>Ngày nghỉ</SectionTitle>
+          {holidayButton}
+        </div>
+        <p className={s.muted}>Thứ Bảy và Chủ nhật luôn nghỉ. Ngày lễ, nghỉ bù thêm ở đây; ngày nghỉ không gửi thư thực đơn.</p>
+        {holidays.loading ? (
+          <Skeleton rows={2} />
+        ) : holidays.error ? (
+          <ErrorState message={holidays.error} onRetry={holidays.reload} />
+        ) : !holidays.data?.length ? (
+          <EmptyState title="Chưa có ngày nghỉ bổ sung" action={holidayButton} />
+        ) : (
+          <DataTable caption="Ngày nghỉ bổ sung" rows={holidays.data} rowKey={(h) => h.id} columns={holidayColumns} />
+        )}
+      </Stack>
+
+      {editingMenu ? (
+        <MenuForm
+          current={versions.data?.find((v) => v.is_current) ?? versions.data?.[0] ?? null}
+          onClose={() => updateParams({ 'sua-thuc-don': null })}
+          onSaved={(v) => {
+            updateParams({ 'sua-thuc-don': null, tuan: v.effective_from });
+            reloadAll();
+          }}
+        />
+      ) : null}
+      {addingHoliday ? (
+        <HolidayForm
+          onClose={() => updateParams({ 'ngay-nghi': null })}
+          onSaved={() => {
+            updateParams({ 'ngay-nghi': null });
+            reloadAll();
+          }}
+        />
+      ) : null}
+      {viewing ? <VersionDrawer version={viewing} onClose={() => updateParams({ 'phien-ban': null })} /> : null}
+      {deleting ? (
+        <ConfirmDialog
+          title={
+            deleting.kind === 'version'
+              ? `Xoá thực đơn áp dụng từ ${formatDate(deleting.item.effective_from)}?`
+              : `Xoá ngày nghỉ ${formatDate(deleting.item.date)}?`
+          }
+          confirmLabel="Xoá"
+          tone="danger"
+          busy={busy}
+          onCancel={() => setDeleting(null)}
+          onConfirm={remove}
+        >
+          <p>
+            {deleting.kind === 'version'
+              ? 'Thực đơn này chưa áp dụng. Sau khi xoá, các ngày đó dùng lại thực đơn đang áp dụng.'
+              : 'Ngày này sẽ trở lại thành ngày học và có thực đơn theo thứ.'}
+          </p>
+          {deleteError ? (
+            <Callout tone="danger" role="alert">
+              {deleteError}
+            </Callout>
+          ) : null}
+        </ConfirmDialog>
+      ) : null}
+    </>
+  );
 }
 
-function MenuForm({ dishes, current, onClose, onSaved }: { dishes: Dish[]; current?: MenuVersion; onClose: () => void; onSaved: () => void }) {
-  const available = dishes.filter(d => d.is_active && d.has_recipe);
+function sourceBadge(day: MenuDay) {
+  if (day.status !== 'menu') return null;
+  if (day.source === 'snapshot') return <Badge tone="ok">Đã chốt cho ngày</Badge>;
+  if (day.source === 'version') return <Badge tone="info">Theo thực đơn cố định</Badge>;
+  return <Badge tone="warn">Chưa lập thực đơn</Badge>;
+}
+
+function WeekGrid({ days, today }: { days: MenuDay[]; today: string }) {
+  const school = days.filter((d) => d.weekday < 5);
+  const weekend = days.filter((d) => d.weekday >= 5);
+  return (
+    <>
+      <ol className={styles.week} aria-label="Thực đơn Thứ Hai đến Thứ Sáu">
+        {school.map((d) => (
+          <li key={d.date} className={`${styles.day} ${d.date === today ? styles.today : ''} ${d.status !== 'menu' ? styles.off : ''}`}>
+            <div className={styles.dayHead}>
+              <h3 className={styles.dayName}>{d.weekday_label}</h3>
+              <span className={styles.dayDate}>
+                {formatShortDate(d.date)}
+                {d.date === today ? ' · Hôm nay' : ''}
+              </span>
+            </div>
+            {d.status === 'holiday' ? (
+              <Badge tone="warn">Nghỉ: {d.holiday_name || 'ngày lễ'}</Badge>
+            ) : d.dishes.length ? (
+              <ul className={styles.dishes}>
+                {d.dishes.map((dish) => (
+                  <li key={dish.dish_id}>
+                    <span className={styles.dishName}>{dish.dish_name}</span>
+                    <span className={styles.recipe}>
+                      {dish.components.map((c) => `${c.food_name} ${formatPortion(c.quantity, c.unit)}`).join(' · ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={s.muted}>Chưa có món.</p>
+            )}
+            {sourceBadge(d)}
+          </li>
+        ))}
+      </ol>
+      <p className={s.muted}>
+        {weekend.map((d) => `${d.weekday_label} ${formatShortDate(d.date)}`).join(' · ')}: nghỉ cuối tuần.
+      </p>
+    </>
+  );
+}
+
+function VersionDrawer({ version, onClose }: { version: MenuVersion; onClose: () => void }) {
+  return (
+    <Drawer
+      title={`Thực đơn từ ${formatDate(version.effective_from)}`}
+      subtitle={version.effective_to ? `Áp dụng tới ${formatDate(version.effective_to)}` : 'Chưa có ngày kết thúc'}
+      onClose={onClose}
+    >
+      <Stack gap="lg">
+        {version.note ? <p>{version.note}</p> : null}
+        <dl className={styles.versionDays}>
+          {WEEKDAY_LABELS.map((label, i) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{(version.days[String(i)] ?? []).map((d) => d.dish_name).join(', ') || '—'}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className={s.muted}>
+          Lập bởi {version.created_by} lúc {formatDateTime(version.created_at)}.
+        </p>
+      </Stack>
+    </Drawer>
+  );
+}
+
+function MenuForm({
+  current,
+  onClose,
+  onSaved,
+}: {
+  current: MenuVersion | null;
+  onClose: () => void;
+  onSaved: (v: MenuVersion) => void;
+}) {
+  const dishesQ = useApiQuery(catalogApi.dishes, []);
   const tomorrow = shiftDate(todayISO(), 1);
   const [date, setDate] = useState(tomorrow);
   const [note, setNote] = useState('');
-  const [days, setDays] = useState<Record<string, number[]>>(() => Object.fromEntries(weekdays.map((_, i) => [String(i), (current?.days[String(i)] ?? []).map(d => d.dish_id).filter(id => available.some(d => d.id === id))])));
+  const [days, setDays] = useState<Record<string, number[]> | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
-  async function submit(e: FormEvent) {
-    e.preventDefault(); setError('');
+
+  const available: Dish[] = (dishesQ.data ?? []).filter((d) => d.is_active && d.has_recipe);
+  // Mặc định chép thực đơn đang áp dụng (chỉ giữ món còn dùng được) để sửa ít thao tác.
+  const chosen: Record<string, number[]> =
+    days ??
+    Object.fromEntries(
+      WEEKDAY_LABELS.map((_, i) => [
+        String(i),
+        (current?.days[String(i)] ?? []).map((d) => d.dish_id).filter((id) => available.some((d) => d.id === id)),
+      ]),
+    );
+
+  const toggle = (weekday: string, dishId: number, on: boolean) => {
+    const base = chosen[weekday] ?? [];
+    setDays({ ...chosen, [weekday]: on ? [...base, dishId] : base.filter((id) => id !== dishId) });
+  };
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setFormError('');
     const next: Record<string, string> = {};
     if (!date || date < tomorrow) next.effective_from = 'Ngày áp dụng phải từ ngày mai trở đi.';
-    weekdays.forEach((_, i) => { if (!days[String(i)].length) next[`days.${i}`] = 'Chọn ít nhất một món.'; });
-    setErrors(next); if (Object.keys(next).length) return;
+    WEEKDAY_LABELS.forEach((label, i) => {
+      if (!chosen[String(i)]?.length) next[`days.${i}`] = `${label} cần ít nhất một món.`;
+    });
+    setErrors(next);
+    if (Object.keys(next).length) {
+      setFormError('Kiểm tra lại các ô được đánh dấu.');
+      return;
+    }
     setBusy(true);
-    try { await menusApi.create({ effective_from: date, note: note.trim(), days }); toast.show('Đã lưu thực đơn cố định mới.'); onSaved(); }
-    catch (err) { setError(messageOf(err)); setErrors(fieldsOf(err)); } finally { setBusy(false); }
-  }
-  return <Drawer title="Sửa thực đơn cố định" subtitle="Thực đơn mới lặp lại mỗi tuần từ ngày áp dụng." onClose={busy ? () => undefined : onClose} footer={<><Button variant="secondary" disabled={busy} onClick={onClose}>Hủy</Button><Button write form="menu-form" type="submit" busy={busy} disabled={!available.length}>Lưu thực đơn</Button></>}>
-    <form id="menu-form" className={s.form} onSubmit={submit} noValidate>
-      {error ? <Callout tone="danger" role="alert">{error}</Callout> : null}
-      <TextField label="Ngày áp dụng" type="date" min={tomorrow} value={date} onChange={e => setDate(e.target.value)} error={errors.effective_from} required />
-      {!available.length ? <EmptyState title="Chưa có món đang dùng có công thức">Thêm món và công thức trước khi lập thực đơn.</EmptyState> : weekdays.map((label, i) => <fieldset key={i} className={styles.choices} aria-describedby={errors[`days.${i}`] ? `day-error-${i}` : undefined}>
-        <legend>{label}</legend>
-        {available.map(d => <Checkbox key={d.id} label={d.name} checked={days[String(i)].includes(d.id)} onChange={e => setDays(prev => ({ ...prev, [i]: e.target.checked ? [...prev[String(i)], d.id] : prev[String(i)].filter(id => id !== d.id) }))} />)}
-        {errors[`days.${i}`] ? <p className={styles.error} role="alert" id={`day-error-${i}`}>{errors[`days.${i}`]}</p> : null}
-      </fieldset>)}
-      <TextareaField label="Ghi chú" value={note} onChange={e => setNote(e.target.value)} maxLength={500} error={errors.note} />
-    </form>
-  </Drawer>;
+    try {
+      const v = await menusApi.createVersion({ effective_from: date, note: note.trim(), days: chosen });
+      toast.show(`Đã lưu thực đơn áp dụng từ ${formatDate(v.effective_from)}.`);
+      onSaved(v);
+    } catch (err) {
+      setFormError(messageOf(err));
+      setErrors(fieldsOf(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Drawer
+      title="Sửa thực đơn cố định"
+      subtitle="Tạo phiên bản mới lặp lại mỗi tuần từ ngày áp dụng. Ngày đã qua giữ nguyên thực đơn cũ."
+      width="640px"
+      onClose={busy ? () => undefined : onClose}
+      footer={
+        <>
+          <Button variant="secondary" disabled={busy} onClick={onClose}>
+            Huỷ
+          </Button>
+          <Button write type="submit" form="menu-form" busy={busy} disabled={!available.length}>
+            Lưu thực đơn
+          </Button>
+        </>
+      }
+    >
+      {dishesQ.loading ? (
+        <Skeleton rows={4} />
+      ) : dishesQ.error ? (
+        <ErrorState message={dishesQ.error} onRetry={dishesQ.reload} />
+      ) : (
+        <form id="menu-form" className={s.form} onSubmit={onSubmit} noValidate>
+          {formError ? (
+            <Callout tone="danger" role="alert">
+              {formError}
+            </Callout>
+          ) : null}
+          <TextField
+            label="Áp dụng từ ngày"
+            type="date"
+            min={tomorrow}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            error={errors.effective_from}
+            hint="Sớm nhất là ngày mai. Không sửa lùi thực đơn đã áp dụng."
+            required
+          />
+          {!available.length ? (
+            <EmptyState title="Chưa có món đang dùng có công thức">Thêm món và công thức ở tab Món & công thức trước.</EmptyState>
+          ) : (
+            WEEKDAY_LABELS.map((label, i) => {
+              const key = String(i);
+              const err = errors[`days.${i}`] ?? errors[`days.${key}`];
+              return (
+                <fieldset key={label} className={styles.choices} aria-invalid={err ? true : undefined} aria-describedby={err ? `menu-day-${i}-error` : undefined}>
+                  <legend className={styles.legend}>
+                    {label} <span className={s.muted}>({chosen[key]?.length ?? 0} món)</span>
+                  </legend>
+                  <div className={styles.choiceGrid}>
+                    {available.map((d) => (
+                      <Checkbox
+                        key={d.id}
+                        label={d.name}
+                        checked={chosen[key]?.includes(d.id) ?? false}
+                        onChange={(e) => toggle(key, d.id, e.target.checked)}
+                      />
+                    ))}
+                  </div>
+                  {err ? (
+                    <p className={styles.error} id={`menu-day-${i}-error`}>
+                      {err}
+                    </p>
+                  ) : null}
+                </fieldset>
+              );
+            })
+          )}
+          <TextareaField label="Ghi chú" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} error={errors.note} rows={2} />
+        </form>
+      )}
+    </Drawer>
+  );
 }
 
 function HolidayForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const [date, setDate] = useState(todayISO());
+  const today = todayISO();
+  const [date, setDate] = useState(shiftDate(today, 1));
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
   const toast = useToast();
-  async function submit(e: FormEvent) {
-    e.preventDefault(); setError('');
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setFormError('');
     const next: Record<string, string> = {};
-    if (!date || date < todayISO()) next.date = 'Chọn hôm nay hoặc ngày tương lai.';
-    if (!name.trim()) next.name = 'Hãy nhập tên ngày nghỉ.';
-    setErrors(next); if (Object.keys(next).length) return;
+    if (!date || date < today) next.date = 'Chọn hôm nay hoặc ngày sắp tới.';
+    if (!name.trim()) next.name = 'Hãy nhập tên ngày nghỉ, ví dụ Nghỉ lễ Quốc khánh.';
+    setErrors(next);
+    if (Object.keys(next).length) return;
     setBusy(true);
-    try { await menusApi.addHoliday({ date, name: name.trim() }); toast.show('Đã thêm ngày nghỉ.'); onSaved(); }
-    catch (err) { setError(messageOf(err)); setErrors(fieldsOf(err)); } finally { setBusy(false); }
-  }
-  return <Drawer title="Thêm ngày nghỉ" onClose={busy ? () => undefined : onClose} footer={<><Button variant="secondary" onClick={onClose} disabled={busy}>Hủy</Button><Button write form="holiday-form" type="submit" busy={busy}>Lưu</Button></>}><form id="holiday-form" className={s.form} onSubmit={submit} noValidate>
-    {error ? <Callout tone="danger" role="alert">{error}</Callout> : null}
-    <TextField label="Ngày nghỉ" type="date" min={todayISO()} value={date} onChange={e => setDate(e.target.value)} error={errors.date} required />
-    <TextField label="Tên ngày nghỉ" value={name} onChange={e => setName(e.target.value)} error={errors.name} maxLength={120} required />
-  </form></Drawer>;
+    try {
+      const h = await menusApi.addHoliday({ date, name: name.trim() });
+      toast.show(`Đã thêm ngày nghỉ ${formatDate(h.date)}.`);
+      onSaved();
+    } catch (err) {
+      setFormError(messageOf(err));
+      setErrors(fieldsOf(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Drawer
+      title="Thêm ngày nghỉ"
+      onClose={busy ? () => undefined : onClose}
+      footer={
+        <>
+          <Button variant="secondary" disabled={busy} onClick={onClose}>
+            Huỷ
+          </Button>
+          <Button write type="submit" form="holiday-form" busy={busy}>
+            Lưu ngày nghỉ
+          </Button>
+        </>
+      }
+    >
+      <form id="holiday-form" className={s.form} onSubmit={onSubmit} noValidate>
+        {formError ? (
+          <Callout tone="danger" role="alert">
+            {formError}
+          </Callout>
+        ) : null}
+        <TextField
+          label="Ngày nghỉ"
+          type="date"
+          min={today}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          error={errors.date}
+          hint="Không chọn Thứ Bảy/Chủ nhật (đã nghỉ sẵn) hay ngày đã gửi thực đơn."
+          required
+        />
+        <TextField label="Tên ngày nghỉ" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} maxLength={120} required />
+      </form>
+    </Drawer>
+  );
 }

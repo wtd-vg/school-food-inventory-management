@@ -34,6 +34,7 @@ import { fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { catalogApi, recipeUnitsFor, type Dish } from '../../services/catalog';
 import { inventoryApi, type Food } from '../../services/inventory';
+import { DishTabs } from '../common/FeatureLayouts';
 import { focusFirstInvalid, useQueryParam, useUpdateParams } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
 import styles from './DishesPage.module.css';
@@ -150,6 +151,7 @@ export function DishesPage() {
           </Button>
         }
       />
+      <DishTabs />
       <Stack gap="lg">
         {query.data ? (
           <Lead>

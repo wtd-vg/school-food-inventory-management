@@ -11,7 +11,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   icon?: ReactNode;
   block?: boolean;
   busy?: boolean;
-  /** Thao tác ghi: viewer thấy nút bị khoá + icon ổ khoá, không bị ẩn. */
+  /** Thao tác ghi nghiệp vụ: Hiệu trưởng thấy nút bị khoá + icon ổ khoá, không bị ẩn. */
   write?: boolean;
 };
 
