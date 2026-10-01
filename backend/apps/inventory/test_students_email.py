@@ -12,12 +12,13 @@ from unittest.mock import patch
 from cryptography.fernet import Fernet
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core import signing
 from django.core.management import call_command
-from django.db import connection
-from django.test import Client, TestCase, override_settings
+from django.db import IntegrityError, connection, transaction
+from django.test import Client, TestCase, TransactionTestCase, override_settings
 
 from . import mailer, notifications
-from .crypto_fields import contact_hash, decrypt
+from .crypto_fields import contact_hash, decrypt, encrypt
 from .models import (
     AuditLog, Category, DayMenuSnapshot, Dish, FoodItem, MenuVersion,
     MenuVersionItem, NotificationLog, ParentContact, RecipeComponent, SchoolClass,
@@ -451,3 +452,249 @@ class HocSinhEmailTests(CsrfClientMixin, TestCase):
         self.assertIn("dry_run=1", stdout.getvalue())
         self.assertEqual(self.nhat_ky_nguoi_nhan().get().status, "dry_run")
         self.assertEqual(len(mail.outbox), 0)
+
+    # --- Bổ sung BE-04/08/14 ---
+
+    def quet_db_tim_email(self, *emails):
+        """Quét toàn bộ dòng (dạng JSON) của các bảng liên quan: không được có '@' hay email rõ."""
+        with connection.cursor() as cursor:
+            for bang in ("inventory_parentcontact", "inventory_notificationlog", "inventory_student"):
+                with self.subTest(bang=bang):
+                    cursor.execute(f"SELECT row_to_json(t)::text FROM {bang} t")
+                    for (dong,) in cursor.fetchall():
+                        # email_hint có dạng "ph•••@example.com": chỉ còn 2 ký tự đầu, không phải email đầy đủ.
+                        du_lieu = json.loads(dong)
+                        du_lieu.pop("email_hint", None)
+                        text = json.dumps(du_lieu, ensure_ascii=False).lower()
+                        self.assertNotIn("@", text)
+                        for email in emails:
+                            self.assertNotIn(email.lower(), text)
+            cursor.execute("SELECT row_to_json(t)::text FROM inventory_auditlog t")
+            text = " ".join(r[0] for r in cursor.fetchall()).lower()
+            for email in emails:
+                self.assertNotIn(email.lower(), text)
+
+    @override_settings(EMAIL_MODE="smtp")
+    def test_db_khong_chua_email_ro_sau_tao_nhap_sua_va_gui(self):
+        self.tao_thuc_don()
+        hoc_sinh = self.tao_hoc_sinh("Bé An", ("phuhuynh.a@example.com",))
+        self.gui("PATCH", f"/api/students/{hoc_sinh.id}/", {
+            "contacts": [{"email": "phuhuynh.a@example.com", "consent": True},
+                         {"email": "me.be.an@example.test", "consent": True}],
+        })
+        self.assertEqual(self.nhap_csv([["Bé Bình", "1A", "phuhuynh.b@example.test", "", "co"]]).status_code, 200)
+        notifications.send_daily_menu(NGAY)
+        self.assertEqual(len(mail.outbox), 3)
+        self.quet_db_tim_email("phuhuynh.a@example.com", "me.be.an@example.test", "phuhuynh.b@example.test")
+
+    def test_db_chan_luu_email_ro(self):
+        hoc_sinh = self.tao_hoc_sinh(emails=())
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                ParentContact.objects.create(
+                    student=hoc_sinh, email_encrypted="phuhuynh.a@example.com",
+                    email_hash=contact_hash("phuhuynh.a@example.com"), email_hint="ph•••@example.com",
+                    consent_at=BAY_GIO, created_by=self.quan_ly,
+                )
+        self.assertFalse(ParentContact.objects.exists())
+
+    def test_xoay_khoa_van_doc_duoc_ban_cu(self):
+        from django.conf import settings
+
+        khoa_cu = settings.FIELD_ENCRYPTION_KEYS
+        contact = self.tao_hoc_sinh().contacts.get()
+        khoa_moi = Fernet.generate_key().decode()
+        with override_settings(FIELD_ENCRYPTION_KEYS=f"{khoa_moi},{khoa_cu}"):
+            self.assertEqual(decrypt(contact.email_encrypted), "phuhuynh.a@example.com")
+            ban_moi = encrypt("phuhuynh.a@example.com")
+            body = self.gui("POST", f"/api/parent-contacts/{contact.id}/reveal/")
+            self.assertEqual(body["email"], "phuhuynh.a@example.com")
+        # Bản mã bằng khóa mới không đọc được nếu chỉ còn khóa cũ.
+        with self.assertRaises(ValueError):
+            decrypt(ban_moi)
+
+    def test_hieu_truong_moi_thao_tac_ghi_hoc_sinh_va_thu_tra_403(self):
+        self.tao_thuc_don()
+        hoc_sinh = self.tao_hoc_sinh()
+        self.hieu_truong.email = "hieutruong@example.test"
+        self.hieu_truong.save(update_fields=["email"])
+        self.client = self.csrf_client(self.hieu_truong)
+        truoc = (Student.objects.count(), ParentContact.objects.count(), NotificationLog.objects.count(),
+                 AuditLog.objects.count())
+        for method, url, body in [
+            ("POST", "/api/students/", {"full_name": "Bé Mới", "class_id": self.lop.id, "contacts": []}),
+            ("PATCH", f"/api/students/{hoc_sinh.id}/", {"full_name": "Đổi tên"}),
+            ("DELETE", f"/api/students/{hoc_sinh.id}/", None),
+            ("POST", "/api/notifications/send/", {"date": "2026-10-01"}),
+            ("POST", "/api/notifications/test/", {"date": "2026-10-01"}),
+        ]:
+            with self.subTest(method=method, url=url):
+                self.gui(method, url, body, status=403)
+        self.assertEqual(self.nhap_csv([["Bé Bình", "1A", "", "", "khong"]]).status_code, 403)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(Student.objects.get().full_name, "Bé An")
+        self.assertEqual((Student.objects.count(), ParentContact.objects.count(), NotificationLog.objects.count(),
+                          AuditLog.objects.count()), truoc)
+
+    def test_chua_dang_nhap_tra_401_tru_huy_nhan(self):
+        # Có CSRF hợp lệ nhưng chưa đăng nhập → 401 (thiếu CSRF thì middleware trả 403 trước).
+        client = self.csrf_client()
+        for method, url in [("GET", "/api/students/"), ("GET", "/api/notifications/"),
+                            ("POST", "/api/students/"), ("POST", "/api/parent-contacts/1/reveal/"),
+                            ("POST", "/api/students/import/"), ("POST", "/api/notifications/send/")]:
+            with self.subTest(method=method, url=url):
+                self.assertEqual(self.call(client, method, url, {}).status_code, 401)
+        self.assertFalse(Student.objects.exists())
+
+    def test_csv_dry_run_co_loi_tra_200_khong_ghi(self):
+        rows = [["Bé An", "1A", "phuhuynh.a@example.com", "", "co"],
+                ["", "1A", "", "", "co"],
+                ["Bé Chi", "1A", "", "", "co"],
+                ["Bé Dũng", "1A", "", "", "chua_ro"]]
+        response = self.nhap_csv(rows, dry_run=True)
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertFalse(body["saved"])
+        self.assertEqual(body["summary"], {"rows": 4, "ok": 1, "errors": 3, "with_email": 1})
+        loi = {r["line"]: r["errors"] for r in body["rows"] if r["status"] == "error"}
+        self.assertIn("ho_ten", loi[3])
+        self.assertIn("email_1", loi[4])  # đồng ý nhưng không có email
+        self.assertIn("da_dong_y", loi[5])
+        self.assertFalse(Student.objects.exists())
+
+    def test_csv_trung_trong_file_va_trung_db_bi_chan(self):
+        self.tao_hoc_sinh("Bé An", ())
+        response = self.nhap_csv([["bé an", "1A", "", "", "khong"],
+                                  ["Bé Bình", "1A", "", "", "khong"],
+                                  ["Bé Bình", "1a", "", "", "khong"]])
+        self.assertEqual(response.status_code, 400)
+        loi = {r["line"]: r["errors"] for r in response.json()["rows"] if r["status"] == "error"}
+        self.assertEqual(set(loi), {2, 4})
+        self.assertEqual(Student.objects.count(), 1)
+
+    @override_settings(EMAIL_MODE="smtp")
+    def test_thu_bay_skipped_khong_gui(self):
+        self.tao_thuc_don()
+        self.tao_hoc_sinh()
+        thu_bay = date(2026, 10, 3)
+        with patch("django.utils.timezone.now", return_value=BAY_GIO.replace(day=3)):
+            stats = notifications.send_daily_menu(thu_bay)
+        self.assertEqual(stats, {"sent": 0, "dry_run": 0, "failed": 0, "skipped": 1, "already": 0})
+        self.assertEqual(NotificationLog.objects.get(date=thu_bay).status, "skipped")
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(EMAIL_MODE="smtp")
+    def test_sai_app_password_dung_ca_dot(self):
+        self.tao_thuc_don()
+        self.tao_hoc_sinh()
+        self.tao_hoc_sinh("Bé Bình", ("phuhuynh.b@example.test",))
+        loi = smtplib.SMTPAuthenticationError(535, b"Username and Password not accepted")
+        with patch("django.core.mail.EmailMultiAlternatives.send", side_effect=loi) as send:
+            stats = notifications.send_daily_menu(NGAY)
+        send.assert_called_once()
+        self.assertEqual(stats["failed"], 2)
+        self.assertEqual(set(self.nhat_ky_nguoi_nhan().values_list("status", flat=True)), {"failed"})
+        tong = NotificationLog.objects.get(date=NGAY, email_hash="*")
+        self.assertEqual(tong.status, "failed")
+        self.assertIn("App Password", tong.error)
+
+    @override_settings(EMAIL_MODE="smtp")
+    def test_lien_ket_huy_nhan_trong_thu_hoat_dong_va_hom_sau_khong_gui(self):
+        self.tao_thuc_don()
+        self.tao_hoc_sinh()
+        notifications.send_daily_menu(NGAY)
+        thu = mail.outbox[0]
+        duong_dan = thu.extra_headers["List-Unsubscribe"].strip("<>")
+        self.assertTrue(duong_dan.startswith("https://schoolfood.example.test/api/unsubscribe/"))
+        token = duong_dan.rstrip("/").rsplit("/", 1)[1]
+        self.assertIn(f"https://schoolfood.example.test/huy-nhan/{token}", thu.body)
+        response = Client(enforce_csrf_checks=True).post(f"/api/unsubscribe/{token}/")
+        self.assertEqual(response.status_code, 200)
+        audit = AuditLog.objects.get(action="email_unsubscribe")
+        self.assertIsNone(audit.actor_id)
+        ngay_mai = date(2026, 10, 2)
+        with patch("django.utils.timezone.now", return_value=BAY_GIO.replace(day=2)):
+            stats = notifications.send_daily_menu(ngay_mai)
+        self.assertEqual(stats["sent"], 0)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertFalse(self.nhat_ky_nguoi_nhan(ngay_mai).exists())
+
+    def test_huy_nhan_token_sai_salt_hoac_noi_dung_tra_400(self):
+        contact = self.tao_hoc_sinh().contacts.get()
+        client = Client(enforce_csrf_checks=True)
+        for token in [signing.dumps({"h": contact.email_hash}, salt="salt-khac"),
+                      signing.dumps({"h": "ngan"}, salt=mailer.UNSUBSCRIBE_SALT),
+                      signing.dumps(["khong-phai-object"], salt=mailer.UNSUBSCRIBE_SALT)]:
+            with self.subTest(token=token[:20]):
+                response = client.post(f"/api/unsubscribe/{token}/")
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("message", response.json())
+        contact.refresh_from_db()
+        self.assertIsNone(contact.unsubscribed_at)
+
+    def test_gui_thu_thu_toi_email_cua_chinh_minh_khong_ghi_nhat_ky(self):
+        self.tao_thuc_don()
+        self.tao_hoc_sinh()
+        self.quan_ly.email = "quanly@example.test"
+        self.quan_ly.save(update_fields=["email"])
+        self.client = self.csrf_client(self.quan_ly)
+        self.gui("POST", "/api/notifications/test/", {"date": "2026-10-01"})
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["quanly@example.test"])
+        self.assertTrue(mail.outbox[0].subject.startswith("[Thử]"))
+        self.assertNotIn("Bé An", mail.outbox[0].body)
+        self.assertFalse(NotificationLog.objects.exists())
+        self.assertTrue(AuditLog.objects.filter(action="email_test").exists())
+
+    def test_gui_thu_tai_khoan_chua_co_email_tra_400(self):
+        self.gui("POST", "/api/notifications/test/", {}, status=400)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_gui_thu_loi_smtp_tra_json_khong_500(self):
+        """BUG? notifications_test không bắt SMTPException/OSError: lỗi SMTP khi gửi thử trả 500 (HTML
+        traceback khi DEBUG) thay vì JSON {"message"} theo quy ước lỗi API §10.2."""
+        self.tao_thuc_don()
+        self.quan_ly.email = "quanly@example.test"
+        self.quan_ly.save(update_fields=["email"])
+        self.client = self.csrf_client(self.quan_ly)
+        self.client.raise_request_exception = False
+        with patch("django.core.mail.EmailMultiAlternatives.send", side_effect=smtplib.SMTPServerDisconnected("mất kết nối")):
+            response = self.call(self.client, "POST", "/api/notifications/test/", {"date": "2026-10-01"})
+        self.assertNotEqual(response.status_code, 500)
+        self.assertIn("message", response.json())
+
+    @override_settings(EMAIL_MODE="smtp")
+    def test_scheduler_thu_bay_ghi_skipped_khong_gui(self):
+        self.tao_thuc_don()
+        self.tao_hoc_sinh()
+        stdout = io.StringIO()
+        with patch("django.utils.timezone.now", return_value=BAY_GIO.replace(day=3)), \
+                patch("apps.inventory.management.commands.run_scheduler.close_old_connections"), \
+                patch("apps.inventory.management.commands.run_scheduler.signal.signal"):
+            call_command("run_scheduler", "--once", stdout=stdout)
+        self.assertEqual(NotificationLog.objects.get(date=date(2026, 10, 3), email_hash="*").status, "skipped")
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class GioiHanEmailTriggerTests(TransactionTestCase):
+    """BE-04: trigger PostgreSQL chặn email thứ ba của một bé, kể cả khi bỏ qua service."""
+
+    def test_email_thu_ba_bi_trigger_chan(self):
+        user = make_user("quan_ly_trigger_email", "manager")
+        lop = SchoolClass.objects.create(code="TRG", name="Lớp trigger", enrolled=10)
+        hoc_sinh = Student.objects.create(school_class=lop, full_name="Bé Trigger")
+
+        def lien_he(i):
+            return ParentContact(
+                student=hoc_sinh, email_encrypted=f"gAAAAA-ban-ma-{i}", email_hash=f"{i:064x}",
+                email_hint=f"p{i}•••@example.test", consent_at=BAY_GIO, created_by=user,
+            )
+
+        lien_he(1).save()
+        lien_he(2).save()
+        with self.assertRaises(IntegrityError) as caught:
+            with transaction.atomic():
+                lien_he(3).save()
+        self.assertEqual(caught.exception.__cause__.sqlstate, "23514")
+        self.assertEqual(caught.exception.__cause__.diag.constraint_name, "parent_contact_limit")
+        self.assertEqual(hoc_sinh.contacts.count(), 2)
