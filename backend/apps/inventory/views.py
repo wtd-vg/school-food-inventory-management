@@ -431,6 +431,7 @@ def _receipt_payload(r, with_names=True):
                 "quantity": str(line.quantity),
                 "unit_price": str(line.unit_price),
                 "line_total": str(line_value(line.quantity, line.unit_price)),
+                "po_line_id": line.po_line_id,
                 **({"food_name": line.food.name} if with_names else {}),
             }
             for line in lines
@@ -539,6 +540,7 @@ def _issue_payload(iss, with_totals=True):
         "note": iss.note,
         "status": iss.status.upper(),
         "posted_at": iss.posted_at.isoformat() if iss.posted_at else None,
+        "lunch_date": iss.lunch_day.date.isoformat() if iss.lunch_day_id else None,
         "total_value": str(document_total(lines, "unit_cost")),
         "lines": [
             {
@@ -558,7 +560,7 @@ def _issue_payload(iss, with_totals=True):
 @json_api
 def issues(request):
     if request.method == "GET":
-        rows = Issue.objects.prefetch_related("lines__food").order_by("-id")
+        rows = Issue.objects.select_related("lunch_day").prefetch_related("lines__food").order_by("-id")
         return JsonResponse({"results": [_issue_payload(i) for i in rows]})
     if request.method != "POST":
         return method_not_allowed()
