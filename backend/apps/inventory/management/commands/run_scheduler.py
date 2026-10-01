@@ -1,9 +1,8 @@
 """BE-08: vòng lặp lịch gửi email thực đơn (service `scheduler` trong compose.prod.yaml).
 
 Mỗi 60 giây:
-- Ngày học (T2–T6) và đã qua MENU_SEND_TIME (mặc định 06:30 giờ Việt Nam) mà hôm nay chưa chạy → gửi.
-  Container khởi động lại lúc 8h vẫn gửi bù trong ngày.
-- Ngày nào có yêu cầu "Gửi lại" (dòng tổng pending) → chạy lại, chỉ gửi phần còn thiếu.
+- Ngày nào Quản lý bấm "Gửi thư cho phụ huynh" (dòng tổng pending) → gửi, chỉ gửi phần còn thiếu.
+- Chỉ khi MENU_AUTO_SEND=true (mặc định tắt từ SF74): ngày học đã qua MENU_SEND_TIME mà chưa chạy → tự gửi.
 Dừng gọn khi nhận SIGTERM/SIGINT. --once: chạy một vòng rồi thoát (kiểm tra thủ công).
 """
 
@@ -21,7 +20,7 @@ from apps.inventory.notifications import SUMMARY, send_daily_menu
 
 
 class Command(BaseCommand):
-    help = "Lịch gửi email thực đơn 06:30 mỗi ngày học và xử lý yêu cầu gửi lại."
+    help = "Gửi email thực đơn khi Quản lý bấm gửi (và tự gửi 06:30 nếu MENU_AUTO_SEND=true)."
 
     def add_arguments(self, parser):
         parser.add_argument("--once", action="store_true")
@@ -32,7 +31,8 @@ class Command(BaseCommand):
         signal.signal(signal.SIGTERM, self._stop)
         signal.signal(signal.SIGINT, self._stop)
         hour, minute = (int(x) for x in settings.MENU_SEND_TIME.split(":"))
-        self.stdout.write(f"Scheduler chạy: gửi lúc {hour:02d}:{minute:02d}, chế độ {settings.EMAIL_MODE}.")
+        when = f"tự gửi lúc {hour:02d}:{minute:02d}" if settings.MENU_AUTO_SEND else "chỉ gửi khi Quản lý bấm"
+        self.stdout.write(f"Scheduler chạy: {when}, chế độ {settings.EMAIL_MODE}.")
         while not self.stopping:
             close_old_connections()
             try:
@@ -50,7 +50,7 @@ class Command(BaseCommand):
         now = timezone.localtime()
         today = now.date()
         due = now.time() >= datetime.min.replace(hour=hour, minute=minute).time()
-        if due and not NotificationLog.objects.filter(date=today, email_hash=SUMMARY).exists():
+        if settings.MENU_AUTO_SEND and due and not NotificationLog.objects.filter(date=today, email_hash=SUMMARY).exists():
             self.stdout.write(f"{today}: {send_daily_menu(today)}")
         for day in NotificationLog.objects.filter(email_hash=SUMMARY, status=NotificationLog.Status.PENDING,
                                                   date__lte=today).values_list("date", flat=True):

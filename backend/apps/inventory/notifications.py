@@ -1,4 +1,7 @@
-"""BE-08 (R11): gửi email thực đơn hôm nay cho phụ huynh.
+"""BE-08 (R11) / SF74: gửi email thực đơn (kèm ảnh suất ăn thực tế của ngày) cho phụ huynh.
+
+Từ 01/10/2026 thư KHÔNG tự gửi lúc 06:30 nữa (MENU_AUTO_SEND=false): Quản lý bấm "Gửi thư cho phụ huynh"
+→ dòng tổng pending → scheduler gửi trong khoảng 1 phút.
 
 send_daily_menu(d):
 1. Khóa advisory (session) để hai tiến trình không gửi cùng lúc.
@@ -13,6 +16,7 @@ Email đuôi .invalid (RFC 2606, dùng cho dữ liệu mẫu seed_sample) không
 để không bị trả thư làm hỏng uy tín tài khoản Gmail gửi.
 """
 
+import base64
 import logging
 import smtplib
 from collections import OrderedDict
@@ -22,7 +26,8 @@ from django.core.mail import get_connection
 from django.db import connection as db_connection, transaction
 
 from .crypto_fields import decrypt
-from .mailer import build_menu_email
+from .mailer import build_menu_email, render_menu_html, subject_for
+from .meal_photos import email_photos
 from .menu_services import MENU, day_status, menu_for_date, snapshot_day
 from .models import NotificationLog, ParentContact
 
@@ -99,6 +104,7 @@ def _send(d):
         stats["skipped"] = 1
         return stats
     day = menu_for_date(d)
+    photos = email_photos(d)
     groups = recipients()
     dry_run = settings.EMAIL_MODE != "smtp"
     sent_today = NotificationLog.objects.filter(date=d, status=Status.SENT).exclude(email_hash=SUMMARY).count()
@@ -126,7 +132,8 @@ def _send(d):
             else:
                 entry.attempts += 1
                 try:
-                    build_menu_email(group["email"], email_hash, day, group["children"], connection=smtp).send()
+                    build_menu_email(group["email"], email_hash, day, group["children"], connection=smtp,
+                                     photos=photos).send()
                     entry.status, entry.error = Status.SENT, ""
                     sent_today += 1
                 except smtplib.SMTPAuthenticationError as exc:
@@ -182,6 +189,35 @@ def day_logs(d):
 def send_test_email(to_email, d):
     """Gửi thử thực đơn của ngày d tới email của người đang đăng nhập (không ghi NotificationLog)."""
     day = menu_for_date(d, take_snapshot=False)
-    message = build_menu_email(to_email, "0" * 64, day, ["(thư thử)"])
+    message = build_menu_email(to_email, "0" * 64, day, ["(thư thử)"], photos=email_photos(d))
     message.subject = "[Thử] " + message.subject
     return message.send()
+
+
+def check_sendable(d):
+    """Lý do không gửi được thư của ngày d (None = gửi được). Dùng trước khi xếp lịch và khi xem trước."""
+    status = day_status(d)
+    if status != MENU:
+        return "Ngày nghỉ: không có bữa trưa nên không gửi thư."
+    if not menu_for_date(d, take_snapshot=False)["dishes"]:
+        return "Chưa có thực đơn cho ngày này."
+    return None
+
+
+def preview(d):
+    """Thư mẫu để Quản lý xem trước khi bấm gửi: ảnh nhúng dạng data: (không cần đăng nhập để hiện trong khung)."""
+    problem = check_sendable(d)
+    groups = recipients()
+    sample = sum(1 for g in groups.values() if is_sample_email(g["email"]))
+    sent = NotificationLog.objects.filter(date=d, status=Status.SENT).exclude(email_hash=SUMMARY).count()
+    result = {"date": d.isoformat(), "mode": settings.EMAIL_MODE, "problem": problem,
+              "recipients": len(groups) - sample, "sample_recipients": sample, "already_sent": sent,
+              "photos": 0, "subject": "", "html": ""}
+    if problem:
+        return result
+    day = menu_for_date(d, take_snapshot=False)
+    photos = email_photos(d)
+    src = lambda p: "data:image/jpeg;base64," + base64.b64encode(p["data"]).decode()  # noqa: E731
+    result.update(photos=len(photos), subject=subject_for(day, photos),
+                  html=render_menu_html(day, ["(tên bé)"], photos, src, "#"))
+    return result

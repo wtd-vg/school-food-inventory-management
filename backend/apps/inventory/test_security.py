@@ -72,6 +72,7 @@ EXPECTED_PERMS = {
     "notifications": ("inventory", ["GET"], []),
     "notifications_send": ("inventory", [], ["POST"]),
     "notifications_test": ("inventory", [], ["POST"]),
+    "notifications_preview": ("inventory", ["GET"], []),
     "lunch_day_demand": ("inventory", ["GET"], []),
     "lunch_day_demand_calculate": ("inventory", [], ["POST"]),
     "demand_approve": ("inventory", [], ["POST"]),

@@ -1,7 +1,8 @@
 /**
- * FE-07 /lop-hoc/thu-thuc-don: nhật ký thư thực đơn gửi phụ huynh lúc 06:30 (notification_views.py, BE-08).
+ * FE-07 /lop-hoc/thu-thuc-don: nhật ký thư thực đơn gửi phụ huynh (notification_views.py, BE-08).
  * - ?ngay=YYYY-MM-DD (mặc định hôm nay). Email luôn ở dạng che; không có email đầy đủ trên màn này.
- * - "Gửi lại phần còn thiếu" → 202, scheduler gửi trong khoảng 1 phút (chỉ thư chưa gửi/lỗi).
+ * - SF74: không tự gửi 06:30. "Gửi thư cho phụ huynh" mở thư xem trước (kèm ảnh suất ăn) → 202, scheduler gửi
+ *   trong khoảng 1 phút; bấm lại chỉ gửi thư chưa gửi/lỗi.
  * - "Gửi thử tới email của tôi" → thư thử tới email của tài khoản đang đăng nhập, không ghi nhật ký.
  * - Máy chủ ở EMAIL_MODE=dry_run thì hiện nhãn "Chế độ thử": chỉ ghi nhật ký, không gửi thư thật.
  */
@@ -11,7 +12,6 @@ import {
   Badge,
   Button,
   Callout,
-  ConfirmDialog,
   DataTable,
   EmptyState,
   ErrorState,
@@ -29,6 +29,7 @@ import { formatDate, formatDateTime, todayISO } from '../../lib/format';
 import { messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { MAIL_STATUS, notificationsApi, type NotificationRow } from '../../services/notifications';
+import { SendMenuDrawer } from './SendMenuDrawer';
 import { ClassTabs } from '../common/FeatureLayouts';
 import { useQueryParam } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
@@ -37,26 +38,11 @@ export function NotificationsPage() {
   const today = todayISO();
   const [date, setDate] = useQueryParam('ngay', today);
   const q = useApiQuery(() => notificationsApi.day(date), [date]);
-  const [confirmResend, setConfirmResend] = useState(false);
-  const [busy, setBusy] = useState<'resend' | 'test' | null>(null);
+  const [sending, setSending] = useState(false);
+  const [busy, setBusy] = useState<'test' | null>(null);
   const [actionError, setActionError] = useState('');
   const toast = useToast();
   const isFuture = date > today;
-
-  const resend = async () => {
-    setBusy('resend');
-    setActionError('');
-    try {
-      const res = await notificationsApi.resend(date);
-      toast.show(res.message);
-      setConfirmResend(false);
-      q.reload();
-    } catch (err) {
-      setActionError(messageOf(err));
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const sendTest = async () => {
     setBusy('test');
@@ -86,7 +72,7 @@ export function NotificationsPage() {
     <>
       <PageHeader
         title="Thư thực đơn"
-        description="Mỗi ngày học lúc 06:30, mỗi email phụ huynh nhận một thư thực đơn hôm nay (gộp các bé)."
+        description="Quản lý bấm gửi sau khi tải ảnh suất ăn: mỗi email phụ huynh nhận một thư/ngày gồm thực đơn và ảnh (gộp các bé)."
         actions={
           <>
             <Button write variant="secondary" icon={<IconSend size={18} />} busy={busy === 'test'} disabled={isFuture || busy !== null} onClick={sendTest}>
@@ -98,10 +84,10 @@ export function NotificationsPage() {
               disabled={isFuture || busy !== null}
               onClick={() => {
                 setActionError('');
-                setConfirmResend(true);
+                setSending(true);
               }}
             >
-              Gửi lại phần còn thiếu
+              Gửi thư cho phụ huynh
             </Button>
           </>
         }
@@ -117,7 +103,7 @@ export function NotificationsPage() {
             Máy chủ đang ở chế độ thử (EMAIL_MODE=dry_run): hệ thống chỉ ghi nhật ký, không gửi thư thật cho phụ huynh.
           </Callout>
         ) : null}
-        {actionError && !confirmResend ? (
+        {actionError ? (
           <Callout tone="danger" role="alert">
             {actionError}
           </Callout>
@@ -159,7 +145,7 @@ export function NotificationsPage() {
               <EmptyState title={data.summary ? 'Không có thư nào trong ngày này' : 'Chưa gửi thư cho ngày này'}>
                 {data.summary?.status === 'skipped'
                   ? 'Ngày nghỉ hoặc chưa có thực đơn nên không gửi.'
-                  : 'Thư tự gửi lúc 06:30 các ngày học cho phụ huynh đã đồng ý và chưa huỷ nhận.'}
+                  : 'Bấm "Gửi thư cho phụ huynh" để xem trước và gửi cho phụ huynh đã đồng ý, chưa huỷ nhận.'}
               </EmptyState>
             )}
           </>
@@ -167,21 +153,16 @@ export function NotificationsPage() {
         <p className={s.muted}>Phụ huynh huỷ nhận bằng liên kết trong thư; email đã huỷ không được gửi nữa.</p>
       </Stack>
 
-      {confirmResend ? (
-        <ConfirmDialog
-          title={`Gửi lại thư ngày ${formatDate(date)}?`}
-          confirmLabel="Xếp lịch gửi lại"
-          busy={busy === 'resend'}
-          onCancel={() => setConfirmResend(false)}
-          onConfirm={resend}
-        >
-          <p>Hệ thống chỉ gửi thư còn thiếu hoặc bị lỗi; email đã nhận thư ngày này không nhận lần hai. Việc gửi diễn ra trong khoảng 1 phút.</p>
-          {actionError ? (
-            <Callout tone="danger" role="alert">
-              {actionError}
-            </Callout>
-          ) : null}
-        </ConfirmDialog>
+      {sending ? (
+        <SendMenuDrawer
+          date={date}
+          onClose={() => setSending(false)}
+          onSent={(message) => {
+            setSending(false);
+            toast.show(message);
+            q.reload();
+          }}
+        />
       ) : null}
     </>
   );
