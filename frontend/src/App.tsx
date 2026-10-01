@@ -45,7 +45,7 @@ export function App() {
           </RequireAuth>
         }
       >
-        <Route index element={<Navigate to="/kho" replace />} />
+        <Route index element={<Navigate to="/bua-trua" replace />} />
         <Route path="kho" element={<InventoryLayout />}>
           <Route index element={<StockPage />} />
           <Route path="phieu-nhap" element={<ReceiptsPage />} />

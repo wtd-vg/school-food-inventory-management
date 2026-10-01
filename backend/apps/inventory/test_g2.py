@@ -6,6 +6,7 @@ thật (Client, CSRF bật), số chuẩn CLAUDE.md §6:
 Ngày ăn D là một Thứ Hai ≥ 14 ngày sau hôm nay (thực đơn chỉ lập được từ ngày mai), không phụ thuộc lịch thật.
 """
 
+import io
 import threading
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -149,7 +150,7 @@ class G2Fixture(CsrfClientMixin):
         return sum((a.qty for a in Alloc.objects.filter(lunch_day=day, food_id=self.thit["id"], **filters)), Decimal("0"))
 
     def ledger_dat(self):
-        call_command("sf31_ledger_audit", "--strict", stdout=open("/dev/null", "w"))
+        call_command("sf31_ledger_audit", "--strict", stdout=io.StringIO())
 
 
 class G2KichBanTests(G2Fixture, TestCase):

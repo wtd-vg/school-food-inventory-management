@@ -30,6 +30,8 @@ Khi mâu thuẫn, thứ tự ưu tiên: yêu cầu trực tiếp của chủ d�
 | R10 | **Thực đơn cố định (01/10):** mỗi thứ T2–T6 một thực đơn, lặp hằng tuần; nghỉ T7/CN + ngày lễ do admin đánh dấu; sửa thì áp dụng từ ngày chọn, ngày cũ giữ bản chụp. | Thay mô hình "thực đơn tuần lập mới" của SF52. Xem §4 PR2. |
 | R11 | **Phụ huynh nhận email thực đơn hôm nay lúc 6h30** (đổi từ Zalo ZNS ngày 01/10 vì xác thực OA quá lâu). Gửi qua SMTP: Gmail App Password trước, SES khi cần. Email được mã hóa, che khi hiển thị, lưu xác nhận đồng ý, có link hủy nhận, xóa hẳn khi bé nghỉ. | Thêm dependency `cryptography`; gửi mail dùng sẵn Django. Xem §4 PR3. |
 | R12 | **Bảo mật:** khóa đăng nhập sai (backend + Cloudflare), mật khẩu ≥ 10 ký tự, phiên 30 phút không thao tác / tối đa 12 giờ, audit log có màn xem, Cloudflare Access cho `/admin`. | Xem §4. |
+| R13 | **Ảnh suất ăn thực tế (SF73, 01/10):** Quản lý chụp/tải 1–5 ảnh mỗi ngày ăn ở trang Hôm nay; Hiệu trưởng chỉ xem. Lưu trên ổ EC2 (volume `media_data`), không công khai, nén ≤ 1600px JPEG, bỏ EXIF/GPS. Sau đăng nhập mở thẳng **Hôm nay**. | Thêm dependency `Pillow`; `backup.sh` sao lưu cả ảnh. Chưa gửi ảnh cho phụ huynh. |
+| R14 | **Dữ liệu mẫu trên production (01/10):** chủ dự án yêu cầu nạp `seed_sample --production`, giữ dữ liệu đã nhập. | Email phụ huynh mẫu đuôi `.invalid`, không bao giờ gửi qua SMTP; không tạo tài khoản demo. |
 
 ### 1.1 Đề xuất
 
@@ -40,7 +42,7 @@ Khi mâu thuẫn, thứ tự ưu tiên: yêu cầu trực tiếp của chủ d�
 | P3 | GitHub Actions: PG17 + check + test + build trên mọi PR | Chờ duyệt |
 | P4 | Xóa bảng `InventoryLedger` (legacy) | Chờ duyệt, phải kiểm kê dữ liệu trước |
 | P5 | gunicorn production | **Đã làm** (SF38) |
-| P6 | S3 lưu ảnh chứng từ/kiểm thực (U5) | Chờ duyệt |
+| P6 | S3 lưu ảnh chứng từ/kiểm thực (U5) | Ảnh suất ăn (R13) dùng ổ EC2; S3 vẫn chờ duyệt cho U5 |
 | P7 | U1 mức thu/suất đưa lên sớm | Chờ duyệt |
 
 ---
@@ -57,7 +59,9 @@ Khi mâu thuẫn, thứ tự ưu tiên: yêu cầu trực tiếp của chủ d�
 | Auth | Session/CSRF, manager/viewer | Toàn bộ §4 PR1; ISSUE-009 |
 | Frontend | Shell + router, Kho (tồn, nhập, xuất, kiểm kê, danh mục), Món, Lớp, NCC, Báo cáo, Đăng nhập | Màn của PR1–3, màn G2 còn lại |
 | Deploy | Dockerfile, `compose.prod.yaml`, nginx, Cloudflare Tunnel, settings production, guard test DB | Backup định kỳ, CSP, Cloudflare Access (PR4); EC2 đang cần mở SSH để deploy bản mới |
-| Test | 99 test đạt trên PG17 riêng (01/10, `6f0bdc7`) | Thiếu hồi quy auth/CSRF; test đồng thời G2 |
+| Test | 99 test đạt trên PG17 riêng (01/10, `6f0bdc7`); **267 test đạt** trên nhánh `feat/SF73-meal-photos-sample-data` (01/10 chiều, gồm G2, ảnh, dữ liệu mẫu) | — |
+| Ảnh suất ăn (SF73) | Model `MealPhoto` (0021), API `lunch-days/<date>/photos/`, `meal-photos/<id>/(image/)`, khu ảnh ở trang Hôm nay; bằng chứng `outputs/team-6/evidence/SF73_*.png` | Gửi ảnh cho phụ huynh (chưa duyệt) |
+| Dữ liệu mẫu | `seed_sample`: 20 nguyên liệu, 11 món, thực đơn T2–T6, 6 lớp, 30 học sinh, 10 ngày ăn đã đóng | — |
 
 "Có code", "test đạt" và "đã nghiệm thu" là ba trạng thái khác nhau.
 
@@ -286,6 +290,8 @@ Mã task mới (SF73+) do TV1 cấp, bổ sung vào thẻ task và Excel trướ
 | 0021–0022 | SF61: PurchaseOrder(Line), ReceiptLine.po_line (+ trigger) |
 | 0023–0024 | SF67: xuất theo ngày ăn, đóng ngày (+ trigger) |
 | 0025+ | U1, idempotency, P4, G3 |
+
+Thực tế đã merge: G2 dùng gọn 0019–0020 (DemandRevision, PurchaseOrder, StockAllocation, LunchDayClose + trigger); **0021 = SF73 MealPhoto**. Migration mới tiếp theo bắt đầu từ 0022.
 
 Ai cần chen số thì báo TV1. Không đổi tên migration đã merge.
 

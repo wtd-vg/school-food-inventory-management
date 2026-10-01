@@ -127,6 +127,22 @@ export type DailyReport = {
   avg_cost_per_serving: string | null;
 };
 
+/* ---------- Ảnh suất ăn thực tế (SF73) ---------- */
+export type MealPhoto = {
+  id: number;
+  date: string;
+  note: string;
+  width: number;
+  height: number;
+  size: number;
+  uploaded_by: string;
+  created_at: string;
+  /** Ảnh chỉ tải được khi đã đăng nhập (cookie phiên), không có link công khai. */
+  url: string;
+};
+
+export type DayPhotos = { date: string; max: number; results: MealPhoto[] };
+
 const day = (date: string) => `/api/lunch-days/${encodeURIComponent(date)}`;
 
 export const lunchApi = {
@@ -157,4 +173,14 @@ export const lunchApi = {
   close: (date: string, note: string) => api.post<DayCost>(`${day(date)}/close/`, { note }),
   reopenClose: (date: string, reason: string) => api.post<DayCost>(`${day(date)}/reopen-close/`, { reason }),
   dailyReport: (from: string, to: string) => api.get<DailyReport>(`/api/reports/daily/?from=${from}&to=${to}`),
+
+  photos: (date: string) => api.get<DayPhotos>(`${day(date)}/photos/`),
+  /** multipart: file (JPEG đã nén ở trình duyệt) + note. */
+  uploadPhoto: (date: string, file: Blob, note: string) => {
+    const form = new FormData();
+    form.append('file', file, 'suat-an.jpg');
+    form.append('note', note);
+    return api.post<MealPhoto>(`${day(date)}/photos/`, form);
+  },
+  deletePhoto: (id: number) => api.delete<{ ok: true }>(`/api/meal-photos/${id}/`),
 };

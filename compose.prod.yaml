@@ -40,6 +40,10 @@ services:
         DB_PASSWORD: ${POSTGRES_PASSWORD}
         DB_HOST: db
         DB_PORT: "5432"
+        MEDIA_ROOT: /app/media
+      # SF73: ảnh suất ăn thực tế; deploy/backup.sh sao lưu cả thư mục này.
+      volumes:
+        - media_data:/app/media
       depends_on:
         db:
           condition: service_healthy
@@ -86,3 +90,4 @@ services:
 
 volumes:
   postgres_data:
+  media_data:

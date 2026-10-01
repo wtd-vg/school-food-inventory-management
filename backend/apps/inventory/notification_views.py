@@ -8,13 +8,14 @@ POST /api/unsubscribe/<token>/              công khai: hủy nhận (token ký 
 
 import smtplib
 
+from django.conf import settings
 from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from . import audit
 from .auth_views import inventory_permission_required
-from .http_input import InputError, error, json_api, method_not_allowed, only_fields, query_date, read_object, req_date
+from .http_input import Conflict, InputError, error, json_api, method_not_allowed, only_fields, query_date, read_object, req_date
 from .mailer import read_unsubscribe_token
 from .menu_services import today
 from .models import ParentContact
@@ -56,6 +57,9 @@ def notifications_test(request):
     if request.method != "POST":
         return method_not_allowed()
     day = _date_from_body(request)
+    if settings.EMAIL_BACKEND.endswith("smtp.EmailBackend") and not (settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD):
+        raise Conflict("Chưa cấu hình tài khoản gửi thư: điền EMAIL_HOST_USER và EMAIL_HOST_PASSWORD (Gmail App Password) "
+                       "vào .env.prod rồi khởi động lại (docs/SECURITY.md).")
     if not request.user.email:
         raise InputError("Tài khoản của bạn chưa có email để nhận thư thử.")
     try:
