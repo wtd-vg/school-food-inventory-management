@@ -1,5 +1,5 @@
 /**
- * Món & công thức (thay RecipePage cũ). Định lượng mỗi suất lưu theo đơn vị kho (kg/lít/cái, 3 chữ số lẻ).
+ * Món & công thức. Định lượng mỗi suất lưu theo đơn vị kho với tối đa 6 chữ số lẻ.
  * Chi phí ước tính/suất = Σ định lượng × giá vốn bình quân hiện tại (chỉ để tham khảo, không phải giá chốt).
  * ?tao=1 thêm món, ?sua=ID sửa. API không có xoá: ngừng dùng bằng is_active.
  */
@@ -29,8 +29,8 @@ import {
   type Column,
 } from '../../components/ui';
 import { mul, normalizeDecimalInput, parseDec, round, sum, toFixed, type Dec } from '../../lib/decimal';
-import { formatMoney, formatNumber, unitLabel } from '../../lib/format';
-import { messageOf } from '../../lib/http';
+import { formatMoney, formatQty, unitLabel } from '../../lib/format';
+import { fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { catalogApi, recipeUnitsFor, type Dish } from '../../services/catalog';
 import { inventoryApi, type Food } from '../../services/inventory';
@@ -43,9 +43,9 @@ export function formatPortion(qty: string, unit: string): string {
   const d = parseDec(qty);
   const u = unit.toLowerCase();
   if (d && (u === 'kg' || u === 'lit') && d.v < 10n ** BigInt(d.s)) {
-    return `${formatNumber(toFixed(mul(d, { v: 1000n, s: 0 }), 0), 0)} ${u === 'kg' ? 'g' : 'ml'}`;
+    return formatQty(toFixed(mul(d, { v: 1000n, s: 0 }), 6), u === 'kg' ? 'g' : 'ml', 6);
   }
-  return `${formatNumber(qty, 3)} ${unitLabel(unit)}`;
+  return formatQty(qty, unit, 6);
 }
 
 function portionCost(dish: Dish, foods: Map<number, Food>): { value: string; complete: boolean } {
@@ -104,7 +104,7 @@ export function DishesPage() {
       wrap: true,
       cell: (d) => (
         <span className={styles.components}>
-          {d.components.map((c) => `${foodById.get(c.food_id)?.name ?? `#${c.food_id}`} ${formatPortion(c.quantity, c.food_unit)}`).join(' · ')}
+          {d.components.map((c) => `${c.food_name || foodById.get(c.food_id)?.name || `#${c.food_id}`} ${formatPortion(c.quantity, c.food_unit)}`).join(' · ')}
         </span>
       ),
     },
@@ -222,9 +222,9 @@ function initialLines(dish: Dish | null, foods: Map<number, Food>): Line[] {
     // Hiển thị lại theo g/ml khi dưới 1 kg/lít cho dễ đọc.
     const d = parseDec(c.quantity);
     if (d && (u === 'kg' || u === 'lit') && d.v < 10n ** BigInt(d.s)) {
-      return { key: seq++, foodId: String(c.food_id), quantity: toFixed(mul(d, { v: 1000n, s: 0 }), 0), unit: u === 'kg' ? 'g' : 'ml' };
+      return { key: seq++, foodId: String(c.food_id), quantity: toFixed(mul(d, { v: 1000n, s: 0 }), 6), unit: u === 'kg' ? 'g' : 'ml' };
     }
-    return { key: seq++, foodId: String(c.food_id), quantity: formatNumber(c.quantity, 3).replace(/\./g, ''), unit: u };
+    return { key: seq++, foodId: String(c.food_id), quantity: c.quantity, unit: u };
   });
 }
 
@@ -235,7 +235,7 @@ function DishForm({ dish, foods, onClose, onSaved }: { dish: Dish | null; foods:
   const [name, setName] = useState(dish?.name ?? '');
   const [active, setActive] = useState(dish?.is_active ?? true);
   const [lines, setLines] = useState<Line[]>(() => initialLines(dish, foodById));
-  const [errors, setErrors] = useState<{ code?: string; name?: string; lines: Record<number, { food?: string; quantity?: string }> }>({ lines: {} });
+  const [errors, setErrors] = useState<{ code?: string; name?: string; lines: Record<number, { food?: string; quantity?: string; unit?: string }> }>({ lines: {} });
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -253,10 +253,8 @@ function DishForm({ dish, foods, onClose, onSaved }: { dish: Dish | null; foods:
     for (const l of lines) {
       const le: { food?: string; quantity?: string } = {};
       if (!l.foodId) le.food = 'Hãy chọn nguyên liệu.';
-      // g/ml lưu về kg/lít với 3 chữ số lẻ: chỉ nhận số nguyên để không mất định lượng.
-      const small = l.unit === 'g' || l.unit === 'ml';
-      const q = normalizeDecimalInput(l.quantity, { maxDp: small ? 0 : 3, maxIntDigits: small ? 11 : 8, positive: true, label: 'Định lượng' });
-      if (!q.ok) le.quantity = small && q.error.includes('chữ số sau dấu phẩy') ? `Nhập số nguyên ${l.unit} (ví dụ 60).` : q.error;
+      const q = normalizeDecimalInput(l.quantity, { maxDp: 6, maxIntDigits: 11, positive: true, label: 'Định lượng' });
+      if (!q.ok) le.quantity = q.error;
       if (Object.keys(le).length) next.lines[l.key] = le;
       else if (q.ok) components.push({ food_id: Number(l.foodId), quantity: q.value, unit: l.unit });
     }
@@ -273,6 +271,10 @@ function DishForm({ dish, foods, onClose, onSaved }: { dish: Dish | null; foods:
       onSaved();
     } catch (err) {
       setFormError(messageOf(err));
+      const fields = fieldsOf(err);
+      setErrors({ code: fields.code, name: fields.name, lines: Object.fromEntries(lines.map((line, i) => [line.key, {
+        food: fields[`components[${i}].food_id`], quantity: fields[`components[${i}].quantity`], unit: fields[`components[${i}].unit`],
+      }])) });
     } finally {
       setBusy(false);
     }
@@ -353,7 +355,7 @@ function DishForm({ dish, foods, onClose, onSaved }: { dish: Dish | null; foods:
                     ))}
                   </SelectField>
                   <TextField label="Định lượng" numeric value={l.quantity} onChange={(e) => update(l.key, { quantity: e.target.value })} error={err.quantity} required placeholder="0" />
-                  <SelectField label="Đơn vị" value={l.unit} onChange={(e) => update(l.key, { unit: e.target.value })} disabled={units.length < 2}>
+                  <SelectField label="Đơn vị" value={l.unit} error={err.unit} onChange={(e) => update(l.key, { unit: e.target.value })} disabled={units.length < 2}>
                     {units.map((u) => (
                       <option key={u.value} value={u.value}>
                         {u.label}

@@ -46,8 +46,8 @@ export function unitLabel(unit: string | null | undefined): string {
 }
 
 /** Khối lượng: "338.800", "kg" → "338,8 kg". */
-export function formatQty(value: string | null | undefined, unit?: string | null): string {
-  const n = formatNumber(value, 3);
+export function formatQty(value: string | null | undefined, unit?: string | null, maxDp = 3): string {
+  const n = formatNumber(value, maxDp);
   if (n === '—') return n;
   const u = unitLabel(unit);
   return u ? `${n} ${u}` : n;
