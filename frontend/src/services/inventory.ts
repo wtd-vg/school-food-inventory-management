@@ -53,6 +53,8 @@ export type ReceiptLine = {
   quantity: string;
   unit_price: string;
   line_total?: string;
+  /** G2: dòng nhận theo đơn đặt. */
+  po_line_id?: number | null;
 };
 
 export type Receipt = {
@@ -83,6 +85,8 @@ export type Issue = {
   note: string;
   status: DocStatus;
   posted_at?: string | null;
+  /** G2: phiếu xuất cho bếp theo ngày ăn (dùng phần đã giữ của chính ngày đó). */
+  lunch_date?: string | null;
   total_value: string;
   lines: IssueLine[];
 };

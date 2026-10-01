@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { IconBowl, IconBox, IconChart, IconClipboardList, IconLock, IconTruck, IconUsers, type IconProps } from '../icons';
+import { IconBowl, IconBox, IconChart, IconClipboardList, IconLock, IconSun, IconTruck, IconUsers, type IconProps } from '../icons';
 
 export type NavItem = {
   to: string;
@@ -13,6 +13,7 @@ export type NavItem = {
 
 /** Điều hướng chính (gom theo công việc, đã duyệt 01/10/2026). */
 export const NAV_ITEMS: NavItem[] = [
+  { to: '/bua-trua', label: 'Bữa trưa', short: 'Bữa trưa', icon: IconSun },
   { to: '/kho', label: 'Kho hàng', short: 'Kho', icon: IconBox },
   { to: '/mon-an', label: 'Món & công thức', short: 'Món ăn', icon: IconBowl },
   { to: '/lop-hoc', label: 'Lớp học', short: 'Lớp', icon: IconUsers },
