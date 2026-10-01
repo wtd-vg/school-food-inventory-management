@@ -1,3 +1,30 @@
+# Hướng dẫn hiện hành — 29/09/2026
+
+Đọc [README](../../README.md) để biết chức năng hiện có, [CLAUDE.md](../../CLAUDE.md) để làm việc với AI, [plan_final.md](../../plan_final.md) cho kế hoạch và lỗi mở và [architecture.md](../../architecture.md) để tra quyết định kỹ thuật. [Kế hoạch G2](GiaiDoan2_KeHoach.md) và thẻ SF43–SF72 là phần mở rộng bữa trưa đã được duyệt để cập nhật tài liệu.
+
+## Cách dùng bộ tài liệu
+
+1. Leader kiểm tra nền kho G2.0 và mở task phù hợp; G2.1/2 có thể làm trước nền kho hoàn chỉnh.
+2. Owner đọc thẻ task và code, trình kế hoạch, được duyệt rồi triển khai trên nhánh riêng.
+3. Backend chốt JSON và lỗi trước khi FE nối; hai bên dùng cùng fixture kiểm thử.
+4. Owner tự test, reviewer kiểm tra độc lập, TV6 nghiệm thu toàn luồng.
+5. Excel là nơi cập nhật trạng thái, review, bằng chứng và trở ngại. Chỉ tính xong khi đủ cả điều kiện phụ thuộc và gate.
+
+## Thuật ngữ G2
+
+- Sĩ số: quy mô lớp. Suất dự kiến dùng mua trước; suất thực tế dùng xuất/đối chiếu. Chưa nhập khác 0.
+- Công thức: nguyên liệu trước sơ chế cho một suất. Thực đơn: các món trưa của một ngày.
+- Phân bổ: giữ một phần nguồn hàng cho một kế hoạch, không thay quantity kho.
+- Hàng đang chờ: phần đơn chưa nhận, được phân bổ và giao kịp; nhận hàng phải chuyển nguồn để tránh tính đôi.
+- Snapshot/version: giữ dữ liệu lúc chốt và phát hiện người khác đã sửa, không ghi đè lịch sử.
+- Ledger: sổ giao dịch tồn; cần thống nhất nguồn hiện đang tách đôi trước khi G2 dùng kho.
+
+Ví dụ: 300 suất × 70 g = 21 kg. Dự phòng 1, tồn phân bổ 5, hàng chờ 4 → mua 13 kg. Các quy tắc đầy đủ nằm trong architecture.md, không nhân bản sửa ở nhiều nơi.
+
+## Tài liệu nền SF01–SF42 giữ để tham chiếu
+
+Phần dưới được soạn cho skeleton ngày 19/09/2026. Các câu “chưa có auth” hoặc “chỉ có hello” là bối cảnh lịch sử, không mô tả trạng thái hiện tại. Khi mâu thuẫn, dùng README/architecture hiện hành và nêu rõ phần cần cập nhật; không làm lại tính năng chỉ vì tài liệu cũ nói chưa có.
+
 # SchoolFood hướng dẫn làm dự án
 
 Dành cho TV1 leader và 5 thành viên  |  Bản làm việc ngày 19/09/2026
@@ -253,7 +280,7 @@ Mỗi người 5–10 phút: mở task, chạy chức năng, giải thích đo�
 
 File 1 là hướng dẫn chung này. File 2 SchoolFood_HuongDan_Task.md chứa thẻ SF01–SF42; Ctrl+F mã task để tìm. File 3 SchoolFood_Checklist_6_ThanhVien.xlsx có Team, Cong viec, Nghiem thu. Sheet Team điền tên và xem tổng; Cong viec lọc theo TV; Nghiem thu ghi actual và bằng chứng. Ô vàng là phần cập nhật, cột được tính xong là công thức. Tỷ lệ theo số task không đại diện số giờ hoặc độ khó.
 
-Bộ này thay hướng dẫn phân công cũ 5 người trong outputs/project-foundation-update. Giữ bản cũ để tham khảo, không dùng hai checklist song song. README hướng dẫn chạy, architecture.md ghi quyết định kỹ thuật, task_on_progress.md ghi trạng thái hiện tại; chỉ sửa đúng nơi khi có thay đổi.
+Bộ này thay hướng dẫn phân công cũ 5 người trong outputs/project-foundation-update. Giữ bản cũ để tham khảo, không dùng hai checklist song song. README hướng dẫn chạy, architecture.md ghi quyết định kỹ thuật, plan_final.md ghi kế hoạch, trạng thái và lỗi mở; chỉ sửa đúng nơi khi có thay đổi.
 
 ### Nguồn kỹ thuật tra cứu khi cần
 

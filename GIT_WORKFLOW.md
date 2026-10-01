@@ -1,3 +1,5 @@
+> Cập nhật 29/09/2026: trước thay đổi, kiểm tra Git và đọc [CLAUDE.md](CLAUDE.md) và [plan_final.md](plan_final.md). Khảo sát → trình kế hoạch → chủ dự án duyệt → thực hiện → kiểm tra → review. Quyền đã duyệt giữ nguyên trong phạm vi; không hỏi lại từng thao tác. Các lệnh commit/push bên dưới là hướng dẫn khi có yêu cầu tương ứng, không phải lệnh tự động thực thi.
+
 # Quy chuẩn Git & Quy trình làm việc nhóm (Team Git Workflow)
 
 > **Dành cho:** TV1 (Leader) và các thành viên (TV2 – TV6) dự án **School Food Inventory Management**.  
@@ -55,7 +57,7 @@ Mỗi khi bạn bắt đầu một task mới (ví dụ: làm **SF14**):
 Trước khi tạo nhánh mới, luôn đảm bảo bạn xuất phát từ code mới nhất của cả nhóm:
 ```powershell
 git switch dev1
-git pull origin dev1
+git pull --ff-only origin dev1
 ```
 
 ### Bước 2: Tạo nhánh riêng cho task
@@ -135,7 +137,7 @@ git merge origin/dev1
 * Chọn **Accept Current Change** hoặc **Accept Incoming Change** (thảo luận với đồng đội nếu không chắc code của ai đúng).
 * Sau khi sửa hết xung đột:
 ```powershell
-git add .
+git add <cac-file-da-giai-quyet-va-kiem-tra>
 git commit -m "fix: resolve conflict with dev1"
 git push origin feat/SF14-food-supplier-crud
 ```
@@ -159,3 +161,13 @@ Remove-Item -Path "git", "son" -Force -ErrorAction SilentlyContinue
 - [ ] Code backend đã chạy thử `python manage.py test` không bị lỗi cú pháp / 500.
 - [ ] Code frontend đã chạy thử `npm run build` không bị lỗi TypeScript.
 - [ ] Nhánh đích của PR trên GitHub đã chọn đúng là **`dev1`**.
+
+## Giai đoạn 2 và bàn giao AI
+
+- SF43–SF72 dùng nhánh `feat/SFxx-ten-ngan`, PR về dev1; tài liệu dùng nhánh `docs/ten-ngan`. Không sửa trực tiếp dev1/main.
+- Trước đổi nhánh/pull: kiểm tra working tree; không reset/stash/ghi đè công việc người khác tự tiện. Mỗi task nêu owner/reviewer và phạm vi file chung.
+- Không sửa migration đã merge. Model/migration do TV1 điều phối, urls.py TV4, App.tsx TV3.
+- Kế hoạch đã duyệt phải ghi scope, đầu ra và cách thử. Có phát sinh lớn thì trình phần bổ sung.
+- PR phải có expected/actual, lệnh test và exit code, ảnh cho thay đổi UI, giới hạn chưa kiểm chứng. Đừng chỉ ghi “đã test”.
+- Log không có mật khẩu/token/.env. Không dùng git add .; stage từng file đã xem diff. Trong ví dụ conflict, thay placeholder bằng tên file thực tế.
+- Người review chỉ đánh dấu đạt sau khi kiểm tra; TV1 quyết định merge. Không sửa checklist thành hoàn tất chỉ vì push thành công.
