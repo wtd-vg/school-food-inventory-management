@@ -127,9 +127,6 @@ function SelectFoods({ onCreated }: { onCreated: (st: Stocktake) => void }) {
 
   return (
     <Stack gap="lg">
-      <Lead>
-        Chọn mặt hàng cần đếm. Hệ thống chụp lại tồn sổ sách tại thời điểm tạo phiếu; khi chốt, chênh lệch được ghi vào sổ kho.
-      </Lead>
       {error ? (
         <Callout tone="danger" role="alert">
           {error}

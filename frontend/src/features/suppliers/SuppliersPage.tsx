@@ -69,8 +69,8 @@ export function SuppliersPage() {
   return (
     <>
       <PageHeader
-        overline={query.data ? `${activeCount} nhà cung cấp đang hợp tác` : undefined}
         title="Nhà cung cấp"
+        subtitle={query.data ? `${activeCount} nhà cung cấp đang hợp tác` : undefined}
         actions={
           <>
             <SearchField value={search} onValueChange={setSearch} placeholder="Tìm nhà cung cấp…" />
@@ -86,9 +86,7 @@ export function SuppliersPage() {
       ) : query.error ? (
         <ErrorState message={query.error} onRetry={query.reload} />
       ) : suppliers.length === 0 ? (
-        <EmptyState icon={<IconTruck size={32} />} title="Chưa có nhà cung cấp nào">
-          Thêm nhà cung cấp để lập phiếu nhập hàng.
-        </EmptyState>
+        <EmptyState icon={<IconTruck size={32} />} title="Chưa có nhà cung cấp nào" />
       ) : (
         <div className={`${styles.layout} ${id ? styles.hasDetail : ''}`}>
           <nav className={styles.list} aria-label="Danh sách nhà cung cấp">

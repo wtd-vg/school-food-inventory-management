@@ -198,9 +198,7 @@ export function MenusPage() {
         ) : versions.error ? (
           <ErrorState message={versions.error} onRetry={versions.reload} />
         ) : !versions.data?.length ? (
-          <EmptyState title="Chưa lập thực đơn cố định" action={editButton}>
-            Lập thực đơn cho Thứ Hai đến Thứ Sáu; thực đơn lặp lại mỗi tuần.
-          </EmptyState>
+          <EmptyState title="Chưa lập thực đơn cố định" action={editButton} />
         ) : (
           <DataTable caption="Lịch sử thực đơn cố định" rows={versions.data} rowKey={(v) => v.id} columns={versionColumns} minWidth="720px" />
         )}
@@ -209,7 +207,6 @@ export function MenusPage() {
           <SectionTitle>Ngày nghỉ</SectionTitle>
           {holidayButton}
         </div>
-        <p className={s.muted}>Thứ Bảy và Chủ nhật luôn nghỉ. Ngày lễ, nghỉ bù thêm ở đây; ngày nghỉ không gửi thư thực đơn.</p>
         {holidays.loading ? (
           <Skeleton rows={2} />
         ) : holidays.error ? (
@@ -444,7 +441,7 @@ function MenuForm({
             required
           />
           {!available.length ? (
-            <EmptyState title="Chưa có món đang dùng có công thức">Thêm món và công thức ở tab Món & công thức trước.</EmptyState>
+            <EmptyState title="Chưa có món đang dùng có công thức" />
           ) : (
             WEEKDAY_LABELS.map((label, i) => {
               const key = String(i);

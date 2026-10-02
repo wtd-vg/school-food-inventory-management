@@ -81,7 +81,6 @@ export function KitchenIssuePage() {
     <>
       <PageHeader
         title="Xuất bếp"
-        description="Xuất nguyên liệu cho bếp theo nhu cầu đã duyệt của ngày ăn; dùng đúng phần hàng đã giữ cho ngày đó."
         actions={
           <Button write icon={<IconArrowOut size={18} />} busy={busy === 'create'} disabled={busy !== null || closed || Boolean(draft)} onClick={create}>
             Tạo phiếu xuất theo nhu cầu còn thiếu
@@ -137,9 +136,6 @@ export function KitchenIssuePage() {
                 ]}
               />
             )}
-            {remaining && !draft && !closed ? (
-              <p className={s.muted}>Còn nguyên liệu chưa xuất đủ: tạo phiếu xuất theo phần còn thiếu (đã gồm dự phòng).</p>
-            ) : null}
 
             <SectionTitle>Phiếu xuất của ngày</SectionTitle>
             {!dayIssues.length ? (

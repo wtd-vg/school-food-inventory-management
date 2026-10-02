@@ -210,15 +210,7 @@
   min-width: 0;
 }
 
-.overline {
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--accent-ink);
-}
-
-/* SF78: tiêu đề trang dùng font hiển thị (Baloo 2) như trang đăng nhập. */
+/* SF78: tiêu đề = tên khu; dòng phụ = ngữ cảnh ngắn (ngày, tháng, số lượng). */
 .title {
   font-family: var(--font-display);
   font-size: 34px;
@@ -227,15 +219,10 @@
   letter-spacing: -.005em;
 }
 
-.description {
-  margin-top: 6px;
-  font-size: 15px;
+.subtitle {
+  font-size: 16px;
+  font-weight: 500;
   color: var(--muted);
-}
-
-.description strong {
-  color: var(--ink);
-  font-weight: 700;
 }
 
 .actions {
@@ -397,123 +384,6 @@
   box-shadow: none;
 }
 
-/* ---------- StatTile: ô số liệu (SF78) ---------- */
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-  padding: 16px 18px 18px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-panel);
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
-}
-
-.stat:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card-hover);
-}
-
-.statHead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.statIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  flex: none;
-  border-radius: 10px;
-  background: var(--surface-sunken);
-  color: var(--ink-soft);
-}
-
-.statValue {
-  font-family: var(--font-display);
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.statValueMuted {
-  color: var(--pending);
-}
-
-.statHint {
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.stat-accent .statIcon {
-  background: var(--accent-soft);
-  color: var(--accent-ink);
-}
-
-.stat-ok .statIcon {
-  background: var(--ok-bg);
-  color: var(--ok);
-}
-
-.stat-warn .statIcon {
-  background: var(--warn-bg);
-  color: var(--warn);
-}
-
-.stat-info .statIcon {
-  background: var(--info-bg);
-  color: var(--info);
-}
-
-.statGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-}
-
-/* Ô số liệu hiện lên lần lượt khi tải (SF78 PR3). */
-.statGrid > * {
-  animation: statIn var(--dur-slow) var(--ease-out) both;
-}
-
-.statGrid > :nth-child(2) { animation-delay: 50ms; }
-.statGrid > :nth-child(3) { animation-delay: 100ms; }
-.statGrid > :nth-child(4) { animation-delay: 150ms; }
-
-@keyframes statIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .statGrid > * {
-    animation: none;
-  }
-}
-
-@media (max-width: 1023px) {
-  .statGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .statValue {
-    font-size: 24px;
-  }
-}
 
 .devTag {
   align-self: flex-start;

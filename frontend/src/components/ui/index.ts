@@ -12,8 +12,6 @@ export {
   Toolbar,
   Stack,
   Panel,
-  StatTile,
-  StatGrid,
   KeyValueList,
   Pagination,
   Skeleton,

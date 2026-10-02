@@ -87,7 +87,6 @@ export function OrdersPage() {
     <>
       <PageHeader
         title="Đơn đặt hàng"
-        description="Đơn gửi nhà cung cấp: tạo từ đề xuất của ngày ăn hoặc tạo tay; duyệt, gửi, rồi nhận hàng theo đơn."
         actions={createButton}
       />
       <LunchTabs />
@@ -107,9 +106,7 @@ export function OrdersPage() {
         ) : q.error ? (
           <ErrorState message={q.error} onRetry={q.reload} />
         ) : !rows.length ? (
-          <EmptyState title={filter === 'all' ? 'Chưa có đơn đặt' : 'Không có đơn ở trạng thái này'} action={createButton}>
-            Đơn từ đề xuất tạo ở màn Nhu cầu & đề xuất.
-          </EmptyState>
+          <EmptyState title={filter === 'all' ? 'Chưa có đơn đặt' : 'Không có đơn ở trạng thái này'} action={createButton} />
         ) : (
           <DataTable caption="Danh sách đơn đặt" rows={rows} rowKey={(o) => o.id} columns={columns} minWidth="860px" />
         )}

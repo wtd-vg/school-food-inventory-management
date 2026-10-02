@@ -129,7 +129,6 @@ export function UsersPage() {
     <>
       <PageHeader
         title="Tài khoản"
-        description="Quản lý tài khoản Quản lý và Hiệu trưởng. Không có tài khoản phụ huynh."
         actions={addButton}
       />
       {q.loading ? (

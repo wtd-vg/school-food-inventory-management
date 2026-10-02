@@ -183,12 +183,9 @@ export function DishesPage() {
               <Button write icon={<IconPlus size={18} />} onClick={() => updateParams({ tao: '1' })}>
                 Thêm món
               </Button>
-            }
-          >
-            Mỗi món gồm các nguyên liệu và định lượng cho một suất.
-          </EmptyState>
+            } />
         ) : filtered.length === 0 ? (
-          <EmptyState title="Không có món phù hợp">Thử đổi bộ lọc hoặc từ khoá.</EmptyState>
+          <EmptyState title="Không có món phù hợp" />
         ) : (
           <DataTable caption="Danh sách món ăn" rows={filtered} rowKey={(d) => d.id} columns={columns} minWidth="820px" />
         )}

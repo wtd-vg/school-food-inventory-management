@@ -158,12 +158,9 @@ export function StockPage() {
             <Button write onClick={() => navigate('/kho/danh-muc?tab=mat-hang&tao=1')}>
               Thêm mặt hàng
             </Button>
-          }
-        >
-          Tạo danh mục và mặt hàng trước, rồi nhập hàng để có tồn kho.
-        </EmptyState>
+          } />
       ) : filtered.length === 0 ? (
-        <EmptyState title="Không có mặt hàng phù hợp">Thử bỏ bớt bộ lọc hoặc đổi từ khoá tìm kiếm.</EmptyState>
+        <EmptyState title="Không có mặt hàng phù hợp" />
       ) : (
         <>
           <DataTable caption="Tồn kho theo mặt hàng" rows={visible} rowKey={(r) => r.id} columns={columns} minWidth="820px" />
@@ -226,9 +223,7 @@ function FoodDrawer({ row, onClose }: { row: Row; onClose: () => void }) {
         ) : history.error ? (
           <ErrorState message={history.error} onRetry={history.reload} />
         ) : txs.length === 0 ? (
-          <EmptyState icon={<IconBox size={28} />} title="Chưa có giao dịch">
-            Tồn sẽ thay đổi khi chốt phiếu nhập, phiếu xuất hoặc kiểm kê.
-          </EmptyState>
+          <EmptyState icon={<IconBox size={28} />} title="Chưa có giao dịch" />
         ) : (
           <ol className={styles.txList}>
             {txs.map((tx) => {

@@ -72,7 +72,6 @@ export function NotificationsPage() {
     <>
       <PageHeader
         title="Thư thực đơn"
-        description="Quản lý bấm gửi sau khi tải ảnh suất ăn: mỗi email phụ huynh nhận một thư/ngày gồm thực đơn và ảnh (gộp các bé)."
         actions={
           <>
             <Button write variant="secondary" icon={<IconSend size={18} />} busy={busy === 'test'} disabled={isFuture || busy !== null} onClick={sendTest}>
@@ -142,15 +141,18 @@ export function NotificationsPage() {
             {data.results.length ? (
               <DataTable caption={`Thư thực đơn ngày ${formatDate(data.date)}`} rows={data.results} rowKey={(r) => r.id} columns={columns} minWidth="720px" />
             ) : (
-              <EmptyState title={data.summary ? 'Không có thư nào trong ngày này' : 'Chưa gửi thư cho ngày này'}>
-                {data.summary?.status === 'skipped'
-                  ? 'Ngày nghỉ hoặc chưa có thực đơn nên không gửi.'
-                  : 'Bấm "Gửi thư cho phụ huynh" để xem trước và gửi cho phụ huynh đã đồng ý, chưa huỷ nhận.'}
-              </EmptyState>
+              <EmptyState
+                title={
+                  data.summary?.status === 'skipped'
+                    ? 'Ngày nghỉ hoặc chưa có thực đơn, không gửi thư'
+                    : data.summary
+                      ? 'Không có thư nào trong ngày này'
+                      : 'Chưa gửi thư cho ngày này'
+                }
+              />
             )}
           </>
         ) : null}
-        <p className={s.muted}>Phụ huynh huỷ nhận bằng liên kết trong thư; email đã huỷ không được gửi nữa.</p>
       </Stack>
 
       {sending ? (

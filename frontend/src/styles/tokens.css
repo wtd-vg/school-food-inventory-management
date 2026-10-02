@@ -115,6 +115,15 @@
   --cat-dairy-bg: #DDEAF8;
   --cat-dairy-ink: #2C5A8E;
 
+  /* chuỗi màu biểu đồ phân loại (vòng suất ăn theo lớp…), màu phẳng */
+  --series-1: #E2683C;
+  --series-2: #3B6FA8;
+  --series-3: #5E7F2E;
+  --series-4: #C99A2E;
+  --series-5: #8C3B1E;
+  --series-6: #7A5BB5;
+  --series-7: #9C8E80;
+
   /* chuyển động */
   --dur-fast: 140ms;
   --dur-base: 220ms;

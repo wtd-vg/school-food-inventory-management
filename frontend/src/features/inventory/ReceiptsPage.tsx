@@ -151,12 +151,9 @@ export function ReceiptsPage() {
             <Button write icon={<IconArrowIn size={18} />} onClick={() => setCreateParam('1')}>
               Tạo phiếu nhập
             </Button>
-          }
-        >
-          Phiếu nhập ghi lại hàng về và cập nhật giá vốn khi chốt.
-        </EmptyState>
+          } />
       ) : filtered.length === 0 ? (
-        <EmptyState title="Không có phiếu phù hợp">Thử đổi bộ lọc hoặc từ khoá.</EmptyState>
+        <EmptyState title="Không có phiếu phù hợp" />
       ) : (
         <>
           <DataTable caption="Danh sách phiếu nhập" rows={visible} rowKey={(r) => r.id} columns={columns} minWidth="760px" />

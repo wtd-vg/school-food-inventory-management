@@ -129,12 +129,9 @@ export function ClassesPage() {
               <Button write icon={<IconPlus size={18} />} onClick={() => updateParams({ tao: '1' })}>
                 Thêm lớp
               </Button>
-            }
-          >
-            Thêm lớp và sĩ số để nhập suất ăn hằng ngày.
-          </EmptyState>
+            } />
         ) : filtered.length === 0 ? (
-          <EmptyState title="Không có lớp phù hợp">Thử đổi bộ lọc hoặc từ khoá.</EmptyState>
+          <EmptyState title="Không có lớp phù hợp" />
         ) : (
           <DataTable caption="Danh sách lớp học" rows={filtered} rowKey={(c) => c.id} columns={columns} minWidth="560px" />
         )}

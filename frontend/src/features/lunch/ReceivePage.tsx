@@ -48,7 +48,6 @@ export function ReceivePage() {
     <>
       <PageHeader
         title="Nhận hàng theo đơn"
-        description="Chọn đơn đã gửi nhà cung cấp, nhập lượng thực nhận và đơn giá → phiếu nhập nháp → chốt để cộng vào tồn."
       />
       <LunchTabs />
       <Stack gap="lg">
@@ -73,9 +72,10 @@ export function ReceivePage() {
         )}
 
         {!orderId ? (
-          <EmptyState title="Chọn một đơn để nhận hàng">
-            Đơn phải ở trạng thái Đã gửi NCC. <Link to="/bua-trua/don-dat?trang-thai=approved">Xem đơn đã duyệt chưa gửi</Link>
-          </EmptyState>
+          <EmptyState
+            title="Chọn một đơn để nhận hàng"
+            action={<Link to="/bua-trua/don-dat?trang-thai=approved">Xem đơn đã duyệt chưa gửi</Link>}
+          />
         ) : order.loading || (order.data && order.data.id !== orderId && !order.error) ? (
           <Skeleton />
         ) : order.error ? (

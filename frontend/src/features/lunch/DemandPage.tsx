@@ -142,7 +142,6 @@ export function DemandPage() {
     <>
       <PageHeader
         title="Nhu cầu & đề xuất"
-        description="Tính nguyên liệu cần cho ngày ăn từ số suất dự kiến đã chốt và thực đơn; duyệt để giữ hàng và biết phải mua bao nhiêu."
         actions={
           <>
             <Button
@@ -219,12 +218,6 @@ export function DemandPage() {
                     },
                   ]}
                 />
-                {current.status === 'draft' ? (
-                  <p className={s.muted}>
-                    Bản tính chưa duyệt chưa giữ hàng. "Tồn giữ được" và "Đang chờ về" là số ước tính lúc này; khi duyệt, hệ thống chia lại và
-                    giữ hàng.
-                  </p>
-                ) : null}
                 <DataTable caption={`Nhu cầu ngày ${formatDate(date)}`} rows={current.lines} rowKey={(l) => l.id} columns={lineColumns} minWidth="720px" />
                 {approved ? (
                   needsBuying ? (
@@ -259,10 +252,7 @@ export function DemandPage() {
                   <Button write busy={busy === 'calc'} onClick={() => void calculate([])}>
                     Tính nhu cầu
                   </Button>
-                }
-              >
-                Có thể thêm dự phòng (kèm lý do) khi tính lại.
-              </EmptyState>
+                } />
             ) : null}
 
             {data.revisions.length ? (

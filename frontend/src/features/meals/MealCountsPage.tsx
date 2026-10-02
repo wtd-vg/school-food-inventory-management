@@ -227,7 +227,7 @@ export function MealCountsPage() {
 
   return (
     <>
-      <PageHeader title="Số suất" description="Số suất ăn trưa theo lớp: dự kiến (để tính nguyên liệu) và thực tế (để tính chi phí/suất)." />
+      <PageHeader title="Số suất" />
       <ClassTabs />
       <Stack gap="lg">
         <Toolbar>
@@ -256,10 +256,7 @@ export function MealCountsPage() {
               <Button write busy={busy === 'open'} onClick={openDay}>
                 Mở ngày
               </Button>
-            }
-          >
-            Mở ngày để chụp sĩ số các lớp đang học và bắt đầu nhập số suất.
-          </EmptyState>
+            } />
         ) : (
           <>
             <div className={styles.summary}>
@@ -286,7 +283,7 @@ export function MealCountsPage() {
             {day.lines.length ? (
               <DataTable caption={`Số suất ngày ${formatDate(day.date)}`} rows={day.lines} rowKey={(l) => l.class_id} columns={columns} minWidth="560px" />
             ) : (
-              <EmptyState title="Ngày này không có lớp nào">Lớp mở sau khi mở ngày không có trong danh sách của ngày.</EmptyState>
+              <EmptyState title="Ngày này không có lớp nào" />
             )}
 
             <fieldset className={styles.staff}>
@@ -295,7 +292,6 @@ export function MealCountsPage() {
               {cellInput(STAFF_KEY, 'actual', 'Thực tế', STAFF_MAX)}
             </fieldset>
 
-            <p className={s.muted}>Ô trống nghĩa là chưa nhập, khác với 0 suất. Phải nhập đủ mọi lớp mới chốt được.</p>
 
             <div className={styles.actions}>
               <Button write busy={busy === 'save'} disabled={!dirty || busy !== null} onClick={save}>

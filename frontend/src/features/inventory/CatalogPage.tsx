@@ -163,9 +163,9 @@ function FoodsSection({ foods, categories, onChanged }: { foods: Food[]; categor
         <Callout tone="warn">Cần tạo ít nhất một danh mục đang dùng trước khi thêm mặt hàng.</Callout>
       ) : null}
       {foods.length === 0 ? (
-        <EmptyState title="Chưa có mặt hàng nào">Thêm mặt hàng để bắt đầu nhập kho.</EmptyState>
+        <EmptyState title="Chưa có mặt hàng nào" />
       ) : filtered.length === 0 ? (
-        <EmptyState title="Không có mặt hàng phù hợp">Thử đổi bộ lọc hoặc từ khoá.</EmptyState>
+        <EmptyState title="Không có mặt hàng phù hợp" />
       ) : (
         <>
           <DataTable caption="Danh sách mặt hàng" rows={visible} rowKey={(f) => f.id} columns={columns} minWidth="720px" />
@@ -324,7 +324,7 @@ function CategoriesSection({ categories, foods, onChanged }: { categories: Categ
         </Button>
       </Toolbar>
       {categories.length === 0 ? (
-        <EmptyState title="Chưa có danh mục nào">Danh mục giúp nhóm mặt hàng, ví dụ Rau củ quả, Thịt cá trứng, Đồ khô.</EmptyState>
+        <EmptyState title="Chưa có danh mục nào" />
       ) : (
         <DataTable caption="Danh sách danh mục" rows={sorted} rowKey={(c) => c.id} columns={columns} minWidth="560px" />
       )}

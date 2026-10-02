@@ -151,12 +151,9 @@ export function IssuesPage() {
             <Button write icon={<IconArrowOut size={18} />} onClick={() => setCreateParam('1')}>
               Tạo phiếu xuất
             </Button>
-          }
-        >
-          Phiếu xuất ghi lại hàng giao cho bếp và trừ tồn khi chốt.
-        </EmptyState>
+          } />
       ) : filtered.length === 0 ? (
-        <EmptyState title="Không có phiếu phù hợp">Thử đổi bộ lọc hoặc từ khoá.</EmptyState>
+        <EmptyState title="Không có phiếu phù hợp" />
       ) : (
         <>
           <DataTable caption="Danh sách phiếu xuất" rows={visible} rowKey={(r) => r.id} columns={columns} minWidth="720px" />

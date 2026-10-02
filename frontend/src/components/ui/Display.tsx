@@ -90,24 +90,21 @@ export function Callout({
   );
 }
 
-/* ---------- PageHeader ---------- */
+/* ---------- PageHeader: tên khu (chính) + một dòng ngữ cảnh ngắn (phụ). Không có dòng mô tả/hướng dẫn (SF78). */
 export function PageHeader({
-  overline,
   title,
-  description,
+  subtitle,
   actions,
 }: {
-  overline?: ReactNode;
   title: ReactNode;
-  description?: ReactNode;
+  subtitle?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
     <header className={styles.header}>
       <div className={styles.headerText}>
-        {overline ? <p className={`${styles.overline} num`}>{overline}</p> : null}
         <h1 className={styles.title}>{title}</h1>
-        {description ? <p className={`${styles.description} num`}>{description}</p> : null}
+        {subtitle ? <p className={`${styles.subtitle} num`}>{subtitle}</p> : null}
       </div>
       {actions ? <div className={styles.actions}>{actions}</div> : null}
     </header>
@@ -138,47 +135,6 @@ export function SectionTitle({ children, id }: { children: ReactNode; id?: strin
 
 export function Panel({ children, className }: { children: ReactNode; className?: string }) {
   return <section className={[styles.panel, className ?? ''].join(' ')}>{children}</section>;
-}
-
-/* ---------- StatTile: ô số liệu nổi (SF78) — giá trị font hiển thị, icon trong ô màu theo tone ---------- */
-export function StatTile({
-  label,
-  value,
-  hint,
-  icon,
-  tone = 'neutral',
-  muted,
-}: {
-  label: ReactNode;
-  value: ReactNode;
-  hint?: ReactNode;
-  icon?: ReactNode;
-  tone?: 'neutral' | 'accent' | 'ok' | 'warn' | 'info';
-  /** Giá trị chưa có (vd. "chưa chốt"): chữ nhạt hơn. */
-  muted?: boolean;
-}) {
-  return (
-    <div className={`${styles.stat} ${styles[`stat-${tone}`] ?? ''}`}>
-      <div className={styles.statHead}>
-        {icon ? (
-          <span className={styles.statIcon} aria-hidden="true">
-            {icon}
-          </span>
-        ) : null}
-        <span>{label}</span>
-      </div>
-      <div className={`${styles.statValue} ${muted ? styles.statValueMuted : ''}`}>{value}</div>
-      {hint ? <div className={styles.statHint}>{hint}</div> : null}
-    </div>
-  );
-}
-
-export function StatGrid({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <section className={styles.statGrid} aria-label={label}>
-      {children}
-    </section>
-  );
 }
 
 /* ---------- KeyValueList ---------- */
@@ -241,12 +197,12 @@ export function Skeleton({ rows = 5, label = 'Đang tải dữ liệu' }: { rows
   );
 }
 
-export function EmptyState({ title, children, action, icon }: { title: ReactNode; children?: ReactNode; action?: ReactNode; icon?: ReactNode }) {
+/** Ô trống: icon + tiêu đề + nút hành động. Không có câu hướng dẫn (SF78: ít chữ). */
+export function EmptyState({ title, action, icon }: { title: ReactNode; action?: ReactNode; icon?: ReactNode }) {
   return (
     <div className={styles.empty}>
       <span className={styles.emptyIcon}>{icon ?? <IconBox size={32} />}</span>
       <p className={styles.emptyTitle}>{title}</p>
-      {children ? <p>{children}</p> : null}
       {action}
     </div>
   );

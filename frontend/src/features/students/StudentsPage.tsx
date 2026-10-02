@@ -150,7 +150,6 @@ export function StudentsPage() {
     <>
       <PageHeader
         title="Học sinh"
-        description="Họ tên, lớp và email phụ huynh để gửi thực đơn hằng ngày. Email được mã hoá, chỉ hiện dạng che."
         actions={
           <>
             <Button write variant="secondary" onClick={() => updateParams({ 'nhap-csv': '1' })}>
@@ -195,9 +194,7 @@ export function StudentsPage() {
         ) : q.error ? (
           <ErrorState message={q.error} onRetry={q.reload} />
         ) : !q.data?.length ? (
-          <EmptyState title={classId ? 'Lớp này chưa có học sinh' : 'Chưa có học sinh'} action={addButton}>
-            Thêm từng bé hoặc nhập cả lớp từ file CSV.
-          </EmptyState>
+          <EmptyState title={classId ? 'Lớp này chưa có học sinh' : 'Chưa có học sinh'} action={addButton} />
         ) : !rows.length ? (
           <EmptyState title="Không có học sinh khớp tìm kiếm" />
         ) : (

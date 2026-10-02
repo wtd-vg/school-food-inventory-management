@@ -117,8 +117,8 @@ export function ReportsPage() {
   return (
     <>
       <PageHeader
-        overline={section === 'ton-kho' ? 'Số liệu hiện tại' : range.label}
         title="Báo cáo kho"
+        subtitle={section === 'ton-kho' ? 'Số liệu hiện tại' : range.label}
         actions={
           <>
             {section !== 'ton-kho' ? (
@@ -201,9 +201,7 @@ function DailySection({ report, label }: { report: DailyReport; label: string })
 
   if (!report.days.length) {
     return (
-      <EmptyState title={`Chưa có ngày ăn nào trong ${label.toLowerCase()}`} icon={<IconChart size={28} />}>
-        Ngày ăn xuất hiện ở đây khi đã mở số suất cho ngày đó.
-      </EmptyState>
+      <EmptyState title={`Chưa có ngày ăn nào trong ${label.toLowerCase()}`} icon={<IconChart size={28} />} />
     );
   }
   return (
@@ -300,9 +298,7 @@ function Overview({ txs, stockRows, foodById, label }: { txs: Transaction[]; sto
 
   if (txs.length === 0) {
     return (
-      <EmptyState icon={<IconChart size={32} />} title={`${label} chưa có giao dịch kho`}>
-        Số liệu xuất hiện khi chốt phiếu nhập, phiếu xuất hoặc kiểm kê trong tháng.
-      </EmptyState>
+      <EmptyState icon={<IconChart size={32} />} title={`${label} chưa có giao dịch kho`} />
     );
   }
 
@@ -344,7 +340,6 @@ function Overview({ txs, stockRows, foodById, label }: { txs: Transaction[]; sto
         <section aria-labelledby="daily-title" className={styles.mainCol}>
           <div className={styles.sectionHead}>
             <SectionTitle id="daily-title">Giá trị xuất cho bếp theo ngày</SectionTitle>
-            {daily.length ? <span className={styles.note}>Ghi số ở ngày xuất nhiều nhất · rê chuột hoặc Tab để xem từng ngày</span> : null}
           </div>
           {daily.length ? (
             <BarChart data={daily} caption="Giá trị xuất cho bếp theo ngày" axis={axisMoney} />
@@ -428,9 +423,6 @@ function StockSection({ stockRows }: { stockRows: StockRow[] }) {
       <div className={styles.grid}>
         <div className={styles.mainCol}>
           <DataTable caption="Giá trị tồn theo nhóm hàng" rows={groups} rowKey={(g) => g.name} columns={columns} minWidth="520px" />
-          <p className={styles.note}>
-            Xem từng mặt hàng ở <Link to="/kho">Kho hàng</Link>.
-          </p>
         </div>
         <aside className={styles.sideCol} aria-label="Cơ cấu tồn kho">
           <SectionTitle>Cơ cấu giá trị tồn</SectionTitle>
@@ -528,9 +520,7 @@ function Ledger({ txs, foodById }: { txs: Transaction[]; foodById: Map<number, S
         </div>
       </Toolbar>
       {filtered.length === 0 ? (
-        <EmptyState icon={<IconChart size={32} />} title="Không có giao dịch phù hợp">
-          Đổi tháng hoặc bộ lọc để xem thêm.
-        </EmptyState>
+        <EmptyState icon={<IconChart size={32} />} title="Không có giao dịch phù hợp" />
       ) : (
         <>
           <DataTable caption="Sổ giao dịch kho" rows={visible} rowKey={(t) => t.id} columns={columns} minWidth="860px" />

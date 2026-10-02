@@ -14,9 +14,7 @@ export function RequirePermission({ need, children }: { need: 'users' | 'audit';
   return (
     <>
       <PageHeader title="Không có quyền truy cập" />
-      <EmptyState title="Chỉ Hiệu trưởng được xem trang này" action={<Link to="/kho">Về trang Kho hàng</Link>}>
-        Tài khoản Quản lý làm nghiệp vụ hằng ngày; quản lý tài khoản và xem nhật ký do Hiệu trưởng phụ trách.
-      </EmptyState>
+      <EmptyState title="Chỉ Hiệu trưởng được xem trang này" action={<Link to="/bua-trua">Về trang Hôm nay</Link>} />
     </>
   );
 }

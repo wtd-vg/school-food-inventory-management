@@ -136,7 +136,7 @@ export function AuditPage() {
 
   return (
     <>
-      <PageHeader title="Nhật ký" description="Ai đã làm gì, lúc nào. Nhật ký chỉ thêm, không sửa hay xoá được." />
+      <PageHeader title="Nhật ký" />
       <Stack gap="lg">
         <form onSubmit={applyText}>
           <Toolbar>

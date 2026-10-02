@@ -143,9 +143,7 @@ export function MealPhotos({ date, dayOpen, closed }: { date: string; dayOpen: b
           ))}
         </ul>
       ) : (
-        <EmptyState icon={<IconCamera size={32} />} title="Chưa có ảnh suất ăn">
-          Quản lý chụp khay cơm thực tế khi phát suất để lưu làm bằng chứng.
-        </EmptyState>
+        <EmptyState icon={<IconCamera size={32} />} title="Chưa có ảnh suất ăn" />
       )}
 
       {pending ? (

@@ -1,6 +1,6 @@
 /** Trang /_kit (chỉ bản dev): liệt kê mọi component và trạng thái để review giao diện. */
 import { useState } from 'react';
-import { IconArrowIn, IconCheck, IconChart, IconPlus, IconPrinter, IconSearch, IconUsers } from '../../components/icons';
+import { IconArrowIn, IconPlus, IconPrinter, IconSearch } from '../../components/icons';
 import * as Icons from '../../components/icons';
 import {
   Badge,
@@ -23,8 +23,6 @@ import {
   Segmented,
   SelectField,
   Skeleton,
-  StatGrid,
-  StatTile,
   TextareaField,
   TextField,
   tableText,
@@ -51,14 +49,7 @@ export default function KitPage() {
 
   return (
     <>
-      <PageHeader overline="Chỉ có ở bản dev" title="Bộ component" description="Mọi thành phần giao diện và trạng thái của chúng." />
-
-      <StatGrid label="Ô số liệu mẫu">
-        <StatTile label="Suất dự kiến" value="195" hint="đã chốt" icon={<IconUsers size={18} />} tone="accent" />
-        <StatTile label="Suất thực tế" value="chưa chốt" muted icon={<IconCheck size={18} />} tone="ok" />
-        <StatTile label="Chi phí / suất" value="18.262 đ" icon={<IconChart size={18} />} tone="warn" />
-        <StatTile label="Trạng thái" value="Đang xuất bếp" icon={<IconArrowIn size={18} />} tone="info" />
-      </StatGrid>
+      <PageHeader title="Bộ component" subtitle="Chỉ có ở bản dev" />
 
       <Panel>
         <SectionTitle>Nút</SectionTitle>
@@ -165,9 +156,7 @@ export default function KitPage() {
         <SectionTitle>Trạng thái</SectionTitle>
         <div className={styles.grid}>
           <Skeleton rows={3} />
-          <EmptyState title="Chưa có phiếu nhập nào" action={<Button icon={<IconArrowIn size={18} />}>Tạo phiếu nhập</Button>}>
-            Phiếu nhập giúp theo dõi hàng về và giá vốn.
-          </EmptyState>
+          <EmptyState title="Chưa có phiếu nhập nào" action={<Button icon={<IconArrowIn size={18} />}>Tạo phiếu nhập</Button>} />
         </div>
       </Panel>
 
