@@ -62,6 +62,7 @@ Khi mâu thuẫn, thứ tự ưu tiên: yêu cầu trực tiếp của chủ d�
 | Test | 99 test đạt trên PG17 riêng (01/10, `6f0bdc7`); **267 test đạt** trên nhánh `feat/SF73-meal-photos-sample-data` (01/10 chiều, gồm G2, ảnh, dữ liệu mẫu) | — |
 | Ảnh suất ăn (SF73) | Model `MealPhoto` (0021), API `lunch-days/<date>/photos/`, `meal-photos/<id>/(image/)`, khu ảnh ở trang Hôm nay; bằng chứng `outputs/team-6/evidence/SF73_*.png` | Gửi ảnh cho phụ huynh (chưa duyệt) |
 | Dữ liệu mẫu | `seed_sample`: 20 nguyên liệu, 11 món, thực đơn T2–T6, 6 lớp, 30 học sinh, 10 ngày ăn đã đóng | — |
+| Video giới thiệu (SF76, 02/10) | Thẻ "Xem video giới thiệu" ở trang đăng nhập mở khung phát trang tĩnh `/gioi-thieu/` (GSAP 3.12.5, Tone.js 14.8.49 tự host, font app); nginx cho nhúng cùng origin riêng đường dẫn này; thử trên nginx 1.27 + CSP thật: phát được, console không vi phạm CSP; bằng chứng `outputs/team-6/evidence/SF76_*.png` | Thuyết minh tiếng Anh, chưa có bản tiếng Việt |
 
 "Có code", "test đạt" và "đã nghiệm thu" là ba trạng thái khác nhau.
 
