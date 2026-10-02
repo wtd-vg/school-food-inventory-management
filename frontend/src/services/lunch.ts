@@ -3,6 +3,7 @@
  * (phiếu nhập/xuất). Contract: outputs/team-6/contracts/G2_SF55_SF72_nhu_cau_dat_hang_xuat_ngay.md §4.
  * Mọi số lượng/tiền là chuỗi Decimal; thao tác đổi trạng thái đơn gửi kèm version (sai → 409).
  */
+import type { BadgeTone } from '../components/ui';
 import { api } from '../lib/http';
 import type { Issue, Receipt } from './inventory';
 
@@ -55,8 +56,8 @@ export type DayDemand = {
 
 export type ReserveInput = { food_id: number; qty: string; reason: string };
 
-export const REVISION_STATUS: Record<RevisionStatus, { label: string; tone: 'ok' | 'info' | 'neutral' }> = {
-  draft: { label: 'Bản tính (chưa duyệt)', tone: 'info' },
+export const REVISION_STATUS: Record<RevisionStatus, { label: string; tone: BadgeTone }> = {
+  draft: { label: 'Bản tính (chưa duyệt)', tone: 'draft' },
   approved: { label: 'Đã duyệt', tone: 'ok' },
   stale: { label: 'Lỗi thời', tone: 'neutral' },
 };
@@ -95,11 +96,11 @@ export type PurchaseOrder = {
   receipts: { id: number; date: string; status: 'DRAFT' | 'POSTED' }[];
 };
 
-export const PO_STATUS: Record<PoStatus, { label: string; tone: 'ok' | 'info' | 'warn' | 'neutral' | 'danger' }> = {
-  draft: { label: 'Nháp', tone: 'warn' },
-  approved: { label: 'Đã duyệt', tone: 'info' },
+export const PO_STATUS: Record<PoStatus, { label: string; tone: BadgeTone }> = {
+  draft: { label: 'Nháp', tone: 'draft' },
+  approved: { label: 'Đã duyệt', tone: 'ok' },
   sent: { label: 'Đã gửi NCC', tone: 'info' },
-  closed: { label: 'Đã đóng', tone: 'ok' },
+  closed: { label: 'Đã đóng', tone: 'done' },
   cancelled: { label: 'Đã huỷ', tone: 'neutral' },
 };
 

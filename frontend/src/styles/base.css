@@ -11,12 +11,14 @@ html {
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--frame-outside);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  /* SF78: mọi con số dùng chữ số đều cột */
+  font-variant-numeric: tabular-nums;
 }
 
 h1, h2, h3, h4, p, ul, ol, dl, dd, figure {
@@ -49,7 +51,7 @@ a:hover {
 }
 
 :focus-visible {
-  outline: 2px solid var(--link);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 

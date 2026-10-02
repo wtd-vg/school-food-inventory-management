@@ -1,19 +1,31 @@
 # Hướng dẫn giao diện SchoolFood
 
-Dành cho thành viên và agent khi thêm hoặc sửa màn hình. Nguồn thiết kế: các file mẫu `design/*.html` (bản "Bếp Nhà Trường"). Quyết định áp dụng (duyệt 01/10/2026): dùng **đúng** token, font, component và khung trang; **bố cục từng màn** thiết kế lại cho hợp dữ liệu thật; tên hiển thị là **SchoolFood**.
+Dành cho thành viên và agent khi thêm hoặc sửa màn hình. Nguồn thiết kế: bản **"Bếp Nhà Trường" xanh lá rau** (SF78, duyệt 02/10/2026; mẫu Tổng quan, Kho hàng, Chi tiết lô, Đặt hàng, Báo cáo). Quyết định áp dụng: dùng **đúng** token, font, component và khung trang; **chỉ hiện dữ liệu thật** — phần mẫu không có backend (lô/hạn dùng, kiểm thực, so sánh báo giá, bản đồ nguồn gốc, báo cáo dạng tài liệu) **không làm**; tên hiển thị vẫn là **SchoolFood**. Trang đăng nhập (SF77) giữ bảng màu ấm riêng (`--login-*`).
+
+## Hệ thiết kế (SF78)
+
+- **Khung app**: viền 8px gradient mint → lá non → kem → mint bo 30 (chỗ duy nhất có gradient ở viền) → cửa sổ trắng bo 22 → thanh trên 60px (logo, ô tìm kiếm toàn app 420px có chọn phạm vi, chuông "Cần chú ý", tài khoản) → thanh dọc 64px chỉ icon, nền gradient xanh. Nội dung nền #F6F9F5 → trắng, padding 20/24, các khối cách 18.
+- **Màu**: xanh thương hiệu (`--brand`) **chỉ cho hành động** (nút chính, tab chọn, dòng chọn, thanh dọc, liên kết). Đỏ/cam **chỉ cho trạng thái**. Gradient chỉ ở viền khung, băng tranh/ảnh bìa và điện thoại xem trước; vùng dữ liệu phẳng. Biểu đồ: `--chart-1…5` theo thứ tự cố định (đã chạy `validate_palette`), luôn kèm nhãn/chú giải.
+- **Đầu trang**: `PageHeader` (mặc định) tiêu đề 28/500 + `meta` bên phải; `PageHeader variant="banner"` cho trang danh sách (băng tranh 128px, breadcrumb, tiêu đề + `count`, nút phụ); `CoverHeader` + `Tabs` cho trang chi tiết (ảnh bìa 200px, card nổi 3 thông tin).
+- **Nút** (cao 40, bo 12): `primary` xanh; `secondary` nền mint chữ xanh đậm (thao tác phụ của trang); `outline` nền trắng viền xám (Huỷ/Đóng, nút trong bảng, phân trang); `caret` thêm ▾ khi nút mở nhiều loại.
+- **Chip** (`Badge`, cao 26, bo tròn, icon 13, nền pastel + viền cùng tông): `info` mới/đang chuẩn bị · `ok` đạt/đang dùng/đang hợp tác · `done` hoàn tất/đã chốt/đã đóng · `warn` cần đặt/chưa chốt · `danger` hết hàng/lỗi · `draft` nháp · `review` đang duyệt/chế độ thử · `paused` tạm dừng · `neutral` huỷ/ngừng.
+- **Bảng** (`DataTable`): dải tiêu đề nền nhạt bo 10, hàng cao 46. Cột có `sort` thì bấm tiêu đề để sắp xếp (aria-sort). `selected` + `onSelectedChange` thêm checkbox, dòng chọn nền mint; kèm `BulkBar` nổi giữa đáy. Cột đầu có thể dùng `tableText.thumbCell` + `Thumb`.
+- **Khác**: `Panel` (card bo 16, không viền, bóng nhẹ, có `title`/`action`), `InfoTiles` (ô key-value), `Stat` (số lớn), `TimedTask` (việc có giờ, mục xa nhạt dần bằng nền — chữ vẫn đạt AA), `FolderCard`, tranh SVG `Scene` (4 bảng màu `suong`/`dong`/`binhminh`/`song`), `Tray` (khay cơm), `Thumb`.
+- **Chữ**: Be Vietnam Pro 400/500/600/700; tiêu đề trang 28/500, tiêu đề card 16/600, số lớn 22–30/500; mọi con số tabular-nums (đặt sẵn ở `body`).
 
 ## Cấu trúc
 
 ```text
 src/
   styles/        tokens.css (nơi DUY NHẤT có mã màu), base.css, fonts.css (font tự host)
-  lib/           format.ts (hiển thị vi-VN), decimal.ts (tính Decimal bằng BigInt), http.ts (gọi API + lỗi tiếng Việt)
+  lib/           format.ts (hiển thị vi-VN), decimal.ts (tính Decimal bằng BigInt), http.ts (gọi API + lỗi tiếng Việt), text.ts (tìm không dấu)
   auth/          AuthContext (me, role, can_*, login/logout, session-expired), RequireAuth, RequirePermission
   components/
     icons/       SVG inline, 24×24, stroke currentColor
-    ui/          Button, Field, Display (Badge, Callout, Segmented, RouteTabs, PageHeader, Lead, Toolbar…), DataTable (thành thẻ trên điện thoại),
-                 Overlay (Drawer, Modal, ConfirmDialog, Toast), Chart (BarChart, CostBar)
-    layout/      AppShell (sidebar 232 → chỉ icon <1280 → tab dưới <768), nav.ts
+    ui/          Button, Field, Display (Badge, Callout, Segmented, RouteTabs, Tabs, PageHeader, Panel, InfoTiles, Stat, TimedTask, Lead, Toolbar…),
+                 DataTable (sắp xếp, chọn dòng; thành thẻ trên điện thoại), BulkBar, Cover (CoverHeader, FolderCard),
+                 Illustration (Scene, Tray, Thumb), Overlay (Drawer, Modal, ConfirmDialog, Toast), Chart (BarChart, CostBar)
+    layout/      AppShell (viền + thanh trên + thanh dọc 64px; <768: tab dưới đáy, tìm kiếm mở bằng nút), GlobalSearch, AlertsBell, nav.ts
   features/      mỗi nghiệp vụ một thư mục: auth, lunch (G2), inventory, dishes, menus, classes, meals, students, notifications,
                  suppliers, reports, users, audit, public (trang không cần đăng nhập), common (tab con DishTabs/ClassTabs)
   services/      kiểu dữ liệu + lời gọi API khớp JSON backend: inventory, catalog, menus, meals, students,
@@ -55,7 +67,8 @@ Trang `/_kit` (chỉ bản dev) liệt kê mọi component. Mở nó trước kh
 ## Quy tắc bắt buộc
 
 - **Không thêm dependency.** CSS Modules (`X.module.css` cạnh `X.tsx`) + token. Không hex ngoài `tokens.css`, không `style={{…}}` trừ khi truyền giá trị động qua CSS custom property (`style={{ '--h': '72%' }}`).
-- **Font**: Be Vietnam Pro cho mọi chữ. Baloo 2 (`var(--font-display)`) chỉ dùng cho chữ logo.
+- **Font**: Be Vietnam Pro cho mọi chữ. Baloo 2 (`var(--font-display)`) chỉ còn ở trang đăng nhập.
+- **Truy cập**: vùng bấm tối thiểu 40–44px; nút chỉ có icon phải có `aria-label` (thanh dọc hiện tên khi rê chuột/focus); mọi ô nhập có nhãn; mọi cặp chữ/nền đạt AA (kiểm lại khi thêm token).
 - **Số liệu**: API trả Decimal dạng chuỗi. Hiển thị qua `formatQty`, `formatMoney`, `formatDate`…; không `Number()` / `parseFloat` rồi cộng tiền. Cần tổng tạm tính trên form thì dùng `lib/decimal.ts`. Ô nhập số kiểm tra bằng `normalizeDecimalInput` (lượng 3 chữ số lẻ, tiền 2) rồi gửi **chuỗi**.
 - **Gọi API** bằng `api.get/post/patch` trong `lib/http.ts`. Lỗi là `ApiError` có câu tiếng Việt; hiển thị bằng `messageOf(err)`.
 - **Vai trò** (`/api/auth/me/`): `manager` = **Quản lý** (làm mọi nghiệp vụ, `can_write`), `principal` = **Hiệu trưởng** (xem tất cả, `can_manage_users`, `can_view_audit`). Không có tài khoản phụ huynh.
@@ -86,3 +99,4 @@ export function VidụPage() {
 1. `npm run build` đạt.
 2. `grep -rnE "#[0-9a-fA-F]{3,8}" src --include=*.css --include=*.tsx` chỉ còn `tokens.css`.
 3. Chạy app, thao tác bằng tài khoản **Quản lý và Hiệu trưởng**; đi hết bằng bàn phím; xem ở 1440, 1024, 375 px. Ảnh nghiệm thu lưu `outputs/team-6/evidence/<MÃ>_*.png` (1280 và 375 px).
+4. Rà từng màn: không ô bảng, chip hay nút nào tràn chữ hoặc bị bẻ dòng; chip không bị kéo giãn; trang không cuộn ngang (thiếu chỗ thì tăng chiều cao, không bóp chữ).

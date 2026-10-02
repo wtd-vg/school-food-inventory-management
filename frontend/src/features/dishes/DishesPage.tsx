@@ -291,7 +291,7 @@ function DishForm({ dish, foods, onClose, onSaved }: { dish: Dish | null; foods:
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Huỷ
           </Button>
           <Button type="submit" form="dish-form" write busy={busy}>

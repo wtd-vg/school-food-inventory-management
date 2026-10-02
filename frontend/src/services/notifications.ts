@@ -2,6 +2,7 @@
  * Thư thực đơn cho phụ huynh (FE-07): khớp JSON của notification_views.py / notifications.py (BE-08).
  * mode = EMAIL_MODE của máy chủ: dry_run chỉ ghi nhật ký (không gửi thư thật), smtp gửi thật.
  */
+import type { BadgeTone } from '../components/ui';
 import { api } from '../lib/http';
 
 export type MailStatus = 'sent' | 'dry_run' | 'failed' | 'skipped' | 'pending';
@@ -24,9 +25,9 @@ export type NotificationDay = {
   results: NotificationRow[];
 };
 
-export const MAIL_STATUS: Record<MailStatus, { label: string; tone: 'ok' | 'info' | 'danger' | 'warn' | 'neutral' }> = {
-  sent: { label: 'Đã gửi', tone: 'ok' },
-  dry_run: { label: 'Chế độ thử', tone: 'info' },
+export const MAIL_STATUS: Record<MailStatus, { label: string; tone: BadgeTone }> = {
+  sent: { label: 'Đã gửi', tone: 'done' },
+  dry_run: { label: 'Chế độ thử', tone: 'review' },
   failed: { label: 'Lỗi', tone: 'danger' },
   skipped: { label: 'Bỏ qua', tone: 'neutral' },
   pending: { label: 'Đang chờ gửi', tone: 'warn' },
