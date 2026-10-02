@@ -12,28 +12,37 @@
   line-height: 1;
   white-space: nowrap;
   text-decoration: none;
-  transition: background-color var(--motion), border-color var(--motion);
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+/* SF78: nhấn lún nhẹ; nút chính nổi lên khi rê chuột. */
+.button:active:not(:disabled) {
+  transform: translateY(1px) scale(.985);
 }
 
 .primary {
   background: var(--ink);
   color: var(--on-ink);
+  box-shadow: var(--shadow-press);
 }
 
 .primary:hover:not(:disabled) {
   background: var(--ink-hover);
   color: var(--on-ink);
+  transform: translateY(-1px);
 }
 
 .secondary {
   padding: 0 16px;
-  background: transparent;
+  background: var(--surface);
   border-color: var(--border);
   color: var(--ink);
 }
 
 .secondary:hover:not(:disabled) {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
+  border-color: var(--accent);
   color: var(--ink);
 }
 
@@ -72,6 +81,7 @@
 .button:disabled {
   opacity: .45;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .spinner {

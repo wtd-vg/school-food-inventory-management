@@ -10,6 +10,7 @@
 }
 
 .segItem {
+  transition: background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -34,7 +35,7 @@
 .segItem[aria-current='page'] {
   background: var(--surface);
   font-weight: 600;
-  box-shadow: var(--shadow-seg);
+  box-shadow: var(--shadow-card);
 }
 
 /* RouteTabs: tab điều hướng kiểu gạch chân, tách biệt với Segmented (lọc tại chỗ) */
@@ -59,12 +60,17 @@
   white-space: nowrap;
 }
 
+.tab {
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+}
+
 .tab:hover {
   color: var(--ink);
+  border-bottom-color: var(--accent-soft);
 }
 
 .tab[aria-current='page'] {
-  border-bottom-color: var(--ink);
+  border-bottom-color: var(--accent);
   color: var(--ink);
   font-weight: 700;
 }
@@ -88,14 +94,24 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   height: 24px;
-  padding: 0 8px;
-  border-radius: var(--r-badge);
+  padding: 0 10px 0 8px;
+  border-radius: var(--r-pill);
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   vertical-align: middle;
+}
+
+/* SF78: chấm trạng thái trước chữ (màu chỉ bổ trợ, nhãn luôn có chữ). */
+.badge::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .badge-danger {
@@ -134,7 +150,7 @@
   align-items: flex-start;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: var(--r-md);
+  border-radius: var(--r-card);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -195,15 +211,20 @@
 }
 
 .overline {
-  font-size: 14px;
-  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
 }
 
+/* SF78: tiêu đề trang dùng font hiển thị (Baloo 2) như trang đăng nhập. */
 .title {
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -.01em;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.005em;
 }
 
 .description {
@@ -320,13 +341,18 @@
 .skeletonRow {
   height: 44px;
   border-radius: var(--r-md);
-  background: var(--surface-sunken);
-  animation: pulse 1.4s ease-in-out infinite;
+  background: linear-gradient(90deg, var(--surface-sunken) 0%, var(--surface-hover) 50%, var(--surface-sunken) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
 }
 
-@keyframes pulse {
-  50% {
-    opacity: .55;
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
   }
 }
 
@@ -335,9 +361,10 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 48px 16px;
-  border: 1px dashed var(--border);
-  border-radius: var(--r-card);
+  padding: 44px 16px;
+  border: 1px dashed var(--warm-line);
+  border-radius: var(--r-panel);
+  background: var(--surface);
   text-align: center;
   color: var(--muted);
 }
@@ -349,14 +376,126 @@
 }
 
 .emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+/* Khối nội dung: thẻ trắng nổi (SF78). Bảng bên trong bỏ khung thẻ riêng để không lồng hai lớp. */
+.panel {
+  padding: 22px 24px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.panel [data-table-card] {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- StatTile: ô số liệu (SF78) ---------- */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+
+.stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.statHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.statIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--surface-sunken);
+  color: var(--ink-soft);
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.statValueMuted {
   color: var(--pending);
 }
 
-/* Khối nội dung trắng */
-.panel {
-  padding: 20px 22px;
-  border-radius: var(--r-card);
-  background: var(--surface);
+.statHint {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.stat-accent .statIcon {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.stat-ok .statIcon {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.stat-warn .statIcon {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.stat-info .statIcon {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 1023px) {
+  .statGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .statValue {
+    font-size: 24px;
+  }
 }
 
 .devTag {

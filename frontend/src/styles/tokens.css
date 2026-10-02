@@ -2,7 +2,7 @@
    Đây là nơi DUY NHẤT được khai báo mã màu. Component chỉ dùng var(--...). */
 :root {
   /* nền & bề mặt */
-  --bg: #FFF8EC;
+  --bg: #FFF7F1;
   --sidebar: #FFE9BF;
   --surface: #FFFFFF;
   --surface-sunken: #F6EEDF;
@@ -91,4 +91,34 @@
   --tabbar-h: 64px;
   --control-h: 44px;
   --motion: 200ms ease-out;
+
+  /* SF78 "Bếp Nhà Trường 2.0": nền đào nhạt, thẻ trắng nổi, kính mờ, màu nhóm hàng pastel (nối với trang đăng nhập). */
+  --line-soft: #F1E4D8;
+  --accent: #E2683C;
+  --accent-soft: #FFE6DA;
+  --accent-ink: #9A3B16;
+  --glass: rgba(255, 252, 248, .7);
+  --glass-edge: rgba(255, 255, 255, .8);
+  --glass-blur: 18px;
+  --shadow-card: 0 1px 2px rgba(120, 60, 30, .05), 0 10px 28px -16px rgba(120, 60, 30, .22);
+  --shadow-card-hover: 0 2px 4px rgba(120, 60, 30, .06), 0 18px 38px -18px rgba(120, 60, 30, .32);
+  --shadow-press: 0 1px 2px rgba(42, 37, 34, .18), 0 6px 16px -8px rgba(42, 37, 34, .45);
+  --r-panel: 20px;
+
+  /* nhóm hàng: nền pastel + chữ đậm cùng họ (chữ đạt AA trên nền của nó) */
+  --cat-dry-bg: #FFF1CC;
+  --cat-dry-ink: #6E4F00;
+  --cat-protein-bg: #FBE2D7;
+  --cat-protein-ink: #8C3B1E;
+  --cat-veg-bg: #E4F0D6;
+  --cat-veg-ink: #3F5A1C;
+  --cat-dairy-bg: #DDEAF8;
+  --cat-dairy-ink: #2C5A8E;
+
+  /* chuyển động */
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 420ms;
+  --ease-out: cubic-bezier(.2, .75, .2, 1);
+  --ease-spring: cubic-bezier(.3, 1.35, .5, 1);
 }

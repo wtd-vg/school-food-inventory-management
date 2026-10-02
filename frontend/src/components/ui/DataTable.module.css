@@ -1,6 +1,12 @@
+/* SF78: bảng nằm trong thẻ trắng nổi. */
 .wrap {
   width: 100%;
   overflow-x: auto;
+  padding: 4px 10px 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 
 .table {
@@ -16,8 +22,8 @@
 }
 
 .table th {
-  padding: 0 12px 10px;
-  border-bottom: 1px solid var(--line);
+  padding: 14px 12px 10px;
+  border-bottom: 1px solid var(--line-soft);
   color: var(--muted);
   font-size: 13px;
   font-weight: 500;
@@ -28,11 +34,16 @@
 .table td {
   height: 52px;
   padding: 6px 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-soft);
+  transition: background-color var(--dur-fast) var(--ease-out);
   vertical-align: middle;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .table tbody tr:hover td {
@@ -115,6 +126,10 @@
 @media (max-width: 767px) {
   .wrap {
     overflow-x: visible;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
   }
 
   .table,
@@ -139,9 +154,10 @@
 
   .table tr {
     padding: 10px 14px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-soft);
     border-radius: var(--r-card);
     background: var(--surface);
+    box-shadow: var(--shadow-card);
   }
 
   .table tbody tr:hover td {

@@ -27,7 +27,7 @@ export function DataTable<T>({ columns, rows, rowKey, caption, minWidth }: DataT
   const style = minWidth ? ({ '--table-min': minWidth } as CSSProperties) : undefined;
   const alignCls = (a?: string) => (a === 'right' ? styles.right : a === 'center' ? styles.center : '');
   return (
-    <div className={styles.wrap} role="region" aria-label={caption} tabIndex={0}>
+    <div className={styles.wrap} role="region" aria-label={caption} tabIndex={0} data-table-card="">
       <table className={styles.table} style={style} role="table">
         <caption className="sr-only">{caption}</caption>
         <colgroup>

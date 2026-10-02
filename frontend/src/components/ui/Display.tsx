@@ -140,6 +140,47 @@ export function Panel({ children, className }: { children: ReactNode; className?
   return <section className={[styles.panel, className ?? ''].join(' ')}>{children}</section>;
 }
 
+/* ---------- StatTile: ô số liệu nổi (SF78) — giá trị font hiển thị, icon trong ô màu theo tone ---------- */
+export function StatTile({
+  label,
+  value,
+  hint,
+  icon,
+  tone = 'neutral',
+  muted,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  hint?: ReactNode;
+  icon?: ReactNode;
+  tone?: 'neutral' | 'accent' | 'ok' | 'warn' | 'info';
+  /** Giá trị chưa có (vd. "chưa chốt"): chữ nhạt hơn. */
+  muted?: boolean;
+}) {
+  return (
+    <div className={`${styles.stat} ${styles[`stat-${tone}`] ?? ''}`}>
+      <div className={styles.statHead}>
+        {icon ? (
+          <span className={styles.statIcon} aria-hidden="true">
+            {icon}
+          </span>
+        ) : null}
+        <span>{label}</span>
+      </div>
+      <div className={`${styles.statValue} ${muted ? styles.statValueMuted : ''}`}>{value}</div>
+      {hint ? <div className={styles.statHint}>{hint}</div> : null}
+    </div>
+  );
+}
+
+export function StatGrid({ children, label }: { children: ReactNode; label: string }) {
+  return (
+    <section className={styles.statGrid} aria-label={label}>
+      {children}
+    </section>
+  );
+}
+
 /* ---------- KeyValueList ---------- */
 export function KeyValueList({ items }: { items: { label: ReactNode; value: ReactNode }[] }) {
   return (

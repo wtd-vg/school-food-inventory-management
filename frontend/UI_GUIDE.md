@@ -55,7 +55,8 @@ Trang `/_kit` (chỉ bản dev) liệt kê mọi component. Mở nó trước kh
 ## Quy tắc bắt buộc
 
 - **Không thêm dependency.** CSS Modules (`X.module.css` cạnh `X.tsx`) + token. Không hex ngoài `tokens.css`, không `style={{…}}` trừ khi truyền giá trị động qua CSS custom property (`style={{ '--h': '72%' }}`).
-- **Font**: Be Vietnam Pro cho mọi chữ. Baloo 2 (`var(--font-display)`) chỉ dùng cho chữ logo.
+- **Font**: Be Vietnam Pro cho mọi chữ. Baloo 2 (`var(--font-display)`) chỉ dùng cho chữ logo, tiêu đề trang (`PageHeader`), giá trị `StatTile` và trang đăng nhập (SF78).
+- **Ngôn ngữ "Bếp Nhà Trường 2.0" (SF78)**: nền `--bg` đào nhạt; khối nội dung là thẻ trắng nổi (`--line-soft`, `--r-panel`, `--shadow-card`); điểm nhấn `--accent` (tab đang chọn, viền nút khi rê chuột) và chữ trên nền nhấn dùng `--accent-ink`; nhóm hàng dùng cặp `--cat-*-bg` + `--cat-*-ink`; chuyển động dùng `--dur-*` + `--ease-*`. Số liệu tóm tắt đầu trang dùng `StatTile` trong `StatGrid`.
 - **Số liệu**: API trả Decimal dạng chuỗi. Hiển thị qua `formatQty`, `formatMoney`, `formatDate`…; không `Number()` / `parseFloat` rồi cộng tiền. Cần tổng tạm tính trên form thì dùng `lib/decimal.ts`. Ô nhập số kiểm tra bằng `normalizeDecimalInput` (lượng 3 chữ số lẻ, tiền 2) rồi gửi **chuỗi**.
 - **Gọi API** bằng `api.get/post/patch` trong `lib/http.ts`. Lỗi là `ApiError` có câu tiếng Việt; hiển thị bằng `messageOf(err)`.
 - **Vai trò** (`/api/auth/me/`): `manager` = **Quản lý** (làm mọi nghiệp vụ, `can_write`), `principal` = **Hiệu trưởng** (xem tất cả, `can_manage_users`, `can_view_audit`). Không có tài khoản phụ huynh.

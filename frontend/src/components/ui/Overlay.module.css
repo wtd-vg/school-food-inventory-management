@@ -3,7 +3,16 @@
   inset: 0;
   z-index: 50;
   background: var(--overlay);
-  animation: fade var(--motion);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: fade var(--dur-base) var(--ease-out);
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(.97);
+  }
 }
 
 @keyframes fade {
@@ -23,13 +32,14 @@
   flex-direction: column;
   width: min(var(--drawer-w, 460px), 100vw);
   background: var(--surface);
+  border-radius: var(--r-panel) 0 0 var(--r-panel);
   box-shadow: var(--shadow-drawer);
-  animation: slide var(--motion);
+  animation: slide var(--dur-slow) var(--ease-out);
 }
 
 @keyframes slide {
   from {
-    transform: translateX(24px);
+    transform: translateX(40px);
     opacity: 0;
   }
 }
@@ -110,12 +120,12 @@
   width: min(460px, 100%);
   max-height: calc(100vh - 32px);
   padding: 24px 26px;
-  border-radius: var(--r-day);
+  border-radius: var(--r-panel);
   background: var(--surface);
   box-shadow: var(--shadow-pop);
   overflow-y: auto;
   pointer-events: auto;
-  animation: fade var(--motion);
+  animation: pop var(--dur-base) var(--ease-spring);
 }
 
 .modalTitle {
