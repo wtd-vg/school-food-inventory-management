@@ -6,7 +6,7 @@
  */
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { IconChart, IconChevronLeft, IconChevronRight } from '../../components/icons';
+import { IconChart, IconChevronLeft, IconChevronRight, IconDownload } from '../../components/icons';
 import {
   Badge,
   BarChart,
@@ -17,32 +17,79 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
+  InfoTiles,
   PageHeader,
   Pagination,
+  Panel,
   SearchField,
   SectionTitle,
   Segmented,
   SelectField,
   Skeleton,
+  sortRows,
   Stack,
+  Tabs,
   Toolbar,
   tableText,
   type BarDatum,
   type Column,
   type Segment,
+  type SortState,
 } from '../../components/ui';
 import { downloadCsv } from '../../lib/csv';
 import { add, parseDec, sub, sum, toFixed, ZERO, type Dec } from '../../lib/decimal';
 import { formatDate, formatMoney, formatMoneyShort, formatNumber, formatQty, formatShortDate, todayISO } from '../../lib/format';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { lunchApi, type DailyReport } from '../../services/lunch';
-import { inventoryApi, TX_LABELS, txReference, type StockRow, type Transaction, type TxType } from '../../services/inventory';
+import { inventoryApi, TX_LABELS, txReference, type Category, type StockRow, type Transaction, type TxType } from '../../services/inventory';
 import { useQueryParam } from '../inventory/shared';
 import styles from './ReportsPage.module.css';
 
 type Section = 'tong-quan' | 'ton-kho' | 'so-giao-dich' | 'theo-ngay';
 const SECTIONS: Section[] = ['tong-quan', 'ton-kho', 'so-giao-dich', 'theo-ngay'];
-const TONES: Segment['tone'][] = [1, 2, 3, 4, 5];
+const SECTION_LABELS: Record<Section, string> = {
+  'tong-quan': 'Tổng quan',
+  'ton-kho': 'Tồn kho',
+  'so-giao-dich': 'Sổ giao dịch',
+  'theo-ngay': 'Theo ngày ăn',
+};
+
+type ToneOf = (name: string) => Segment['tone'];
+
+/**
+ * Màu đi theo nhóm hàng, không theo hạng: 5 nhóm tạo trước (id nhỏ nhất) giữ 5 màu cố định,
+ * nên đổi tháng/đổi mục không làm đổi màu một nhóm. Nhóm thứ 6 trở đi gộp xám ("Nhóm khác").
+ */
+function categoryTones(categories: Category[] | null | undefined, stockRows: StockRow[]): ToneOf {
+  const names = categories?.length
+    ? [...categories].sort((a, b) => a.id - b.id).map((c) => c.name)
+    : Array.from(new Set(stockRows.map((r) => r.category_name))).sort((a, b) => a.localeCompare(b, 'vi'));
+  return (name) => {
+    const i = names.indexOf(name);
+    return i >= 0 && i < 5 ? ((i + 1) as Segment['tone']) : 'other';
+  };
+}
+
+/** Đoạn của thanh cơ cấu: lớn trước, các nhóm xám gộp thành một đoạn "Nhóm khác" ở cuối. */
+function categorySegments(entries: [string, Dec][], toneOf: ToneOf): Segment[] {
+  const colored: [string, Dec][] = [];
+  let other = ZERO;
+  let otherNames: string[] = [];
+  entries.forEach(([name, v]) => {
+    if (toneOf(name) === 'other') {
+      other = add(other, v);
+      otherNames = [...otherNames, name];
+    } else colored.push([name, v]);
+  });
+  const segs = colored
+    .sort(([, a], [, b]) => decNum(b) - decNum(a))
+    .map<Segment>(([name, v]) => ({ key: name, label: name, value: decNum(v), display: formatMoneyShort(toFixed(v, 2)), tone: toneOf(name) }));
+  if (otherNames.length) {
+    const label = otherNames.length === 1 ? otherNames[0] : `Nhóm khác (${otherNames.length})`;
+    segs.push({ key: '__other', label, value: decNum(other), display: formatMoneyShort(toFixed(other, 2)), tone: 'other' });
+  }
+  return segs;
+}
 
 const dec = (v: string) => parseDec(v) ?? ZERO;
 const neg = (d: Dec): Dec => ({ v: -d.v, s: d.s });
@@ -84,6 +131,7 @@ export function ReportsPage() {
   const current = todayISO().slice(0, 7);
 
   const stock = useApiQuery(() => inventoryApi.stock(), []);
+  const cats = useApiQuery(() => inventoryApi.categories(), []);
   const txQuery = useApiQuery(() => inventoryApi.transactions({ from: range.from, to: range.to }), [range.from, range.to]);
   const dailyQuery = useApiQuery(
     () => (section === 'theo-ngay' ? lunchApi.dailyReport(range.from, range.to) : Promise.resolve(null)),
@@ -93,6 +141,7 @@ export function ReportsPage() {
   const stockRows = stock.data ?? [];
   const foodById = useMemo(() => new Map(stockRows.map((r) => [r.id, r])), [stockRows]);
   const txs = txQuery.data ?? [];
+  const toneOf = useMemo(() => categoryTones(cats.data, stockRows), [cats.data, stockRows]);
 
   const exportCsv = () => {
     if (section === 'theo-ngay') {
@@ -114,47 +163,54 @@ export function ReportsPage() {
     ]);
   };
 
+  const monthNav =
+    section !== 'ton-kho' ? (
+      <div className={styles.monthNav}>
+        <IconButton label="Tháng trước" onClick={() => setMonthParam(shiftMonth(month, -1))}>
+          <IconChevronLeft size={18} />
+        </IconButton>
+        <span className={`${styles.monthLabel} num`} aria-live="polite">
+          {range.label}
+        </span>
+        <IconButton label="Tháng sau" disabled={month >= current} onClick={() => setMonthParam(shiftMonth(month, 1))}>
+          <IconChevronRight size={18} />
+        </IconButton>
+      </div>
+    ) : (
+      <span className={styles.note}>Số liệu hiện tại</span>
+    );
+
   return (
     <>
       <PageHeader
-        overline={section === 'ton-kho' ? 'Số liệu hiện tại' : range.label}
+        variant="banner"
+        scene="dong"
+        breadcrumb={[{ label: 'Báo cáo', to: '/bao-cao' }, { label: SECTION_LABELS[section] }]}
         title="Báo cáo kho"
+        count={section === 'ton-kho' ? 'hiện tại' : range.label.toLowerCase()}
         actions={
-          <>
-            {section !== 'ton-kho' ? (
-              <div className={styles.monthNav}>
-                <IconButton label="Tháng trước" onClick={() => setMonthParam(shiftMonth(month, -1))}>
-                  <IconChevronLeft size={18} />
-                </IconButton>
-                <span className={`${styles.monthLabel} num`} aria-live="polite">
-                  {range.label}
-                </span>
-                <IconButton label="Tháng sau" disabled={month >= current} onClick={() => setMonthParam(shiftMonth(month, 1))}>
-                  <IconChevronRight size={18} />
-                </IconButton>
-              </div>
-            ) : null}
-            <Button
-              variant="secondary"
-              onClick={exportCsv}
-              disabled={section === 'ton-kho' || (section === 'theo-ngay' ? !dailyQuery.data?.days.length : txs.length === 0)}
-            >
-              Xuất CSV
-            </Button>
-          </>
+          <Button
+            variant="secondary"
+            icon={<IconDownload size={16} />}
+            onClick={exportCsv}
+            disabled={section === 'ton-kho' || (section === 'theo-ngay' ? !dailyQuery.data?.days.length : txs.length === 0)}
+          >
+            Xuất CSV
+          </Button>
         }
       />
-      <Segmented
-        label="Chọn mục báo cáo"
-        value={section}
-        onChange={(v) => setSectionParam(v)}
-        options={[
-          { value: 'tong-quan', label: 'Tổng quan tháng' },
-          { value: 'ton-kho', label: 'Tồn kho' },
-          { value: 'so-giao-dich', label: 'Sổ giao dịch' },
-          { value: 'theo-ngay', label: 'Theo ngày ăn' },
-        ]}
-      />
+      <Panel>
+        <div className={styles.toolbar}>
+          <Tabs
+            label="Chọn mục báo cáo"
+            idPrefix="bao-cao"
+            value={section}
+            onChange={(v) => setSectionParam(v)}
+            items={SECTIONS.map((v) => ({ value: v, label: SECTION_LABELS[v] }))}
+          />
+          {monthNav}
+        </div>
+        <div role="tabpanel" id="bao-cao-panel" aria-labelledby={`bao-cao-tab-${section}`} className={styles.body}>
       {section === 'theo-ngay' ? (
         dailyQuery.loading ? (
           <Skeleton rows={8} />
@@ -174,12 +230,14 @@ export function ReportsPage() {
           }}
         />
       ) : section === 'tong-quan' ? (
-        <Overview txs={txs} stockRows={stockRows} foodById={foodById} label={range.label} />
+        <Overview txs={txs} stockRows={stockRows} foodById={foodById} label={range.label} toneOf={toneOf} />
       ) : section === 'ton-kho' ? (
-        <StockSection stockRows={stockRows} />
+        <StockSection stockRows={stockRows} toneOf={toneOf} />
       ) : (
         <Ledger txs={txs} foodById={foodById} />
       )}
+        </div>
+      </Panel>
     </>
   );
 }
@@ -208,20 +266,13 @@ function DailySection({ report, label }: { report: DailyReport; label: string })
   }
   return (
     <Stack gap="lg">
-      <div className={styles.kpis}>
-        <div className={styles.kpi}>
-          <span className={styles.kpiLabel}>Tổng chi phí</span>
-          <span className={`${styles.kpiValue} num`}>{formatMoney(report.total_cost)}</span>
-        </div>
-        <div className={styles.kpi}>
-          <span className={styles.kpiLabel}>Tổng suất thực tế</span>
-          <span className={`${styles.kpiValue} num`}>{formatNumber(report.total_servings, 0)}</span>
-        </div>
-        <div className={styles.kpi}>
-          <span className={styles.kpiLabel}>Bình quân / suất</span>
-          <span className={`${styles.kpiValue} num`}>{report.avg_cost_per_serving ? formatMoney(report.avg_cost_per_serving) : '—'}</span>
-        </div>
-      </div>
+      <InfoTiles
+        items={[
+          { label: 'Tổng chi phí', value: formatMoney(report.total_cost) },
+          { label: 'Tổng suất thực tế', value: formatNumber(report.total_servings, 0) },
+          { label: 'Bình quân / suất', value: report.avg_cost_per_serving ? formatMoney(report.avg_cost_per_serving) : '—' },
+        ]}
+      />
       {chart.length ? (
         <>
           <SectionTitle>Chi phí mỗi suất theo ngày</SectionTitle>
@@ -235,12 +286,12 @@ function DailySection({ report, label }: { report: DailyReport; label: string })
         rows={report.days}
         rowKey={(d) => d.date}
         columns={[
-          { key: 'date', header: 'Ngày', cell: (d) => <Link to={`/bua-trua?ngay=${d.date}`}>{formatDate(d.date)}</Link> },
-          { key: 'planned', header: 'Dự kiến', align: 'right', cell: (d) => (d.planned_total == null ? '—' : formatNumber(d.planned_total, 0)) },
-          { key: 'actual', header: 'Thực tế', align: 'right', cell: (d) => (d.actual_total == null ? '—' : formatNumber(d.actual_total, 0)) },
-          { key: 'cost', header: 'Chi phí ngày', align: 'right', cell: (d) => <span className={tableText.strong}>{formatMoney(d.cost)}</span> },
-          { key: 'per', header: 'Chi phí/suất', align: 'right', cell: (d) => (d.cost_per_serving ? formatMoney(d.cost_per_serving) : '—') },
-          { key: 'closed', header: 'Đóng ngày', cell: (d) => (d.closed ? <Badge tone="done">Đã đóng</Badge> : <Badge tone="warn">Chưa đóng</Badge>) },
+          { key: 'date', header: 'Ngày', sort: (d) => d.date, cell: (d) => <Link to={`/bua-trua?ngay=${d.date}`}>{formatDate(d.date)}</Link> },
+          { key: 'planned', header: 'Dự kiến', align: 'right', sort: (d) => (d.planned_total == null ? null : Number(d.planned_total)), cell: (d) => (d.planned_total == null ? '—' : formatNumber(d.planned_total, 0)) },
+          { key: 'actual', header: 'Thực tế', align: 'right', sort: (d) => (d.actual_total == null ? null : Number(d.actual_total)), cell: (d) => (d.actual_total == null ? '—' : formatNumber(d.actual_total, 0)) },
+          { key: 'cost', header: 'Chi phí ngày', align: 'right', sort: (d) => decNum(dec(d.cost)), cell: (d) => <span className={tableText.strong}>{formatMoney(d.cost)}</span> },
+          { key: 'per', header: 'Chi phí/suất', align: 'right', sort: (d) => (d.cost_per_serving ? decNum(dec(d.cost_per_serving)) : null), cell: (d) => (d.cost_per_serving ? formatMoney(d.cost_per_serving) : '—') },
+          { key: 'closed', header: 'Đóng ngày', sort: (d) => (d.closed ? 1 : 0), cell: (d) => (d.closed ? <Badge tone="done">Đã đóng</Badge> : <Badge tone="warn">Chưa đóng</Badge>) },
         ]}
       />
     </Stack>
@@ -248,7 +299,19 @@ function DailySection({ report, label }: { report: DailyReport; label: string })
 }
 
 /* ---------------- Tổng quan tháng ---------------- */
-function Overview({ txs, stockRows, foodById, label }: { txs: Transaction[]; stockRows: StockRow[]; foodById: Map<number, StockRow>; label: string }) {
+function Overview({
+  txs,
+  stockRows,
+  foodById,
+  label,
+  toneOf,
+}: {
+  txs: Transaction[];
+  stockRows: StockRow[];
+  foodById: Map<number, StockRow>;
+  label: string;
+  toneOf: ToneOf;
+}) {
   const by = (t: TxType) => txs.filter((x) => x.transaction_type === t);
   const ins = by('IN');
   const outs = by('OUT');
@@ -276,10 +339,8 @@ function Overview({ txs, stockRows, foodById, label }: { txs: Transaction[]; sto
       const cat = foodById.get(t.food_id)?.category_name || 'Khác';
       m.set(cat, add(m.get(cat) ?? ZERO, neg(dec(t.value_delta))));
     });
-    return Array.from(m.entries())
-      .sort(([, a], [, b]) => decNum(b) - decNum(a))
-      .map<Segment>(([cat, v], i) => ({ key: cat, label: cat, value: decNum(v), display: formatMoneyShort(toFixed(v, 2)), tone: TONES[i] ?? 'other' }));
-  }, [outs, foodById]);
+    return categorySegments(Array.from(m.entries()), toneOf);
+  }, [outs, foodById, toneOf]);
 
   // Theo tuần.
   const weekly = useMemo(() => {
@@ -312,6 +373,7 @@ function Overview({ txs, stockRows, foodById, label }: { txs: Transaction[]; sto
       key: 'week',
       header: 'Tuần',
       width: '28%',
+      sort: (w) => w.week,
       cell: (w) => (
         <>
           <span className={tableText.primaryText}>Tuần {w.week}</span>
@@ -321,9 +383,9 @@ function Overview({ txs, stockRows, foodById, label }: { txs: Transaction[]; sto
         </>
       ),
     },
-    { key: 'in', header: 'Nhập', align: 'right', cell: (w) => formatMoney(toFixed(w.inV, 2)) },
-    { key: 'out', header: 'Xuất cho bếp', align: 'right', cell: (w) => <span className={tableText.strong}>{formatMoney(toFixed(w.outV, 2))}</span> },
-    { key: 'adj', header: 'Kiểm kê', align: 'right', cell: (w) => (w.adjV.v === 0n ? <span className={tableText.muted}>—</span> : formatMoney(toFixed(w.adjV, 2))) },
+    { key: 'in', header: 'Nhập', align: 'right', sort: (w) => decNum(w.inV), cell: (w) => formatMoney(toFixed(w.inV, 2)) },
+    { key: 'out', header: 'Xuất cho bếp', align: 'right', sort: (w) => decNum(w.outV), cell: (w) => <span className={tableText.strong}>{formatMoney(toFixed(w.outV, 2))}</span> },
+    { key: 'adj', header: 'Kiểm kê', align: 'right', sort: (w) => decNum(w.adjV), cell: (w) => (w.adjV.v === 0n ? <span className={tableText.muted}>—</span> : formatMoney(toFixed(w.adjV, 2))) },
   ];
 
   return (
@@ -398,7 +460,7 @@ function Overview({ txs, stockRows, foodById, label }: { txs: Transaction[]; sto
 }
 
 /* ---------------- Tồn kho ---------------- */
-function StockSection({ stockRows }: { stockRows: StockRow[] }) {
+function StockSection({ stockRows, toneOf }: { stockRows: StockRow[]; toneOf: ToneOf }) {
   const groups = useMemo(() => {
     const m = new Map<string, { name: string; count: number; value: Dec; empty: number }>();
     stockRows.forEach((r) => {
@@ -414,10 +476,10 @@ function StockSection({ stockRows }: { stockRows: StockRow[] }) {
   const total = sum(groups.map((g) => g.value));
   type Group = (typeof groups)[number];
   const columns: Column<Group>[] = [
-    { key: 'name', header: 'Nhóm hàng', width: '36%', cell: (g) => <span className={tableText.primaryText}>{g.name}</span> },
-    { key: 'count', header: 'Số mặt hàng', align: 'right', cell: (g) => g.count },
-    { key: 'empty', header: 'Đang hết', align: 'right', cell: (g) => (g.empty ? <Badge tone="danger">{g.empty}</Badge> : <span className={tableText.muted}>0</span>) },
-    { key: 'value', header: 'Giá trị tồn', align: 'right', cell: (g) => <span className={tableText.strong}>{formatMoney(toFixed(g.value, 2))}</span> },
+    { key: 'name', header: 'Nhóm hàng', width: '36%', sort: (g) => g.name, cell: (g) => <span className={tableText.primaryText}>{g.name}</span> },
+    { key: 'count', header: 'Số mặt hàng', align: 'right', sort: (g) => g.count, cell: (g) => g.count },
+    { key: 'empty', header: 'Đang hết', align: 'right', sort: (g) => g.empty, cell: (g) => (g.empty ? <Badge tone="danger">{g.empty}</Badge> : <span className={tableText.muted}>0</span>) },
+    { key: 'value', header: 'Giá trị tồn', align: 'right', sort: (g) => decNum(g.value), cell: (g) => <span className={tableText.strong}>{formatMoney(toFixed(g.value, 2))}</span> },
   ];
   if (stockRows.length === 0) return <EmptyState title="Kho chưa có mặt hàng" />;
   return (
@@ -436,7 +498,10 @@ function StockSection({ stockRows }: { stockRows: StockRow[] }) {
           <SectionTitle>Cơ cấu giá trị tồn</SectionTitle>
           <CostBar
             caption="Cơ cấu giá trị tồn theo nhóm hàng"
-            segments={groups.map((g, i) => ({ key: g.name, label: g.name, value: decNum(g.value), display: formatMoneyShort(toFixed(g.value, 2)), tone: TONES[i] ?? 'other' }))}
+            segments={categorySegments(
+              groups.map((g) => [g.name, g.value]),
+              toneOf,
+            )}
           />
         </aside>
       </div>
@@ -450,6 +515,7 @@ function Ledger({ txs, foodById }: { txs: Transaction[]; foodById: Map<number, S
   const [food, setFood] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<SortState>(null);
   const PAGE = 15;
 
   const filtered = useMemo(() => {
@@ -460,28 +526,30 @@ function Ledger({ txs, foodById }: { txs: Transaction[]; foodById: Map<number, S
       .filter((t) => !food || String(t.food_id) === food)
       .filter((t) => !q || txReference(t).toLowerCase().includes(q) || (foodById.get(t.food_id)?.name ?? '').toLowerCase().includes(q));
   }, [txs, type, food, search, foodById]);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE));
-  const cur = Math.min(page, pageCount);
-  const visible = filtered.slice((cur - 1) * PAGE, cur * PAGE);
   const foodsInMonth = Array.from(new Set(txs.map((t) => t.food_id)))
     .map((id) => foodById.get(id))
     .filter((f): f is StockRow => Boolean(f))
     .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
 
   const columns: Column<Transaction>[] = [
-    { key: 'date', header: 'Ngày', width: '11%', cell: (t) => <span className="num">{formatDate(t.date)}</span> },
+    { key: 'date', header: 'Ngày', width: '132px', sort: (t) => `${t.date}#${String(t.id).padStart(10, '0')}`, cell: (t) => <span className="num">{formatDate(t.date)}</span> },
     {
       key: 'type',
       header: 'Loại',
-      width: '11%',
+      width: '120px',
       cell: (t) => <Badge tone={t.transaction_type === 'IN' ? 'ok' : t.transaction_type === 'OUT' ? 'info' : 'warn'}>{TX_LABELS[t.transaction_type]}</Badge>,
     },
-    { key: 'food', header: 'Mặt hàng', width: '24%', cell: (t) => <span className={tableText.primaryText}>{foodById.get(t.food_id)?.name ?? `#${t.food_id}`}</span> },
-    { key: 'ref', header: 'Chứng từ', width: '18%', cell: (t) => <span className={tableText.muted}>{txReference(t)}</span> },
-    { key: 'qty', header: 'Số lượng', width: '12%', align: 'right', cell: (t) => formatQty(t.quantity_change, foodById.get(t.food_id)?.unit) },
-    { key: 'cost', header: 'Đơn giá', width: '12%', align: 'right', cell: (t) => <span className={tableText.muted}>{formatMoney(t.cost)}</span> },
-    { key: 'value', header: 'Giá trị', width: '12%', align: 'right', cell: (t) => <span className={tableText.strong}>{formatMoney(t.value_delta)}</span> },
+    { key: 'food', header: 'Mặt hàng', width: '200px', sort: (t) => foodById.get(t.food_id)?.name, cell: (t) => <span className={tableText.primaryText}>{foodById.get(t.food_id)?.name ?? `#${t.food_id}`}</span> },
+    { key: 'ref', header: 'Chứng từ', cell: (t) => <span className={tableText.muted}>{txReference(t)}</span> },
+    { key: 'qty', header: 'Số lượng', width: '120px', align: 'right', sort: (t) => decNum(dec(t.quantity_change)), cell: (t) => formatQty(t.quantity_change, foodById.get(t.food_id)?.unit) },
+    { key: 'cost', header: 'Đơn giá', width: '128px', align: 'right', cell: (t) => <span className={tableText.muted}>{formatMoney(t.cost)}</span> },
+    { key: 'value', header: 'Giá trị', width: '168px', align: 'right', sort: (t) => decNum(dec(t.value_delta)), cell: (t) => <span className={tableText.strong}>{formatMoney(t.value_delta)}</span> },
   ];
+  // Sắp xếp trước khi cắt trang để thứ tự đúng trên toàn bộ kết quả lọc.
+  const sorted = sortRows(filtered, columns, sort);
+  const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE));
+  const cur = Math.min(page, pageCount);
+  const visible = sorted.slice((cur - 1) * PAGE, cur * PAGE);
 
   return (
     <Stack gap="lg">
@@ -533,8 +601,19 @@ function Ledger({ txs, foodById }: { txs: Transaction[]; foodById: Map<number, S
         </EmptyState>
       ) : (
         <>
-          <DataTable caption="Sổ giao dịch kho" rows={visible} rowKey={(t) => t.id} columns={columns} minWidth="860px" />
-          <Pagination page={cur} pageCount={pageCount} onPageChange={setPage} summary={`Đang hiện ${visible.length} trong ${filtered.length} giao dịch, mới nhất trước`} />
+          <DataTable
+            caption="Sổ giao dịch kho"
+            rows={visible}
+            rowKey={(t) => t.id}
+            columns={columns}
+            minWidth="1100px"
+            sort={sort}
+            onSortChange={(next) => {
+              setSort(next);
+              setPage(1);
+            }}
+          />
+          <Pagination page={cur} pageCount={pageCount} onPageChange={setPage} summary={`Đang hiện ${visible.length} trong ${filtered.length} giao dịch${sort ? '' : ', mới nhất trước'}`} />
         </>
       )}
     </Stack>

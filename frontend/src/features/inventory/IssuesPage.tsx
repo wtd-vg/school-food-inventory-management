@@ -72,18 +72,17 @@ export function IssuesPage() {
     {
       key: 'code',
       header: 'Mã phiếu',
-      width: '22%',
+      width: '176px',
       cell: (r) => (
         <button type="button" className={tableText.rowLink} onClick={() => setDocParam(String(r.id))}>
           {r.code}
         </button>
       ),
     },
-    { key: 'date', header: 'Ngày', width: '13%', cell: (r) => <span className="num">{formatDate(r.date)}</span> },
+    { key: 'date', header: 'Ngày', width: '132px', cell: (r) => <span className="num">{formatDate(r.date)}</span> },
     {
       key: 'items',
       header: 'Mặt hàng',
-      width: '27%',
       cell: (r) => (
         <span className={tableText.muted}>
           {r.lines[0]?.food_name ?? '—'}
@@ -94,11 +93,11 @@ export function IssuesPage() {
     {
       key: 'total',
       header: 'Giá trị xuất',
-      width: '18%',
+      width: '160px',
       align: 'right',
       cell: (r) => (r.status === 'POSTED' ? <span className={tableText.strong}>{formatMoney(r.total_value)}</span> : <span className={tableText.muted}>Tính khi chốt</span>),
     },
-    { key: 'status', header: 'Trạng thái', width: '13%', cell: (r) => <DocStatusBadge status={r.status} /> },
+    { key: 'status', header: 'Trạng thái', width: '140px', cell: (r) => <DocStatusBadge status={r.status} /> },
   ];
 
   return (
@@ -159,7 +158,7 @@ export function IssuesPage() {
         <EmptyState title="Không có phiếu phù hợp">Thử đổi bộ lọc hoặc từ khoá.</EmptyState>
       ) : (
         <>
-          <DataTable caption="Danh sách phiếu xuất" rows={visible} rowKey={(r) => r.id} columns={columns} minWidth="720px" />
+          <DataTable caption="Danh sách phiếu xuất" rows={visible} rowKey={(r) => r.id} columns={columns} minWidth="840px" />
           <Pagination page={current} pageCount={pageCount} onPageChange={setPage} summary={`Đang hiện ${visible.length} trong ${filtered.length} phiếu, mới nhất trước`} />
         </>
       )}

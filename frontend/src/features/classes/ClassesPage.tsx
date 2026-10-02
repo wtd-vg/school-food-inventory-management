@@ -29,7 +29,7 @@ import { formatNumber } from '../../lib/format';
 import { fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { catalogApi, ENROLLED_MAX, type SchoolClass } from '../../services/catalog';
-import { ClassTabs } from '../common/FeatureLayouts';
+import { ClassTabs, classCrumbs } from '../common/FeatureLayouts';
 import { focusFirstInvalid, useQueryParam, useUpdateParams } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
 import styles from './ClassesPage.module.css';
@@ -58,17 +58,16 @@ export function ClassesPage() {
     {
       key: 'name',
       header: 'Lớp',
-      width: '38%',
       cell: (c) => (
         <button type="button" className={tableText.rowButton} onClick={() => updateParams({ sua: String(c.id), tao: null })}>
           {c.name}
         </button>
       ),
     },
-    { key: 'code', header: 'Mã', width: '18%', cell: (c) => <span className={tableText.muted}>{c.code}</span> },
-    { key: 'grade', header: 'Khối', cell: (c) => c.grade ?? '—' },
-    { key: 'enrolled', header: 'Sĩ số', width: '16%', align: 'right', cell: (c) => <span className={tableText.strong}>{c.enrolled}</span> },
-    { key: 'status', header: 'Trạng thái', width: '18%', cell: (c) => (c.is_active ? <Badge tone="ok">Đang học</Badge> : <Badge>Ngừng</Badge>) },
+    { key: 'code', header: 'Mã', width: '120px', cell: (c) => <span className={tableText.muted}>{c.code}</span> },
+    { key: 'grade', header: 'Khối', width: '80px', cell: (c) => c.grade ?? '—' },
+    { key: 'enrolled', header: 'Sĩ số', width: '96px', align: 'right', cell: (c) => <span className={tableText.strong}>{c.enrolled}</span> },
+    { key: 'status', header: 'Trạng thái', width: '144px', cell: (c) => (c.is_active ? <Badge tone="ok">Đang học</Badge> : <Badge>Ngừng</Badge>) },
     {
       key: 'actions',
       header: <span className="sr-only">Thao tác</span>,
@@ -86,7 +85,11 @@ export function ClassesPage() {
   return (
     <>
       <PageHeader
+        variant="banner"
+        scene="binhminh"
+        breadcrumb={classCrumbs('Lớp học')}
         title="Lớp học"
+        count={query.data ? active.length : undefined}
         actions={
           <Button write icon={<IconPlus size={18} strokeWidth={2.4} />} onClick={() => updateParams({ tao: '1', sua: null })}>
             Thêm lớp

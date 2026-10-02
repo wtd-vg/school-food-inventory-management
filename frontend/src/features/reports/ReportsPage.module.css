@@ -1,3 +1,25 @@
+/* Đầu card: tab mục báo cáo bên trái, chọn tháng bên phải */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.toolbar > :first-child {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+  padding-top: 6px;
+}
+
 .monthNav {
   display: inline-flex;
   align-items: center;
@@ -88,7 +110,8 @@
   gap: 0;
 }
 
-@media (max-width: 1023px) {
+/* Cột phụ 320px chỉ đặt cạnh khi cột chính còn đủ rộng; hẹp hơn thì xếp dọc để bảng không bị cắt. */
+@media (max-width: 1279px) {
   .grid {
     grid-template-columns: 1fr;
     gap: 28px;
@@ -102,41 +125,5 @@
 
   .foodFilter {
     width: 100%;
-  }
-}
-
-/* Theo ngày ăn (SF70) */
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  background: var(--surface);
-}
-
-.kpiLabel {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.kpiValue {
-  font-size: 24px;
-  font-weight: 700;
-}
-
-@media (max-width: 767px) {
-  .kpis {
-    grid-template-columns: 1fr;
   }
 }

@@ -131,3 +131,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Cột "Người lập": tên trên, thời điểm dưới (không cắt ở 1280px) */
+.byName,
+.byTime {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.byTime {
+  font-size: 13px;
+  color: var(--muted);
+}

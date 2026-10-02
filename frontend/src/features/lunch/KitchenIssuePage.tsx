@@ -118,7 +118,7 @@ export function KitchenIssuePage() {
                 rows={cost.data.foods}
                 rowKey={(f) => f.food_id}
                 columns={[
-                  { key: 'food', header: 'Nguyên liệu', wrap: true, cell: (f) => <span className={tableText.strong}>{f.food_name}</span> },
+                  { key: 'food', header: 'Nguyên liệu', cell: (f) => <span className={tableText.strong}>{f.food_name}</span> },
                   { key: 'required', header: 'Cần dùng', align: 'right', cell: (f) => formatQty(f.required, f.unit) },
                   { key: 'issued', header: 'Đã xuất', align: 'right', cell: (f) => formatQty(f.issued, f.unit) },
                   {

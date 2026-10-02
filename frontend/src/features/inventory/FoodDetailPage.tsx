@@ -85,11 +85,10 @@ export function FoodDetailPage() {
   const counts = { IN: txs.filter((t) => t.transaction_type === 'IN').length, OUT: txs.filter((t) => t.transaction_type === 'OUT').length, ADJUST: txs.filter((t) => t.transaction_type === 'ADJUST').length };
 
   const txColumns: Column<Transaction>[] = [
-    { key: 'date', header: 'Ngày', width: '14%', sort: (t) => `${t.date} ${String(t.id).padStart(9, '0')}`, cell: (t) => <span className="num">{formatDate(t.date)}</span> },
+    { key: 'date', header: 'Ngày', width: '132px', sort: (t) => `${t.date} ${String(t.id).padStart(9, '0')}`, cell: (t) => <span className="num">{formatDate(t.date)}</span> },
     {
       key: 'event',
       header: 'Sự kiện',
-      width: '34%',
       sort: (t) => TX_LABELS[t.transaction_type],
       cell: (t) => (
         <span className={styles.event}>
@@ -100,11 +99,11 @@ export function FoodDetailPage() {
         </span>
       ),
     },
-    { key: 'cost', header: 'Đơn giá', width: '16%', align: 'right', sort: (t) => num(t.cost), cell: (t) => <span className={tableText.muted}>{formatMoney(t.cost)}</span> },
+    { key: 'cost', header: 'Đơn giá', width: '128px', align: 'right', sort: (t) => num(t.cost), cell: (t) => <span className={tableText.muted}>{formatMoney(t.cost)}</span> },
     {
       key: 'qty',
       header: 'Số lượng',
-      width: '16%',
+      width: '120px',
       align: 'right',
       sort: (t) => num(t.quantity_change),
       cell: (t) => {
@@ -117,7 +116,7 @@ export function FoodDetailPage() {
         );
       },
     },
-    { key: 'value', header: 'Giá trị', width: '20%', align: 'right', sort: (t) => num(t.value_delta), cell: (t) => formatMoney(t.value_delta) },
+    { key: 'value', header: 'Giá trị', width: '148px', align: 'right', sort: (t) => num(t.value_delta), cell: (t) => formatMoney(t.value_delta) },
   ];
 
   const historyTable = (list: Transaction[], caption: string) =>
@@ -128,7 +127,7 @@ export function FoodDetailPage() {
     ) : list.length === 0 ? (
       <EmptyState title="Chưa có giao dịch">Tồn thay đổi khi chốt phiếu nhập, phiếu xuất hoặc kiểm kê.</EmptyState>
     ) : (
-      <DataTable caption={caption} rows={list} rowKey={(t) => t.id} columns={txColumns} minWidth="640px" />
+      <DataTable caption={caption} rows={list} rowKey={(t) => t.id} columns={txColumns} minWidth="740px" />
     );
 
   return (
