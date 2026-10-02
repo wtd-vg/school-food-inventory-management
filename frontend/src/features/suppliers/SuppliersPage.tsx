@@ -69,8 +69,11 @@ export function SuppliersPage() {
   return (
     <>
       <PageHeader
-        overline={query.data ? `${activeCount} nhà cung cấp đang hợp tác` : undefined}
+        variant="banner"
+        scene="song"
+        breadcrumb={[{ label: 'Nhà cung cấp', to: '/nha-cung-cap' }, { label: selected?.name ?? 'Danh sách' }]}
         title="Nhà cung cấp"
+        count={query.data ? activeCount : undefined}
         actions={
           <>
             <SearchField value={search} onValueChange={setSearch} placeholder="Tìm nhà cung cấp…" />
@@ -160,11 +163,11 @@ function SupplierDetail({ supplier, receipts, foods, onEdit }: { supplier: Suppl
 
   const recent = [...receipts].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id).slice(0, 8);
   const columns: Column<Receipt>[] = [
-    { key: 'date', header: 'Ngày', width: '14%', cell: (r) => <span className="num">{formatShortDate(r.date)}</span> },
+    { key: 'date', header: 'Ngày', width: '88px', cell: (r) => <span className="num">{formatShortDate(r.date)}</span> },
     {
       key: 'doc',
       header: 'Phiếu nhập',
-      width: '16%',
+      width: '112px',
       cell: (r) => (
         <Link className={tableText.rowLink} to={`/kho/phieu-nhap?phieu=${r.id}`}>
           #{r.id}
@@ -174,7 +177,6 @@ function SupplierDetail({ supplier, receipts, foods, onEdit }: { supplier: Suppl
     {
       key: 'items',
       header: 'Mặt hàng',
-      width: '34%',
       cell: (r) => (
         <span className={tableText.muted}>
           {r.lines[0]?.food_name ?? '—'}
@@ -182,8 +184,8 @@ function SupplierDetail({ supplier, receipts, foods, onEdit }: { supplier: Suppl
         </span>
       ),
     },
-    { key: 'total', header: 'Tiền hàng', width: '20%', align: 'right', cell: (r) => <span className={tableText.strong}>{formatMoney(r.total_value)}</span> },
-    { key: 'status', header: 'Trạng thái', width: '16%', cell: (r) => <DocStatusBadge status={r.status} /> },
+    { key: 'total', header: 'Tiền hàng', width: '160px', align: 'right', cell: (r) => <span className={tableText.strong}>{formatMoney(r.total_value)}</span> },
+    { key: 'status', header: 'Trạng thái', width: '128px', cell: (r) => <DocStatusBadge status={r.status} /> },
   ];
 
   return (
@@ -263,7 +265,7 @@ function SupplierDetail({ supplier, receipts, foods, onEdit }: { supplier: Suppl
         {recent.length === 0 ? (
           <p className={styles.empty}>Chưa có phiếu nhập nào từ nhà cung cấp này.</p>
         ) : (
-          <DataTable caption={`Phiếu nhập gần đây của ${supplier.name}`} rows={recent} rowKey={(r) => r.id} columns={columns} minWidth="560px" />
+          <DataTable caption={`Phiếu nhập gần đây của ${supplier.name}`} rows={recent} rowKey={(r) => r.id} columns={columns} minWidth="680px" />
         )}
       </section>
     </article>

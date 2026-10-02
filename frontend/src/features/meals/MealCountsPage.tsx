@@ -31,7 +31,7 @@ import { formatDate, formatDateTime, formatNumber, todayISO } from '../../lib/fo
 import { ApiError, fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { mealsApi, STAFF_MAX, type CountKind, type CountLine, type CountsInput, type OpenMealDay } from '../../services/meals';
-import { ClassTabs } from '../common/FeatureLayouts';
+import { ClassTabs, classCrumbs } from '../common/FeatureLayouts';
 import { useQueryParam } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
 import styles from './MealCountsPage.module.css';
@@ -227,7 +227,12 @@ export function MealCountsPage() {
 
   return (
     <>
-      <PageHeader title="Số suất" description="Số suất ăn trưa theo lớp: dự kiến (để tính nguyên liệu) và thực tế (để tính chi phí/suất)." />
+      <PageHeader
+        variant="banner"
+        scene="binhminh"
+        breadcrumb={classCrumbs('Số suất')}
+        title="Số suất"
+        description="Số suất ăn trưa theo lớp: dự kiến (để tính nguyên liệu) và thực tế (để tính chi phí/suất)." />
       <ClassTabs />
       <Stack gap="lg">
         <Toolbar>

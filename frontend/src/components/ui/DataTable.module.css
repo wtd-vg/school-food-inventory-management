@@ -1,4 +1,6 @@
 .wrap {
+  /* relative: nhãn sr-only (absolute) trong bảng nằm trong khung cuộn, không đẩy cả trang cuộn ngang */
+  position: relative;
   width: 100%;
   overflow-x: auto;
 }

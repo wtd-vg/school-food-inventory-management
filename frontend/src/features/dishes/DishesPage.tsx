@@ -34,7 +34,7 @@ import { fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { catalogApi, recipeUnitsFor, type Dish } from '../../services/catalog';
 import { inventoryApi, type Food } from '../../services/inventory';
-import { DishTabs } from '../common/FeatureLayouts';
+import { DishTabs, dishCrumbs } from '../common/FeatureLayouts';
 import { focusFirstInvalid, useQueryParam, useUpdateParams } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
 import styles from './DishesPage.module.css';
@@ -88,7 +88,7 @@ export function DishesPage() {
     {
       key: 'name',
       header: 'Món',
-      width: '26%',
+      width: '30%',
       cell: (d) => (
         <>
           <button type="button" className={tableText.rowButton} onClick={() => updateParams({ sua: String(d.id), tao: null })}>
@@ -101,7 +101,6 @@ export function DishesPage() {
     {
       key: 'components',
       header: 'Định lượng mỗi suất',
-      width: '40%',
       wrap: true,
       cell: (d) => (
         <span className={styles.components}>
@@ -112,7 +111,7 @@ export function DishesPage() {
     {
       key: 'cost',
       header: 'Chi phí ước tính/suất',
-      width: '16%',
+      width: '168px',
       align: 'right',
       cell: (d) => {
         const c = portionCost(d, foodById);
@@ -124,7 +123,7 @@ export function DishesPage() {
         );
       },
     },
-    { key: 'status', header: 'Trạng thái', width: '12%', cell: (d) => (d.is_active ? <Badge tone="ok">Đang dùng</Badge> : <Badge>Ngừng dùng</Badge>) },
+    { key: 'status', header: 'Trạng thái', width: '144px', cell: (d) => (d.is_active ? <Badge tone="ok">Đang dùng</Badge> : <Badge>Ngừng dùng</Badge>) },
     {
       key: 'actions',
       header: <span className="sr-only">Thao tác</span>,
@@ -144,7 +143,11 @@ export function DishesPage() {
   return (
     <>
       <PageHeader
+        variant="banner"
+        scene="dong"
+        breadcrumb={dishCrumbs('Món & công thức')}
         title="Món & công thức"
+        count={query.data ? activeCount : undefined}
         actions={
           <Button write icon={<IconPlus size={18} strokeWidth={2.4} />} onClick={() => updateParams({ tao: '1', sua: null })}>
             Thêm món
@@ -190,7 +193,7 @@ export function DishesPage() {
         ) : filtered.length === 0 ? (
           <EmptyState title="Không có món phù hợp">Thử đổi bộ lọc hoặc từ khoá.</EmptyState>
         ) : (
-          <DataTable caption="Danh sách món ăn" rows={filtered} rowKey={(d) => d.id} columns={columns} minWidth="820px" />
+          <DataTable caption="Danh sách món ăn" rows={filtered} rowKey={(d) => d.id} columns={columns} minWidth="900px" />
         )}
         {filtered.some((d) => !portionCost(d, foodById).complete) ? (
           <p className={styles.footnote}>* Có nguyên liệu chưa nhập kho lần nào nên chưa có giá vốn.</p>

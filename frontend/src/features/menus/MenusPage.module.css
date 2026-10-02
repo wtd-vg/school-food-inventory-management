@@ -6,6 +6,17 @@
   list-style: none;
 }
 
+/* SF79: tuần có bữa trưa Thứ Bảy → 3 cột × 2 hàng; chỉ chia 6 cột khi màn đủ rộng để chip không tràn thẻ */
+.week6 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (min-width: 1600px) {
+  .week6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
 .day {
   display: flex;
   flex-direction: column;
@@ -109,6 +120,12 @@
   font-weight: 700;
 }
 
+.saturday {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .choiceGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -130,4 +147,17 @@
   .week {
     grid-template-columns: 1fr;
   }
+}
+
+/* Cột "Người lập": tên trên, thời điểm dưới (không cắt ở 1280px) */
+.byName,
+.byTime {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.byTime {
+  font-size: 13px;
+  color: var(--muted);
 }

@@ -32,8 +32,19 @@ import { formatDate, formatDateTime, formatShortDate, todayISO } from '../../lib
 import { fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { catalogApi, type Dish } from '../../services/catalog';
-import { menusApi, shiftDate, WEEKDAY_LABELS, type Holiday, type MenuDay, type MenuVersion } from '../../services/menus';
-import { DishTabs } from '../common/FeatureLayouts';
+import {
+  hasSaturday,
+  isSchoolDay,
+  menusApi,
+  SATURDAY,
+  SATURDAY_LABEL,
+  shiftDate,
+  WEEKDAY_LABELS,
+  type Holiday,
+  type MenuDay,
+  type MenuVersion,
+} from '../../services/menus';
+import { DishTabs, dishCrumbs } from '../common/FeatureLayouts';
 import { formatPortion } from '../dishes/DishesPage';
 import { useQueryParam, useUpdateParams } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
@@ -96,20 +107,35 @@ export function MenusPage() {
     {
       key: 'range',
       header: 'Áp dụng',
+      width: '26%',
       cell: (v) => (
-        <span className={tableText.strong}>
-          {formatDate(v.effective_from)} → {v.effective_to ? formatDate(v.effective_to) : 'nay'}
-        </span>
+        <>
+          <span className={tableText.strong}>
+            {formatDate(v.effective_from)} → {v.effective_to ? formatDate(v.effective_to) : 'nay'}
+          </span>
+          <span className={tableText.secondaryText}>{hasSaturday(v) ? 'T2–T7' : 'T2–T6'}</span>
+        </>
       ),
     },
     {
       key: 'state',
       header: 'Trạng thái',
+      width: '16%',
       cell: (v) =>
         v.is_current ? <Badge tone="ok">Đang áp dụng</Badge> : v.is_editable ? <Badge tone="info">Sắp áp dụng</Badge> : <Badge>Lịch sử</Badge>,
     },
     { key: 'note', header: 'Ghi chú', wrap: true, cell: (v) => v.note || '—' },
-    { key: 'by', header: 'Người lập', cell: (v) => <span className={tableText.muted}>{v.created_by} · {formatDateTime(v.created_at)}</span> },
+    {
+      key: 'by',
+      header: 'Người lập',
+      width: '22%',
+      cell: (v) => (
+        <>
+          <span className={`${tableText.primaryText} ${styles.byName}`}>{v.created_by}</span>
+          <span className={`${styles.byTime} num`}>{formatDateTime(v.created_at)}</span>
+        </>
+      ),
+    },
     {
       key: 'actions',
       header: <span className="sr-only">Thao tác</span>,
@@ -165,7 +191,7 @@ export function MenusPage() {
 
   return (
     <>
-      <PageHeader title="Thực đơn tuần" actions={editButton} />
+      <PageHeader variant="banner" scene="dong" breadcrumb={dishCrumbs('Thực đơn tuần')} title="Thực đơn tuần" actions={editButton} />
       <DishTabs />
       <Stack gap="lg">
         <Toolbar>
@@ -199,7 +225,7 @@ export function MenusPage() {
           <ErrorState message={versions.error} onRetry={versions.reload} />
         ) : !versions.data?.length ? (
           <EmptyState title="Chưa lập thực đơn cố định" action={editButton}>
-            Lập thực đơn cho Thứ Hai đến Thứ Sáu; thực đơn lặp lại mỗi tuần.
+            Lập thực đơn cho Thứ Hai đến Thứ Sáu (thêm Thứ Bảy nếu trường có bữa trưa Thứ Bảy); thực đơn lặp lại mỗi tuần.
           </EmptyState>
         ) : (
           <DataTable caption="Lịch sử thực đơn cố định" rows={versions.data} rowKey={(v) => v.id} columns={versionColumns} minWidth="720px" />
@@ -278,11 +304,12 @@ function sourceBadge(day: MenuDay) {
 }
 
 function WeekGrid({ days, today }: { days: MenuDay[]; today: string }) {
-  const school = days.filter((d) => d.weekday < 5);
-  const weekend = days.filter((d) => d.weekday >= 5);
+  const school = days.filter(isSchoolDay);
+  const weekend = days.filter((d) => !isSchoolDay(d));
+  const withSaturday = school.some((d) => d.weekday === SATURDAY);
   return (
     <>
-      <ol className={styles.week} aria-label="Thực đơn Thứ Hai đến Thứ Sáu">
+      <ol className={`${styles.week} ${withSaturday ? styles.week6 : ''}`} aria-label={`Thực đơn Thứ Hai đến ${withSaturday ? 'Thứ Bảy' : 'Thứ Sáu'}`}>
         {school.map((d) => (
           <li key={d.date} className={`${styles.day} ${d.date === today ? styles.today : ''} ${d.status !== 'menu' ? styles.off : ''}`}>
             <div className={styles.dayHead}>
@@ -335,6 +362,10 @@ function VersionDrawer({ version, onClose }: { version: MenuVersion; onClose: ()
               <dd>{(version.days[String(i)] ?? []).map((d) => d.dish_name).join(', ') || '—'}</dd>
             </div>
           ))}
+          <div>
+            <dt>{SATURDAY_LABEL}</dt>
+            <dd>{hasSaturday(version) ? version.days[String(SATURDAY)].map((d) => d.dish_name).join(', ') : 'Nghỉ'}</dd>
+          </div>
         </dl>
         <p className={s.muted}>
           Lập bởi {version.created_by} lúc {formatDateTime(version.created_at)}.
@@ -358,6 +389,7 @@ function MenuForm({
   const [date, setDate] = useState(tomorrow);
   const [note, setNote] = useState('');
   const [days, setDays] = useState<Record<string, number[]> | null>(null);
+  const [saturday, setSaturday] = useState(hasSaturday(current));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -368,15 +400,19 @@ function MenuForm({
   const chosen: Record<string, number[]> =
     days ??
     Object.fromEntries(
-      WEEKDAY_LABELS.map((_, i) => [
+      [...WEEKDAY_LABELS, SATURDAY_LABEL].map((_, i) => [
         String(i),
         (current?.days[String(i)] ?? []).map((d) => d.dish_id).filter((id) => available.some((d) => d.id === id)),
       ]),
     );
+  // Thứ tự các thứ hiện trong form: T2–T6, cộng Thứ Bảy khi bật.
+  const dayLabels = saturday ? [...WEEKDAY_LABELS, SATURDAY_LABEL] : WEEKDAY_LABELS;
 
   const toggle = (weekday: string, dishId: number, on: boolean) => {
     const base = chosen[weekday] ?? [];
     setDays({ ...chosen, [weekday]: on ? [...base, dishId] : base.filter((id) => id !== dishId) });
+    // Đã chọn món thì bỏ lỗi "cần ít nhất một món" của thứ đó.
+    if (on && errors[`days.${weekday}`]) setErrors(({ [`days.${weekday}`]: _gone, ...rest }) => rest);
   };
 
   const onSubmit = async (e: FormEvent) => {
@@ -384,7 +420,7 @@ function MenuForm({
     setFormError('');
     const next: Record<string, string> = {};
     if (!date || date < tomorrow) next.effective_from = 'Ngày áp dụng phải từ ngày mai trở đi.';
-    WEEKDAY_LABELS.forEach((label, i) => {
+    dayLabels.forEach((label, i) => {
       if (!chosen[String(i)]?.length) next[`days.${i}`] = `${label} cần ít nhất một món.`;
     });
     setErrors(next);
@@ -394,7 +430,9 @@ function MenuForm({
     }
     setBusy(true);
     try {
-      const v = await menusApi.createVersion({ effective_from: date, note: note.trim(), days: chosen });
+      // Chỉ gửi khóa "5" khi bật Thứ Bảy; không gửi thì Thứ Bảy là ngày nghỉ.
+      const payload = Object.fromEntries(dayLabels.map((_, i) => [String(i), chosen[String(i)] ?? []]));
+      const v = await menusApi.createVersion({ effective_from: date, note: note.trim(), days: payload });
       toast.show(`Đã lưu thực đơn áp dụng từ ${formatDate(v.effective_from)}.`);
       onSaved(v);
     } catch (err) {
@@ -443,10 +481,24 @@ function MenuForm({
             hint="Sớm nhất là ngày mai. Không sửa lùi thực đơn đã áp dụng."
             required
           />
+          <div className={styles.saturday}>
+            <Checkbox
+              label="Có bữa trưa Thứ Bảy"
+              aria-describedby="menu-saturday-hint"
+              checked={saturday}
+              onChange={(e) => {
+                setSaturday(e.target.checked);
+                if (!e.target.checked) setErrors(({ [`days.${SATURDAY}`]: _gone, ...rest }) => rest);
+              }}
+            />
+            <p className={s.muted} id="menu-saturday-hint">
+              Bật khi trường nấu ăn Thứ Bảy; tắt thì Thứ Bảy là ngày nghỉ. Chủ nhật luôn nghỉ.
+            </p>
+          </div>
           {!available.length ? (
             <EmptyState title="Chưa có món đang dùng có công thức">Thêm món và công thức ở tab Món & công thức trước.</EmptyState>
           ) : (
-            WEEKDAY_LABELS.map((label, i) => {
+            dayLabels.map((label, i) => {
               const key = String(i);
               const err = errors[`days.${i}`] ?? errors[`days.${key}`];
               return (

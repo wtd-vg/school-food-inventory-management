@@ -77,19 +77,18 @@ export function ReceiptsPage() {
     {
       key: 'id',
       header: 'Phiếu',
-      width: '12%',
+      width: '96px',
       cell: (r) => (
         <button type="button" className={tableText.rowLink} onClick={() => setDocParam(String(r.id))}>
           #{r.id}
         </button>
       ),
     },
-    { key: 'date', header: 'Ngày', width: '13%', cell: (r) => <span className="num">{formatDate(r.date)}</span> },
-    { key: 'supplier', header: 'Nhà cung cấp', width: '25%', cell: (r) => <span className={tableText.strong}>{r.supplier_name || '—'}</span> },
+    { key: 'date', header: 'Ngày', width: '132px', cell: (r) => <span className="num">{formatDate(r.date)}</span> },
+    { key: 'supplier', header: 'Nhà cung cấp', cell: (r) => <span className={tableText.strong}>{r.supplier_name || '—'}</span> },
     {
       key: 'items',
       header: 'Mặt hàng',
-      width: '22%',
       cell: (r) => (
         <span className={tableText.muted}>
           {r.lines[0]?.food_name ?? '—'}
@@ -97,8 +96,8 @@ export function ReceiptsPage() {
         </span>
       ),
     },
-    { key: 'total', header: 'Tổng tiền', width: '15%', align: 'right', cell: (r) => <span className={tableText.strong}>{formatMoney(r.total_value)}</span> },
-    { key: 'status', header: 'Trạng thái', width: '13%', cell: (r) => <DocStatusBadge status={r.status} /> },
+    { key: 'total', header: 'Tổng tiền', width: '160px', align: 'right', cell: (r) => <span className={tableText.strong}>{formatMoney(r.total_value)}</span> },
+    { key: 'status', header: 'Trạng thái', width: '140px', cell: (r) => <DocStatusBadge status={r.status} /> },
   ];
 
   return (
@@ -159,7 +158,7 @@ export function ReceiptsPage() {
         <EmptyState title="Không có phiếu phù hợp">Thử đổi bộ lọc hoặc từ khoá.</EmptyState>
       ) : (
         <>
-          <DataTable caption="Danh sách phiếu nhập" rows={visible} rowKey={(r) => r.id} columns={columns} minWidth="760px" />
+          <DataTable caption="Danh sách phiếu nhập" rows={visible} rowKey={(r) => r.id} columns={columns} minWidth="960px" />
           <Pagination page={current} pageCount={pageCount} onPageChange={setPage} summary={`Đang hiện ${visible.length} trong ${filtered.length} phiếu, mới nhất trước`} />
         </>
       )}
@@ -215,7 +214,11 @@ function CreateReceiptDrawer({
   const [supplierId, setSupplierId] = useState('');
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState('');
-  const [lines, setLines] = useState<DraftLine[]>(() => [newLine(preset)]);
+  // ?mat-hang=1,2,3 (chọn nhiều dòng ở Tồn kho) → mỗi mặt hàng một dòng.
+  const [lines, setLines] = useState<DraftLine[]>(() => {
+    const ids = preset.split(',').filter((x) => /^\d+$/.test(x));
+    return ids.length ? ids.map((x) => newLine(x)) : [newLine('')];
+  });
   const [errors, setErrors] = useState<{ supplier?: string; date?: string; lines: Record<number, { food?: string; quantity?: string; unitPrice?: string }> }>({ lines: {} });
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
