@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { roleLabel, useAuth } from '../../auth/AuthContext';
 import { IconBowl, IconLogOut } from '../icons';
 import { useToast } from '../ui';
@@ -8,7 +8,7 @@ import styles from './AppShell.module.css';
 
 function Brand() {
   return (
-    <NavLink to="/kho" className={styles.brand} aria-label={`${APP_NAME} – về trang Kho hàng`}>
+    <NavLink to="/bua-trua" className={styles.brand} aria-label={`${APP_NAME} – về trang Hôm nay`}>
       <span className={styles.logo}>
         <IconBowl size={22} />
       </span>
@@ -116,8 +116,11 @@ function UserMenu() {
 /** Khung trang (UI_GUIDE.md): sidebar 232 → chỉ icon (<1280) → tab dưới đáy (<768). */
 export function AppShell() {
   const { main, admin } = useNavItems();
+  // Khu hiện tại (/kho, /bua-trua…): đổi khu thì nội dung hiện lên lại; đổi tab con không.
+  const section = useLocation().pathname.split('/')[1] ?? '';
   return (
     <div className={styles.shell}>
+      <div className={styles.backdrop} aria-hidden="true" />
       <a className={styles.skip} href="#main">
         Bỏ qua điều hướng
       </a>
@@ -142,7 +145,9 @@ export function AppShell() {
 
       <main id="main" className={styles.main} tabIndex={-1}>
         <div className={styles.content}>
-          <Outlet />
+          <div key={section} className={styles.page}>
+            <Outlet />
+          </div>
         </div>
       </main>
 

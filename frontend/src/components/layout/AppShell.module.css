@@ -1,7 +1,31 @@
+/* SF78: nền đào nhạt + vài mảng pastel mờ trôi rất chậm phía sau (CSS thuần, không WebGL). */
 .shell {
+  position: relative;
   display: flex;
   min-height: 100vh;
-  background: var(--bg);
+  background: linear-gradient(160deg, var(--login-glow) 0%, var(--bg) 38%, var(--login-peach-1) 100%);
+  isolation: isolate;
+}
+
+.backdrop {
+  position: fixed;
+  inset: -10%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(34% 30% at 12% 14%, var(--login-slab-butter) 0%, transparent 70%),
+    radial-gradient(30% 28% at 90% 10%, var(--login-slab-rose) 0%, transparent 70%),
+    radial-gradient(34% 32% at 86% 88%, var(--login-slab-mint) 0%, transparent 70%),
+    radial-gradient(30% 30% at 24% 92%, var(--login-slab-sky) 0%, transparent 70%),
+    radial-gradient(26% 24% at 58% 46%, var(--login-slab-lilac) 0%, transparent 72%);
+  opacity: .85;
+  animation: drift 48s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  to {
+    transform: translate3d(2.5%, -2%, 0) rotate(2deg) scale(1.04);
+  }
 }
 
 .skip {
@@ -25,6 +49,7 @@
 .sidebar {
   position: sticky;
   top: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 26px;
@@ -32,7 +57,10 @@
   width: var(--sidebar-w);
   height: 100vh;
   padding: 26px 16px 20px;
-  background: var(--sidebar);
+  border-right: 1px solid var(--glass-edge);
+  background: var(--glass);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
   overflow-y: auto;
 }
 
@@ -101,21 +129,37 @@
   font-weight: 500;
   text-decoration: none;
   white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .navLink:hover {
-  background: var(--warm-inner);
+  background: var(--surface-hover);
   color: var(--ink);
+}
+
+.navLink:active {
+  transform: scale(.98);
 }
 
 .navLink[aria-current='page'] {
   background: var(--surface);
   color: var(--ink);
   font-weight: 700;
+  box-shadow: var(--shadow-card);
 }
 
 .navIcon {
   flex: none;
+  transition: color var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-spring);
+}
+
+.navLink:hover .navIcon {
+  transform: translateY(-1px) rotate(-4deg);
+}
+
+.navLink[aria-current='page'] .navIcon {
+  color: var(--accent);
 }
 
 .userArea {
@@ -138,7 +182,7 @@
 
 .userButton:hover,
 .userButton[aria-expanded='true'] {
-  background: var(--warm-inner);
+  background: var(--surface-hover);
 }
 
 .avatar {
@@ -183,9 +227,18 @@
   z-index: 30;
   min-width: 220px;
   padding: 6px;
-  border-radius: var(--r-md);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-card);
   background: var(--surface);
   box-shadow: var(--shadow-pop);
+  animation: menuIn var(--dur-base) var(--ease-spring);
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(.97);
+  }
 }
 
 .menuHead {
@@ -224,6 +277,8 @@
 
 /* ---------- Nội dung chính ---------- */
 .main {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -232,12 +287,34 @@
   padding: 30px 40px 28px;
 }
 
+/* Chuyển khu (Hôm nay → Kho…): nội dung hiện lên nhẹ. Đổi tab trong cùng khu không chạy lại. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  animation: pageIn var(--dur-slow) var(--ease-out);
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 .content {
   display: flex;
   flex-direction: column;
   gap: 22px;
   width: 100%;
   max-width: 1400px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .page {
+    animation: none;
+  }
 }
 
 /* ---------- Thanh trên + tab dưới (<768) ---------- */
@@ -305,7 +382,10 @@
     gap: 12px;
     height: 60px;
     padding: 0 16px;
-    background: var(--sidebar);
+    border-bottom: 1px solid var(--glass-edge);
+    background: var(--glass);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
   }
 
   .topbar .brandText {
@@ -363,7 +443,10 @@
     grid-auto-columns: minmax(0, 1fr);
     height: var(--tabbar-h);
     padding: 0 4px env(safe-area-inset-bottom);
-    background: var(--surface);
+    border-top: 1px solid var(--glass-edge);
+    background: var(--glass);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
     box-shadow: var(--shadow-bar);
   }
 
@@ -394,7 +477,13 @@
     border-radius: var(--r-pill);
   }
 
+  .tabIcon {
+    transition: background-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-spring);
+  }
+
   .tabLink[aria-current='page'] .tabIcon {
-    background: var(--sidebar);
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    transform: translateY(-2px);
   }
 }
