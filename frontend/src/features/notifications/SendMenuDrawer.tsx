@@ -42,7 +42,7 @@ export function SendMenuDrawer({ date, onClose, onSent }: { date: string; onClos
       onClose={busy ? () => undefined : onClose}
       footer={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Đóng
           </Button>
           <Button write icon={<IconSend size={18} />} busy={busy} disabled={!p || Boolean(p.problem) || remaining === 0} onClick={send}>

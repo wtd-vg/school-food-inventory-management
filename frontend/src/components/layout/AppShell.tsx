@@ -1,22 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { roleLabel, useAuth } from '../../auth/AuthContext';
-import { IconBowl, IconLogOut } from '../icons';
+import { IconChevronDown, IconClose, IconLogOut, IconSearch, LogoMark } from '../icons';
 import { useToast } from '../ui';
-import { APP_NAME, NAV_ITEMS, SCHOOL_NAME, type NavItem } from './nav';
+import { AlertsBell } from './AlertsBell';
+import { GlobalSearch } from './GlobalSearch';
+import { APP_NAME, NAV_ITEMS, SCHOOL_NAME, isNavActive, type NavItem } from './nav';
 import styles from './AppShell.module.css';
 
 function Brand() {
   return (
-    <NavLink to="/kho" className={styles.brand} aria-label={`${APP_NAME} – về trang Kho hàng`}>
+    <Link to="/bua-trua" className={styles.brand} aria-label={`${APP_NAME} – về Tổng quan`}>
       <span className={styles.logo}>
-        <IconBowl size={22} />
+        <LogoMark size={30} />
       </span>
       <span className={styles.brandText}>
         <span className={styles.brandName}>{APP_NAME}</span>
         {SCHOOL_NAME ? <span className={styles.schoolName}>{SCHOOL_NAME}</span> : null}
       </span>
-    </NavLink>
+    </Link>
   );
 }
 
@@ -31,15 +33,10 @@ function useNavItems(): { main: NavItem[]; admin: NavItem[] } {
   };
 }
 
-function UserMenu() {
-  const { user, logout } = useAuth();
-  const { admin } = useNavItems();
-  const toast = useToast();
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
+/** Đóng popover khi bấm ra ngoài hoặc Esc (trả focus về nút mở). */
+function useDismiss(open: boolean, setOpen: (v: boolean) => void) {
   const areaRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
@@ -57,7 +54,17 @@ function UserMenu() {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, setOpen]);
+  return { areaRef, buttonRef };
+}
+
+function UserMenu() {
+  const { user, logout } = useAuth();
+  const { admin } = useNavItems();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const { areaRef, buttonRef } = useDismiss(open, setOpen);
 
   if (!user) return null;
   const initial = user.username.trim().charAt(0) || '?';
@@ -73,7 +80,7 @@ function UserMenu() {
   };
 
   return (
-    <div className={styles.userArea} ref={areaRef}>
+    <div className={styles.popArea} ref={areaRef}>
       <button
         ref={buttonRef}
         type="button"
@@ -90,10 +97,11 @@ function UserMenu() {
           <span className={styles.userName}>{user.username}</span>
           <span className={styles.userRole}>{roleLabel(user.role)}</span>
         </span>
+        <IconChevronDown size={16} className={styles.userChevron} />
       </button>
       {open ? (
-        <div className={styles.menu} role="menu" aria-label="Tài khoản">
-          <p className={styles.menuHead}>
+        <div className={`${styles.pop} ${styles.popRight}`} role="menu" aria-label="Tài khoản">
+          <p className={styles.popHead}>
             <strong>{user.username}</strong>
             {roleLabel(user.role)}
           </p>
@@ -113,50 +121,98 @@ function UserMenu() {
   );
 }
 
-/** Khung trang (UI_GUIDE.md): sidebar 232 → chỉ icon (<1280) → tab dưới đáy (<768). */
+function RailLink({ item }: { item: NavItem }) {
+  const { pathname } = useLocation();
+  const active = isNavActive(item, pathname);
+  return (
+    <Link
+      to={item.to}
+      className={styles.railLink}
+      aria-label={item.label}
+      aria-current={active ? 'page' : undefined}
+      data-tip={item.label}
+    >
+      <item.icon size={20} />
+    </Link>
+  );
+}
+
+/**
+ * Khung app SF78: viền gradient 8px bo 30 → cửa sổ trắng bo 22 → thanh trên 60px + thanh dọc 64px chỉ icon.
+ * Điện thoại (<768): bỏ viền, ô tìm kiếm mở bằng nút, điều hướng ở thanh tab dưới đáy.
+ */
 export function AppShell() {
   const { main, admin } = useNavItems();
-  return (
-    <div className={styles.shell}>
-      <a className={styles.skip} href="#main">
-        Bỏ qua điều hướng
-      </a>
+  const { pathname } = useLocation();
+  const [mobileSearch, setMobileSearch] = useState(false);
 
-      <aside className={styles.sidebar}>
-        <Brand />
-        <nav className={styles.nav} aria-label="Điều hướng chính">
-          {[...main, ...admin].map((item) => (
-            <NavLink key={item.to} to={item.to} className={styles.navLink} title={item.label}>
-              <item.icon size={20} className={styles.navIcon} />
-              <span className={styles.navLabel}>{item.label}</span>
-            </NavLink>
+  useEffect(() => setMobileSearch(false), [pathname]);
+
+  return (
+    <div className={styles.frame}>
+      <div className={styles.window}>
+        <a className={styles.skip} href="#main">
+          Bỏ qua điều hướng
+        </a>
+
+        <header className={styles.topbar}>
+          <Brand />
+          <GlobalSearch className={styles.search} />
+          <div className={styles.topActions}>
+            <button
+              type="button"
+              className={`${styles.iconBtn} ${styles.searchToggle}`}
+              aria-label={mobileSearch ? 'Đóng tìm kiếm' : 'Tìm kiếm'}
+              aria-expanded={mobileSearch}
+              onClick={() => setMobileSearch((v) => !v)}
+            >
+              {mobileSearch ? <IconClose size={20} /> : <IconSearch size={20} />}
+            </button>
+            <AlertsBell />
+            <UserMenu />
+          </div>
+        </header>
+        {mobileSearch ? (
+          <div className={styles.mobileSearch}>
+            <GlobalSearch autoFocus />
+          </div>
+        ) : null}
+
+        <div className={styles.body}>
+          <nav className={styles.rail} aria-label="Điều hướng chính">
+            {main.map((item) => (
+              <RailLink key={item.to} item={item} />
+            ))}
+            {admin.length ? <span className={styles.railDivider} aria-hidden="true" /> : null}
+            {admin.map((item) => (
+              <RailLink key={item.to} item={item} />
+            ))}
+          </nav>
+
+          <main id="main" className={styles.main} tabIndex={-1}>
+            <div className={styles.content}>
+              <Outlet />
+            </div>
+          </main>
+        </div>
+
+        <nav className={styles.tabbar} aria-label="Điều hướng chính (điện thoại)">
+          {/* Tài khoản/Nhật ký nằm trong menu tài khoản trên điện thoại. */}
+          {main.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={styles.tabLink}
+              aria-current={isNavActive(item, pathname) ? 'page' : undefined}
+            >
+              <span className={styles.tabIcon}>
+                <item.icon size={20} />
+              </span>
+              {item.short}
+            </Link>
           ))}
         </nav>
-        <UserMenu />
-      </aside>
-
-      <header className={styles.topbar}>
-        <Brand />
-        <UserMenu />
-      </header>
-
-      <main id="main" className={styles.main} tabIndex={-1}>
-        <div className={styles.content}>
-          <Outlet />
-        </div>
-      </main>
-
-      <nav className={styles.tabbar} aria-label="Điều hướng chính (điện thoại)">
-        {/* Thanh tab điện thoại chỉ giữ 5 mục nghiệp vụ; Tài khoản/Nhật ký nằm trong menu tài khoản. */}
-        {main.map((item) => (
-          <NavLink key={item.to} to={item.to} className={styles.tabLink}>
-            <span className={styles.tabIcon}>
-              <item.icon size={22} />
-            </span>
-            {item.short}
-          </NavLink>
-        ))}
-      </nav>
+      </div>
     </div>
   );
 }

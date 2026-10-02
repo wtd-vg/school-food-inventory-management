@@ -40,7 +40,7 @@
 .revealed {
   padding: 12px 14px;
   border-radius: var(--r-md);
-  background: var(--warm-inner);
+  background: var(--kv-bg);
   font-size: 17px;
   font-weight: 600;
   word-break: break-all;

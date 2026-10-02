@@ -57,7 +57,7 @@
   width: 48px;
   height: 48px;
   border-radius: var(--r-logo);
-  background: var(--brand);
+  background: var(--login-brand);
   color: var(--ink);
   transform: rotate(-5deg);
   transition: transform 400ms cubic-bezier(.3, 1.6, .5, 1);
@@ -110,7 +110,7 @@
   border: none;
   border-radius: var(--r-input-sm);
   background: transparent;
-  color: var(--link);
+  color: var(--login-link);
   font-size: 14px;
   font-weight: 600;
 }
@@ -161,7 +161,7 @@
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--warm-muted);
+  color: var(--login-warm-muted);
 }
 
 .headline {
@@ -185,9 +185,9 @@
   align-items: center;
   gap: 10px;
   padding: 6px 14px 6px 6px;
-  border: 1px solid var(--warm-line);
+  border: 1px solid var(--login-warm-line);
   border-radius: var(--r-pill);
-  background: var(--warm-inner);
+  background: var(--login-warm-inner);
   color: var(--ink-soft);
   font-size: 14px;
   font-weight: 600;
@@ -197,13 +197,13 @@
 
 .videoTag:hover {
   transform: translateY(-1px);
-  border-color: var(--brand);
-  background: var(--sidebar);
+  border-color: var(--login-brand);
+  background: var(--login-tag);
   box-shadow: var(--shadow-pop);
 }
 
 .videoTag:focus-visible {
-  outline: 2px solid var(--link);
+  outline: 2px solid var(--login-link);
   outline-offset: 2px;
 }
 
@@ -224,7 +224,7 @@
 }
 
 .videoTime {
-  color: var(--warm-muted);
+  color: var(--login-warm-muted);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }

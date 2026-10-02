@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { IconCheck, IconLock } from '../../components/icons';
 import {
   Badge,
+  type BadgeTone,
   Button,
   Callout,
   ErrorState,
@@ -39,8 +40,8 @@ import styles from './TodayPage.module.css';
 type StepState = 'done' | 'doing' | 'todo' | 'warn' | 'skip';
 type Step = { key: string; title: string; state: StepState; detail: ReactNode; link?: { to: string; label: string } };
 
-const STATE_BADGE: Record<StepState, { label: string; tone: 'ok' | 'info' | 'neutral' | 'warn' }> = {
-  done: { label: 'Xong', tone: 'ok' },
+const STATE_BADGE: Record<StepState, { label: string; tone: BadgeTone }> = {
+  done: { label: 'Xong', tone: 'done' },
   doing: { label: 'Đang làm', tone: 'info' },
   todo: { label: 'Chưa làm', tone: 'neutral' },
   warn: { label: 'Cần xem lại', tone: 'warn' },
@@ -231,7 +232,7 @@ export function TodayPage() {
               </div>
               <div className={styles.costItem}>
                 <span className={styles.costLabel}>Trạng thái</span>
-                {c?.closed ? <Badge tone="ok">Đã đóng ngày</Badge> : <Badge tone="warn">Chưa đóng</Badge>}
+                {c?.closed ? <Badge tone="done">Đã đóng ngày</Badge> : <Badge tone="warn">Chưa đóng</Badge>}
               </div>
             </section>
 
@@ -331,7 +332,7 @@ function CloseDayModal({ cost, onClose, onDone }: { cost: DayCost; onClose: () =
       onClose={busy ? () => undefined : onClose}
       actions={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button write busy={busy} onClick={submit}>

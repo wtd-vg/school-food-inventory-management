@@ -1,46 +1,55 @@
-.shell {
-  display: flex;
+/* ---------- Khung: viền gradient 8px bo 30 (chỗ DUY NHẤT dùng gradient ở viền) ---------- */
+.frame {
   min-height: 100vh;
-  background: var(--bg);
+  padding: var(--frame-pad);
+  border-radius: var(--r-frame);
+  background: linear-gradient(135deg, var(--frame-mint) 0%, var(--frame-leaf) 34%, var(--frame-cream) 66%, var(--frame-mint) 100%);
+}
+
+.window {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 2 * var(--frame-pad));
+  border-radius: var(--r-window);
+  background: var(--window);
+  /* clip (không phải hidden) để bo góc mà các thanh sticky bên trong vẫn bám theo trang. */
+  overflow: clip;
 }
 
 .skip {
   position: absolute;
-  left: 12px;
+  left: 20px;
   top: -60px;
   z-index: 100;
   padding: 10px 14px;
   border-radius: var(--r-md);
-  background: var(--ink);
+  background: var(--brand);
   color: var(--on-ink);
   font-weight: 600;
 }
 
 .skip:focus {
-  top: 12px;
+  top: 16px;
   color: var(--on-ink);
 }
 
-/* ---------- Sidebar (≥768) ---------- */
-.sidebar {
-  position: sticky;
-  top: 0;
+/* ---------- Thanh trên 60px ---------- */
+.topbar {
   display: flex;
-  flex-direction: column;
-  gap: 26px;
-  flex: none;
-  width: var(--sidebar-w);
-  height: 100vh;
-  padding: 26px 16px 20px;
-  background: var(--sidebar);
-  overflow-y: auto;
+  align-items: center;
+  gap: 24px;
+  height: var(--topbar-h);
+  padding: 0 20px 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 6px;
+  gap: 10px;
+  flex: none;
+  min-height: var(--touch);
   color: var(--ink);
   text-decoration: none;
 }
@@ -51,15 +60,8 @@
 
 .logo {
   display: flex;
-  align-items: center;
-  justify-content: center;
   flex: none;
-  width: 42px;
-  height: 42px;
-  border-radius: var(--r-logo);
-  background: var(--brand);
-  color: var(--ink);
-  transform: rotate(-5deg);
+  color: var(--brand);
 }
 
 .brandText {
@@ -69,10 +71,10 @@
 }
 
 .brandName {
-  font-family: var(--font-display);
-  font-size: 21px;
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .schoolName {
@@ -81,55 +83,65 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 200px;
 }
 
-.nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.search {
+  flex: 0 1 420px;
+  margin-left: 8px;
 }
 
-.navLink {
+.topActions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 44px;
-  padding: 0 14px;
-  border-radius: var(--r-md);
-  color: var(--ink-soft);
-  font-size: 15px;
-  font-weight: 500;
-  text-decoration: none;
-  white-space: nowrap;
+  gap: 6px;
+  margin-left: auto;
 }
 
-.navLink:hover {
-  background: var(--warm-inner);
-  color: var(--ink);
-}
-
-.navLink[aria-current='page'] {
-  background: var(--surface);
-  color: var(--ink);
-  font-weight: 700;
-}
-
-.navIcon {
-  flex: none;
-}
-
-.userArea {
+.iconBtn {
   position: relative;
-  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--touch);
+  height: var(--touch);
+  border: none;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink);
+}
+
+.iconBtn:hover,
+.iconBtn[aria-expanded='true'] {
+  background: var(--surface-sunken);
+}
+
+.dot {
+  position: absolute;
+  top: 10px;
+  right: 11px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chart-over);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.searchToggle {
+  display: none;
+}
+
+.popArea {
+  position: relative;
 }
 
 .userButton {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
-  min-height: 52px;
-  padding: 6px 8px;
+  min-height: var(--touch);
+  padding: 4px 8px 4px 4px;
   border: none;
   border-radius: var(--r-md);
   background: transparent;
@@ -138,7 +150,7 @@
 
 .userButton:hover,
 .userButton[aria-expanded='true'] {
-  background: var(--warm-inner);
+  background: var(--surface-sunken);
 }
 
 .avatar {
@@ -146,12 +158,12 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--brand);
-  font-size: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-input-sm);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  font-size: 15px;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -160,11 +172,13 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  line-height: 1.25;
 }
 
 .userName {
+  max-width: 160px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -172,23 +186,31 @@
 }
 
 .userRole {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--muted);
 }
 
-.menu {
+.userChevron {
+  color: var(--muted);
+}
+
+/* Popover (menu tài khoản, chuông) */
+.pop {
   position: absolute;
-  left: 0;
-  bottom: calc(100% + 8px);
-  z-index: 30;
-  min-width: 220px;
+  top: calc(100% + 8px);
+  z-index: 40;
+  min-width: 240px;
   padding: 6px;
   border-radius: var(--r-md);
   background: var(--surface);
   box-shadow: var(--shadow-pop);
 }
 
-.menuHead {
+.popRight {
+  right: 0;
+}
+
+.popHead {
   padding: 8px 10px 10px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 4px;
@@ -196,10 +218,16 @@
   color: var(--muted);
 }
 
-.menuHead strong {
+.popHead strong {
   display: block;
   color: var(--ink);
   font-size: 14px;
+}
+
+.popNote {
+  padding: 10px;
+  font-size: 14px;
+  color: var(--muted);
 }
 
 .menuItem {
@@ -207,7 +235,7 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  height: 44px;
+  min-height: var(--touch);
   padding: 0 10px;
   border: none;
   border-radius: var(--r-input-sm);
@@ -216,140 +244,223 @@
   font-size: 15px;
   font-weight: 500;
   text-align: left;
+  text-decoration: none;
 }
 
 .menuItem:hover {
   background: var(--surface-sunken);
+  color: var(--ink);
 }
 
-/* ---------- Nội dung chính ---------- */
-.main {
+.alertList {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  list-style: none;
+}
+
+.alertItem {
+  composes: menuItem;
+  font-size: 14px;
+}
+
+.alertIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-input-sm);
+}
+
+.alert-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.alert-draft {
+  background: var(--draft-bg);
+  color: var(--draft);
+}
+
+.mobileSearch {
+  display: none;
+}
+
+/* ---------- Thân: thanh dọc 64px + nội dung ---------- */
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  width: var(--rail-w);
+  padding: 16px 0;
+  background: linear-gradient(180deg, var(--nav-top) 0%, var(--nav-bottom) 100%);
+}
+
+.railLink {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--touch);
+  height: var(--touch);
+  border-radius: var(--r-md);
+  color: var(--nav-icon);
+  text-decoration: none;
+  transition: background-color var(--motion);
+}
+
+.railLink:hover {
+  background: var(--nav-hover);
+  color: var(--on-ink);
+}
+
+.railLink[aria-current='page'] {
+  background: var(--surface);
+  color: var(--brand);
+}
+
+.railLink:focus-visible {
+  outline-color: var(--on-ink);
+}
+
+/* Tên mục hiện khi rê chuột/focus (icon-only cần nhãn nhìn thấy được). */
+.railLink::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  z-index: 45;
+  padding: 6px 10px;
+  border-radius: var(--r-input-sm);
+  background: var(--bulk-bg);
+  color: var(--on-ink);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion);
+}
+
+.railLink:hover::after,
+.railLink:focus-visible::after {
+  opacity: 1;
+}
+
+.railDivider {
+  width: 28px;
+  height: 1px;
+  margin: 6px 0;
+  background: var(--nav-hover);
+}
+
+.main {
   flex: 1;
   min-width: 0;
-  padding: 30px 40px 28px;
+  padding: 20px 24px 28px;
+  background: linear-gradient(180deg, var(--content-top) 0%, var(--content-bottom) 420px);
+}
+
+.main:focus {
+  outline: none;
 }
 
 .content {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: var(--gap);
   width: 100%;
-  max-width: 1400px;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
-/* ---------- Thanh trên + tab dưới (<768) ---------- */
-.topbar,
 .tabbar {
   display: none;
 }
 
-/* Sidebar thu gọn chỉ còn icon: 768–1279 */
-@media (max-width: 1279px) {
-  .sidebar {
-    width: var(--sidebar-w-compact);
-    padding: 22px 10px 16px;
-    align-items: center;
+/* ---------- Màn vừa: thu ô tìm kiếm, ẩn chữ tài khoản ---------- */
+@media (max-width: 1099px) {
+  .topbar {
+    gap: 16px;
   }
 
-  .brand {
-    padding: 0;
+  .search {
+    flex-basis: 320px;
+    margin-left: 0;
   }
 
-  .brandText,
-  .navLabel,
-  .userText {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
-
-  .navLink {
-    justify-content: center;
-    width: 52px;
-    padding: 0;
-  }
-
-  .userButton {
-    justify-content: center;
-    width: 52px;
-    padding: 6px 0;
-  }
-
-  .main {
-    padding: 26px 28px 28px;
-  }
-}
-
-@media (max-width: 767px) {
-  .sidebar {
+  .userText,
+  .userChevron {
     display: none;
   }
 
-  .shell {
-    flex-direction: column;
+  .userButton {
+    padding: 4px;
+  }
+}
+
+/* ---------- Điện thoại (<768): bỏ viền, tab dưới đáy ---------- */
+@media (max-width: 767px) {
+  .frame {
+    padding: 0;
+    border-radius: 0;
+    background: var(--window);
+  }
+
+  .window {
+    min-height: 100vh;
+    border-radius: 0;
+    overflow: visible;
   }
 
   .topbar {
     position: sticky;
     top: 0;
     z-index: 20;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    height: 60px;
-    padding: 0 16px;
-    background: var(--sidebar);
+    gap: 8px;
+    height: 56px;
+    padding: 0 8px 0 12px;
   }
 
-  .topbar .brandText {
-    position: static;
-    width: auto;
-    height: auto;
-    clip: auto;
+  .search {
+    display: none;
   }
 
-  .topbar .logo {
-    width: 36px;
-    height: 36px;
+  .searchToggle {
+    display: inline-flex;
   }
 
-  .topbar .brandName {
-    font-size: 19px;
+  .mobileSearch {
+    position: sticky;
+    top: 56px;
+    z-index: 19;
+    display: block;
+    padding: 8px 12px 10px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
   }
 
-  .topbar .userArea {
-    margin-top: 0;
+  .mobileSearch > * {
+    width: 100%;
   }
 
-  .topbar .userButton {
-    width: 44px;
-    min-height: 44px;
-    padding: 3px;
-    justify-content: center;
-  }
-
-  .topbar .avatar {
-    width: 36px;
-    height: 36px;
-  }
-
-  .topbar .menu {
-    left: auto;
-    right: 0;
-    top: calc(100% + 8px);
-    bottom: auto;
+  .rail {
+    display: none;
   }
 
   .main {
-    padding: 20px 16px calc(var(--tabbar-h) + 24px);
-    gap: 18px;
+    padding: 16px 14px calc(var(--tabbar-h) + 24px);
   }
 
   .tabbar {
@@ -362,7 +473,7 @@
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
     height: var(--tabbar-h);
-    padding: 0 4px env(safe-area-inset-bottom);
+    padding: 0 2px env(safe-area-inset-bottom);
     background: var(--surface);
     box-shadow: var(--shadow-bar);
   }
@@ -375,13 +486,14 @@
     gap: 3px;
     min-width: 0;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     text-decoration: none;
+    white-space: nowrap;
   }
 
   .tabLink[aria-current='page'] {
-    color: var(--ink);
+    color: var(--brand-strong);
     font-weight: 700;
   }
 
@@ -389,12 +501,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
+    width: 44px;
     height: 28px;
     border-radius: var(--r-pill);
   }
 
   .tabLink[aria-current='page'] .tabIcon {
-    background: var(--sidebar);
+    background: var(--brand-soft);
   }
 }

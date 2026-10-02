@@ -80,7 +80,15 @@
   height: var(--h, 0%);
   min-height: 2px;
   border-radius: 4px 4px 0 0;
-  background: var(--chart-bar);
+  background: var(--chart-soft);
+}
+
+.bar-current {
+  background: var(--chart-1);
+}
+
+.bar-over {
+  background: var(--chart-over);
 }
 
 .barValue {
@@ -111,7 +119,7 @@
   display: none;
   padding: 6px 10px;
   border-radius: var(--r-input-sm);
-  background: var(--ink);
+  background: var(--bulk-bg);
   color: var(--on-ink);
   font-size: 13px;
   white-space: nowrap;
@@ -139,10 +147,10 @@
 .costBar {
   display: flex;
   gap: 2px;
-  height: 12px;
-  border-radius: var(--r-pill);
+  height: 14px;
+  border-radius: 4px;
   overflow: hidden;
-  background: var(--surface-sunken);
+  background: var(--chart-track);
 }
 
 .segment {
@@ -189,20 +197,24 @@
   font-weight: 400;
 }
 
-.tone-protein {
-  background: var(--cat-protein);
+.tone-1 {
+  background: var(--chart-1);
 }
 
-.tone-veg {
-  background: var(--cat-veg);
+.tone-2 {
+  background: var(--chart-2);
 }
 
-.tone-dry {
-  background: var(--cat-dry);
+.tone-3 {
+  background: var(--chart-3);
 }
 
-.tone-dairy {
-  background: var(--cat-dairy);
+.tone-4 {
+  background: var(--chart-4);
+}
+
+.tone-5 {
+  background: var(--chart-5);
 }
 
 .tone-other {

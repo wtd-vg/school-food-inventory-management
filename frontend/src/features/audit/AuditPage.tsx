@@ -127,7 +127,7 @@ export function AuditPage() {
       header: <span className="sr-only">Chi tiết</span>,
       align: 'right',
       cell: (r) => (
-        <Button size="xs" variant="secondary" onClick={() => updateParams({ 'chi-tiet': String(r.id) })}>
+        <Button size="xs" variant="outline" onClick={() => updateParams({ 'chi-tiet': String(r.id) })}>
           Xem
         </Button>
       ),
@@ -188,7 +188,7 @@ export function AuditPage() {
             title={hasFilter ? 'Không có nhật ký khớp bộ lọc' : 'Chưa có nhật ký'}
             action={
               hasFilter ? (
-                <Button variant="secondary" onClick={clearFilters}>
+                <Button variant="outline" onClick={clearFilters}>
                   Xoá bộ lọc
                 </Button>
               ) : undefined
