@@ -496,11 +496,12 @@ class RecipeComponent(models.Model):
 # =========================================================================
 # BE-03 / SF49 (R10): THỰC ĐƠN CỐ ĐỊNH THEO THỨ, NGÀY NGHỈ, BẢN CHỤP THEO NGÀY
 # =========================================================================
-WEEKDAY_LABELS = ("Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu")
+WEEKDAY_LABELS = ("Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy")
+SATURDAY = 5  # SF79: Thứ Bảy là ngày ăn khi version có món cho thứ này; Chủ nhật luôn nghỉ.
 
 
 class MenuVersion(models.Model):
-    """Một phiên bản thực đơn cố định T2–T6, có hiệu lực từ effective_from tới version kế tiếp.
+    """Một phiên bản thực đơn cố định T2–T6 (T7 tuỳ chọn, SF79), có hiệu lực từ effective_from tới version kế tiếp.
 
     Bất biến khi đã có hiệu lực (trigger 0016): muốn đổi thực đơn thì tạo version mới cho ngày sau.
     """
@@ -519,7 +520,7 @@ class MenuVersion(models.Model):
 
 class MenuVersionItem(models.Model):
     version = models.ForeignKey(MenuVersion, on_delete=models.CASCADE, related_name="items")
-    weekday = models.PositiveSmallIntegerField()  # 0 = Thứ Hai … 4 = Thứ Sáu
+    weekday = models.PositiveSmallIntegerField()  # 0 = Thứ Hai … 4 = Thứ Sáu, 5 = Thứ Bảy (SF79, tuỳ chọn)
     dish = models.ForeignKey(Dish, on_delete=models.PROTECT, related_name="menu_items")
     position = models.PositiveSmallIntegerField(default=0)
 
@@ -527,12 +528,12 @@ class MenuVersionItem(models.Model):
         ordering = ["version_id", "weekday", "position", "id"]
         constraints = [
             models.UniqueConstraint(fields=["version", "weekday", "dish"], name="menu_item_unique_dish"),
-            models.CheckConstraint(condition=models.Q(weekday__gte=0, weekday__lte=4), name="menu_item_weekday_valid"),
+            models.CheckConstraint(condition=models.Q(weekday__gte=0, weekday__lte=5), name="menu_item_weekday_valid"),
         ]
 
 
 class SchoolHoliday(models.Model):
-    """Ngày nghỉ ngoài T7/CN (lễ, Tết, hè): không có bữa trưa, không gửi email thực đơn."""
+    """Ngày nghỉ ngoài CN và T7 không có thực đơn (lễ, Tết, hè): không có bữa trưa, không gửi email thực đơn."""
 
     date = models.DateField(unique=True)
     name = models.CharField(max_length=120)

@@ -1,6 +1,7 @@
 """BE-07 / SF52 (R10): thực đơn cố định theo thứ, ngày nghỉ, bản chụp theo ngày.
 
-- Thứ Bảy, Chủ nhật và ngày trong SchoolHoliday là ngày nghỉ.
+- Chủ nhật và ngày trong SchoolHoliday là ngày nghỉ. Thứ Bảy (SF79) là ngày ăn khi version áp dụng cho ngày đó
+  có món Thứ Bảy (hoặc ngày đó đã có bản chụp); version không có món Thứ Bảy thì Thứ Bảy nghỉ như trước.
 - Thực đơn của ngày D: bản chụp DayMenuSnapshot nếu đã có; nếu chưa thì lấy MenuVersion mới nhất có
   effective_from ≤ D (theo thứ của D) với công thức hiện hành.
 - snapshot_day(D) chụp một lần cho ngày đã tới (D ≤ hôm nay); sửa công thức sau đó không đổi ngày cũ.
@@ -14,7 +15,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from .http_input import Conflict, InputError, check_int, field_error
-from .models import WEEKDAY_LABELS, DayMenuSnapshot, Dish, MenuVersion, MenuVersionItem, SchoolHoliday
+from .models import SATURDAY, WEEKDAY_LABELS, DayMenuSnapshot, Dish, MenuVersion, MenuVersionItem, SchoolHoliday
 
 MENU, WEEKEND, HOLIDAY = "menu", "weekend", "holiday"
 DAY_NAMES = ("Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ nhật")
@@ -24,8 +25,20 @@ def today():
     return timezone.localdate()
 
 
+def saturday_has_menu(d):
+    """Thứ Bảy d có bữa trưa không: đã chụp thực đơn, hoặc version áp dụng cho d có món Thứ Bảy."""
+    if DayMenuSnapshot.objects.filter(date=d).exists():
+        return True
+    version = version_for(d)
+    return version is not None and version.items.filter(weekday=SATURDAY).exists()
+
+
+def is_weekend(d):
+    return d.weekday() > SATURDAY or (d.weekday() == SATURDAY and not saturday_has_menu(d))
+
+
 def day_status(d):
-    if d.weekday() >= 5:
+    if is_weekend(d):
         return WEEKEND
     if SchoolHoliday.objects.filter(date=d).exists():
         return HOLIDAY
@@ -38,7 +51,7 @@ def version_for(d):
 
 def build_items(version, weekday):
     """Món của một thứ trong version, kèm công thức HIỆN HÀNH (dạng lưu được vào JSON)."""
-    if version is None or weekday > 4:
+    if version is None or weekday > SATURDAY:
         return []
     items = (MenuVersionItem.objects.filter(version=version, weekday=weekday)
              .select_related("dish").prefetch_related("dish__components__food").order_by("position", "id"))
@@ -120,23 +133,35 @@ def version_payload(version):
         "created_at": version.created_at.isoformat(),
         "is_editable": version.effective_from > today(),
         "is_current": version.effective_from <= today() and (nxt is None or nxt.effective_from > today()),
+        # "0"–"4" luôn có; "5" (Thứ Bảy) chỉ có khi version có món Thứ Bảy (SF79, tương thích client cũ).
         "days": {
             str(w): [{"dish_id": i.dish_id, "dish_name": i.dish.name} for i in items if i.weekday == w]
-            for w in range(5)
+            for w in range(SATURDAY + 1)
+            if w < SATURDAY or any(i.weekday == w for i in items)
         },
     }
 
 
 def parse_days(days):
-    """{"0": [dish_id…], …, "4": […]} → {weekday: [Dish…]}; đủ 5 thứ, mỗi thứ ≥ 1 món có công thức."""
+    """{"0": [dish_id…], …, "4": […], "5"?: […]} → {weekday: [Dish…]}.
+
+    Bắt buộc đủ Thứ Hai–Thứ Sáu ("0"–"4"); Thứ Bảy ("5") tuỳ chọn (SF79). Mỗi thứ có mặt cần ≥ 1 món có công thức.
+    """
     if not isinstance(days, dict):
-        raise field_error("days", "Phải là object theo thứ 0–4.", "Thực đơn phải gồm Thứ Hai đến Thứ Sáu.")
-    expected = {str(w) for w in range(5)}
-    if set(days) != expected:
-        missing = sorted(expected - set(days))
+        raise field_error("days", "Phải là object theo thứ 0–5.", "Thực đơn phải gồm Thứ Hai đến Thứ Sáu (Thứ Bảy tuỳ chọn).")
+    required = {str(w) for w in range(5)}
+    allowed = required | {str(SATURDAY)}
+    extra = sorted(set(days) - allowed)
+    if extra:
         raise InputError(
-            "Thực đơn phải có đủ Thứ Hai đến Thứ Sáu" + (f", thiếu: {', '.join(WEEKDAY_LABELS[int(m)] for m in missing)}." if missing else "."),
-            {"days": "Cần đúng các khóa 0–4."},
+            "Thực đơn chỉ gồm Thứ Hai đến Thứ Bảy; Chủ nhật luôn nghỉ.",
+            {"days": f"Khóa không hợp lệ: {', '.join(map(str, extra))}. Chỉ nhận 0–5."},
+        )
+    missing = sorted(required - set(days))
+    if missing:
+        raise InputError(
+            f"Thực đơn phải có đủ Thứ Hai đến Thứ Sáu, thiếu: {', '.join(WEEKDAY_LABELS[int(m)] for m in missing)}.",
+            {"days": "Cần đủ các khóa 0–4; khóa 5 (Thứ Bảy) tuỳ chọn."},
         )
     all_ids, result = set(), {}
     for key in sorted(days):
@@ -195,8 +220,9 @@ def delete_future_version(version_id):
 def add_holiday(d, name, user):
     if d < today():
         raise field_error("date", "Không thêm ngày nghỉ trong quá khứ.", "Không thêm ngày nghỉ cho ngày đã qua.")
-    if d.weekday() >= 5:
-        raise field_error("date", "Thứ Bảy/Chủ nhật đã là ngày nghỉ.", "Thứ Bảy và Chủ nhật đã là ngày nghỉ mặc định.")
+    if is_weekend(d):
+        raise field_error("date", "Ngày này đã là ngày nghỉ.",
+                          "Chủ nhật và Thứ Bảy không có thực đơn đã là ngày nghỉ mặc định.")
     if DayMenuSnapshot.objects.filter(date=d).exists():
         raise Conflict("Ngày này đã có thực đơn được chụp/gửi, không đổi thành ngày nghỉ được.")
     try:
