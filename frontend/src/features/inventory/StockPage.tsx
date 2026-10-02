@@ -103,7 +103,6 @@ export function StockPage() {
     {
       key: 'name',
       header: 'Mặt hàng',
-      width: '21%',
       sort: (r) => r.name,
       cell: (r) => (
         <span className={tableText.thumbCell}>
@@ -114,22 +113,22 @@ export function StockPage() {
         </span>
       ),
     },
-    { key: 'code', header: 'Mã', width: '10%', sort: (r) => r.code, cell: (r) => <span className={tableText.muted}>{r.code}</span> },
+    { key: 'code', header: 'Mã', width: '112px', sort: (r) => r.code, cell: (r) => <span className={tableText.muted}>{r.code}</span> },
     {
       key: 'status',
       header: 'Trạng thái',
-      width: '12%',
+      width: '124px',
       sort: (r) => (r.is_active && r.empty ? 0 : !r.is_active ? 1 : 2),
       cell: statusBadge,
     },
-    { key: 'qty', header: 'Tồn', width: '10%', align: 'right', sort: (r) => num(r.quantity), cell: (r) => <span className={tableText.strong}>{formatQty(r.quantity, r.unit)}</span> },
-    { key: 'cost', header: 'Giá vốn BQ', width: '11%', align: 'right', sort: (r) => num(r.avg_cost), cell: (r) => <span className={tableText.muted}>{formatMoney(r.avg_cost)}</span> },
-    { key: 'value', header: 'Giá trị tồn', width: '12%', align: 'right', sort: (r) => num(r.stock_value), cell: (r) => formatMoney(r.stock_value) },
-    { key: 'supplier', header: 'Nhà cung cấp', width: '16%', sort: (r) => r.lastIn?.supplier, cell: (r) => r.lastIn?.supplier ?? <span className={tableText.muted}>—</span> },
+    { key: 'qty', header: 'Tồn', width: '100px', align: 'right', sort: (r) => num(r.quantity), cell: (r) => <span className={tableText.strong}>{formatQty(r.quantity, r.unit)}</span> },
+    { key: 'cost', header: 'Giá vốn BQ', width: '120px', align: 'right', sort: (r) => num(r.avg_cost), cell: (r) => <span className={tableText.muted}>{formatMoney(r.avg_cost)}</span> },
+    { key: 'value', header: 'Giá trị tồn', width: '148px', align: 'right', sort: (r) => num(r.stock_value), cell: (r) => formatMoney(r.stock_value) },
+    { key: 'supplier', header: 'Nhà cung cấp', sort: (r) => r.lastIn?.supplier, cell: (r) => r.lastIn?.supplier ?? <span className={tableText.muted}>—</span> },
     {
       key: 'lastIn',
       header: 'Nhập',
-      width: '8%',
+      width: '72px',
       align: 'right',
       sort: (r) => r.lastIn?.date,
       cell: (r) => (r.lastIn ? <span title={`Nhập gần nhất ${r.lastIn.date.split('-').reverse().join('/')}`}>{formatShortDate(r.lastIn.date)}</span> : <span className={tableText.muted}>—</span>),
@@ -224,7 +223,7 @@ export function StockPage() {
               rows={visible}
               rowKey={(r) => r.id}
               columns={columns}
-              minWidth="1040px"
+              minWidth="1100px"
               selected={selected}
               onSelectedChange={setSelected}
               selectLabel={(r) => r.name}

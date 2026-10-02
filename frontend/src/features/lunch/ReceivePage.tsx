@@ -213,7 +213,7 @@ function OrderReceive({ po, onChanged }: { po: PurchaseOrder; onChanged: () => v
             rowKey={(l) => l.id}
             minWidth="720px"
             columns={[
-              { key: 'food', header: 'Mặt hàng', wrap: true, cell: (l) => <span className={tableText.strong}>{l.food_name}</span> },
+              { key: 'food', header: 'Mặt hàng', cell: (l) => <span className={tableText.strong}>{l.food_name}</span> },
               { key: 'ordered', header: 'Đặt', align: 'right', cell: (l) => formatQty(l.qty_ordered, l.unit) },
               { key: 'received', header: 'Đã nhận', align: 'right', cell: (l) => formatQty(l.qty_received, l.unit) },
               { key: 'open', header: 'Còn chờ', align: 'right', cell: (l) => <span className={tableText.strong}>{formatQty(l.qty_open, l.unit)}</span> },
