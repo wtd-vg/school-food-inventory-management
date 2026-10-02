@@ -57,7 +57,7 @@ import { useApiQuery } from '../../lib/useApiQuery';
 import { inventoryApi, type Issue } from '../../services/inventory';
 import { lunchApi, type DayCost, type DayDemand, type PurchaseOrder } from '../../services/lunch';
 import { mealsApi, type MealDay } from '../../services/meals';
-import { menusApi, shiftDate, type MenuDay } from '../../services/menus';
+import { isSchoolDay, menusApi, shiftDate, type MenuDay } from '../../services/menus';
 import { MealPhotos } from './MealPhotos';
 import { ReasonModal } from './OrdersPage';
 import { DayPicker, isZero, useLunchDate } from './shared';
@@ -506,7 +506,7 @@ function WeekMenuCard({ date, week }: { date: string; week: MenuDay[] }) {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [day, setDay] = useState<'all' | string>('all');
-  const school = week.filter((d) => d.weekday < 5);
+  const school = week.filter(isSchoolDay); // T2–T6, cộng Thứ Bảy khi có bữa trưa (SF79)
   const today = todayISO();
   const month = date.slice(0, 7);
   const report = useApiQuery(() => lunchApi.dailyReport(school[0]?.date ?? date, school[school.length - 1]?.date ?? date), [school[0]?.date, month]);

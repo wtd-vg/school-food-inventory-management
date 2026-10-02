@@ -1,5 +1,5 @@
 /**
- * Thực đơn cố định T2–T6 (FE-04/05): khớp JSON của menu_views.py / menu_services.py (BE-07, BE-13).
+ * Thực đơn cố định T2–T6, Thứ Bảy tuỳ chọn (FE-04/05, SF79): khớp JSON của menu_views.py / menu_services.py (BE-07, BE-13).
  * Món trong thực đơn dùng dish_id/dish_name (khác danh sách món id/name). quantity là chuỗi 6 số lẻ.
  */
 import { api } from '../lib/http';
@@ -33,13 +33,26 @@ export type MenuVersion = {
   created_at: string;
   is_current: boolean;
   is_editable: boolean;
-  /** "0" (Thứ Hai) … "4" (Thứ Sáu). */
+  /** "0" (Thứ Hai) … "4" (Thứ Sáu) luôn có; "5" (Thứ Bảy) chỉ có khi phiên bản có bữa trưa Thứ Bảy (SF79). */
   days: Record<string, { dish_id: number; dish_name: string }[]>;
 };
 
 export type Holiday = { id: number; date: string; name: string; is_editable: boolean };
 
+/** Các thứ bắt buộc có thực đơn. */
 export const WEEKDAY_LABELS = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu'];
+/** SF79: Thứ Bảy là ngày ăn khi phiên bản thực đơn có món Thứ Bảy; Chủ nhật luôn nghỉ. */
+export const SATURDAY = 5;
+export const SATURDAY_LABEL = 'Thứ Bảy';
+
+/** Ngày học trong tuần để hiện ở lưới thực đơn: T2–T6, cộng Thứ Bảy khi Thứ Bảy đó có bữa trưa (kể cả nghỉ lễ). */
+export function isSchoolDay(d: Pick<MenuDay, 'weekday' | 'status'>): boolean {
+  return d.weekday < SATURDAY || (d.weekday === SATURDAY && d.status !== 'weekend');
+}
+
+export function hasSaturday(v: Pick<MenuVersion, 'days'> | null | undefined): boolean {
+  return Boolean(v?.days[String(SATURDAY)]?.length);
+}
 
 export const menusApi = {
   week: (date: string) => api.get<MenuWeek>(`/api/menu/week/?date=${encodeURIComponent(date)}`),
