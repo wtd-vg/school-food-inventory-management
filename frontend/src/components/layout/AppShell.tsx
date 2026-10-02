@@ -120,7 +120,6 @@ export function AppShell() {
   const section = useLocation().pathname.split('/')[1] ?? '';
   return (
     <div className={styles.shell}>
-      <div className={styles.backdrop} aria-hidden="true" />
       <a className={styles.skip} href="#main">
         Bỏ qua điều hướng
       </a>

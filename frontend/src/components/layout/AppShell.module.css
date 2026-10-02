@@ -1,31 +1,9 @@
-/* SF78: nền đào nhạt + vài mảng pastel mờ trôi rất chậm phía sau (CSS thuần, không WebGL). */
+/* SF78: nền đào nhạt màu phẳng (không gradient, theo yêu cầu chủ dự án 02/10). */
 .shell {
   position: relative;
   display: flex;
   min-height: 100vh;
-  background: linear-gradient(160deg, var(--login-glow) 0%, var(--bg) 38%, var(--login-peach-1) 100%);
-  isolation: isolate;
-}
-
-.backdrop {
-  position: fixed;
-  inset: -10%;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(34% 30% at 12% 14%, var(--login-slab-butter) 0%, transparent 70%),
-    radial-gradient(30% 28% at 90% 10%, var(--login-slab-rose) 0%, transparent 70%),
-    radial-gradient(34% 32% at 86% 88%, var(--login-slab-mint) 0%, transparent 70%),
-    radial-gradient(30% 30% at 24% 92%, var(--login-slab-sky) 0%, transparent 70%),
-    radial-gradient(26% 24% at 58% 46%, var(--login-slab-lilac) 0%, transparent 72%);
-  opacity: .85;
-  animation: drift 48s ease-in-out infinite alternate;
-}
-
-@keyframes drift {
-  to {
-    transform: translate3d(2.5%, -2%, 0) rotate(2deg) scale(1.04);
-  }
+  background: var(--bg);
 }
 
 .skip {
@@ -57,10 +35,8 @@
   width: var(--sidebar-w);
   height: 100vh;
   padding: 26px 16px 20px;
-  border-right: 1px solid var(--glass-edge);
-  background: var(--glass);
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
+  border-right: 1px solid var(--line-soft);
+  background: var(--surface);
   overflow-y: auto;
 }
 
@@ -134,7 +110,7 @@
 }
 
 .navLink:hover {
-  background: var(--surface-hover);
+  background: var(--accent-soft);
   color: var(--ink);
 }
 
@@ -143,10 +119,9 @@
 }
 
 .navLink[aria-current='page'] {
-  background: var(--surface);
-  color: var(--ink);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   font-weight: 700;
-  box-shadow: var(--shadow-card);
 }
 
 .navIcon {
@@ -311,7 +286,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .backdrop,
   .page {
     animation: none;
   }
@@ -382,10 +356,8 @@
     gap: 12px;
     height: 60px;
     padding: 0 16px;
-    border-bottom: 1px solid var(--glass-edge);
-    background: var(--glass);
-    backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--surface);
   }
 
   .topbar .brandText {
@@ -443,10 +415,8 @@
     grid-auto-columns: minmax(0, 1fr);
     height: var(--tabbar-h);
     padding: 0 4px env(safe-area-inset-bottom);
-    border-top: 1px solid var(--glass-edge);
-    background: var(--glass);
-    backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.2);
+    border-top: 1px solid var(--line-soft);
+    background: var(--surface);
     box-shadow: var(--shadow-bar);
   }
 
