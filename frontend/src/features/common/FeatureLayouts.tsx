@@ -18,7 +18,7 @@ export const CLASS_TABS = [
 
 /** G2 (SF57–SF69): mọi tab giữ ?ngay= để chuyển qua lại vẫn đúng ngày ăn. */
 export const LUNCH_TABS = [
-  { to: '/bua-trua', label: 'Hôm nay', end: true },
+  { to: '/bua-trua', label: 'Tổng quan', end: true },
   { to: '/bua-trua/nhu-cau', label: 'Nhu cầu & đề xuất' },
   { to: '/bua-trua/don-dat', label: 'Đơn đặt' },
   { to: '/bua-trua/nhan-hang', label: 'Nhận hàng' },

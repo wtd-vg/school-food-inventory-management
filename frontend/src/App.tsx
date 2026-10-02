@@ -11,6 +11,7 @@ import { CatalogPage } from './features/inventory/CatalogPage';
 import { IssuesPage } from './features/inventory/IssuesPage';
 import { ReceiptsPage } from './features/inventory/ReceiptsPage';
 import { StockPage } from './features/inventory/StockPage';
+import { FoodDetailPage } from './features/inventory/FoodDetailPage';
 import { StocktakePage } from './features/inventory/StocktakePage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { ClassesPage } from './features/classes/ClassesPage';
@@ -46,6 +47,7 @@ export function App() {
         }
       >
         <Route index element={<Navigate to="/bua-trua" replace />} />
+        <Route path="kho/mat-hang/:id" element={<FoodDetailPage />} />
         <Route path="kho" element={<InventoryLayout />}>
           <Route index element={<StockPage />} />
           <Route path="phieu-nhap" element={<ReceiptsPage />} />

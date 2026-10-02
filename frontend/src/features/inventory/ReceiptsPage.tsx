@@ -215,7 +215,11 @@ function CreateReceiptDrawer({
   const [supplierId, setSupplierId] = useState('');
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState('');
-  const [lines, setLines] = useState<DraftLine[]>(() => [newLine(preset)]);
+  // ?mat-hang=1,2,3 (chọn nhiều dòng ở Tồn kho) → mỗi mặt hàng một dòng.
+  const [lines, setLines] = useState<DraftLine[]>(() => {
+    const ids = preset.split(',').filter((x) => /^\d+$/.test(x));
+    return ids.length ? ids.map((x) => newLine(x)) : [newLine('')];
+  });
   const [errors, setErrors] = useState<{ supplier?: string; date?: string; lines: Record<number, { food?: string; quantity?: string; unitPrice?: string }> }>({ lines: {} });
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);

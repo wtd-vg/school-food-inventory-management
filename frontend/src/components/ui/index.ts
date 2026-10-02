@@ -1,5 +1,7 @@
 export { Button, IconButton, VIEWER_TITLE } from './Button';
 export { BulkBar } from './BulkBar';
+export { MenuButton } from './MenuButton';
+export type { MenuItem } from './MenuButton';
 export type { BulkAction } from './BulkBar';
 export { CoverHeader, FolderCard } from './Cover';
 export { Scene, SCENES, Tray, Thumb, thumbKindFor } from './Illustration';
@@ -32,5 +34,5 @@ export type { SegmentedOption, BadgeTone, Crumb } from './Display';
 export { DataTable, tableText, sortRows, nextSort, compareSort } from './DataTable';
 export type { Column, SortState, SortValue } from './DataTable';
 export { Drawer, Modal, ConfirmDialog, ToastProvider, useToast } from './Overlay';
-export { BarChart, CostBar } from './Chart';
-export type { BarDatum, Segment } from './Chart';
+export { BarChart, CostBar, DonutChart, HBars } from './Chart';
+export type { BarDatum, Segment, DonutSegment, HBar } from './Chart';

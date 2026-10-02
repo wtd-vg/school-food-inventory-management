@@ -123,11 +123,12 @@ export function thumbKindFor(...names: (string | null | undefined)[]): ThumbKind
     .replace(/[̀-ͯ]/g, '')
     .replace(/đ/gi, 'd')
     .toLowerCase();
+  // Thứ tự quan trọng: "cà rốt"/"cà chua" là rau (không phải cá), "trứng gà" là trứng (không phải thịt gà).
+  if (/\b(ca rot|ca chua|ca tim|ca phao|rau|cu|qua|bi|chuoi|hanh|toi|nam|dau phu|dau hu|gia do)\b/.test(t)) return 'veg';
+  if (/\btrung\b/.test(t)) return 'egg';
   if (/\b(ca|tom|muc|hai san|thuy san|cua|ngheu)\b/.test(t)) return 'sea';
   if (/\b(thit|heo|bo|ga|vit|suon)\b/.test(t)) return 'meat';
-  if (/\btrung\b/.test(t)) return 'egg';
   if (/\b(sua|dau an|nuoc mam|nuoc|dau|giam|xi dau)\b/.test(t)) return 'dairy';
-  if (/\b(rau|cu|qua|bi|ca rot|ca chua|chuoi|hanh|toi|nam|dau phu|dau hu)\b/.test(t)) return 'veg';
   if (/\b(gao|bot|mi|bun|pho|kho|gia vi|duong|muoi|hat)\b/.test(t)) return 'dry';
   return 'other';
 }
