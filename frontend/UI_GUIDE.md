@@ -9,7 +9,9 @@ Dành cho thành viên và agent khi thêm hoặc sửa màn hình. Nguồn thi�
 - **Đầu trang**: `PageHeader` (mặc định) tiêu đề 28/500 + `meta` bên phải; `PageHeader variant="banner"` cho trang danh sách (băng tranh 128px, breadcrumb, tiêu đề + `count`, nút phụ); `CoverHeader` + `Tabs` cho trang chi tiết (ảnh bìa 200px, card nổi 3 thông tin).
 - **Nút** (cao 40, bo 12): `primary` xanh; `secondary` nền mint chữ xanh đậm (thao tác phụ của trang); `outline` nền trắng viền xám (Huỷ/Đóng, nút trong bảng, phân trang); `caret` thêm ▾ khi nút mở nhiều loại.
 - **Chip** (`Badge`, cao 26, bo tròn, icon 13, nền pastel + viền cùng tông): `info` mới/đang chuẩn bị · `ok` đạt/đang dùng/đang hợp tác · `done` hoàn tất/đã chốt/đã đóng · `warn` cần đặt/chưa chốt · `danger` hết hàng/lỗi · `draft` nháp · `review` đang duyệt/chế độ thử · `paused` tạm dừng · `neutral` huỷ/ngừng.
-- **Bảng** (`DataTable`): dải tiêu đề nền nhạt bo 10, hàng cao 46. Cột có `sort` thì bấm tiêu đề để sắp xếp (aria-sort). `selected` + `onSelectedChange` thêm checkbox, dòng chọn nền mint; kèm `BulkBar` nổi giữa đáy. Cột đầu có thể dùng `tableText.thumbCell` + `Thumb`.
+- **Bảng** (`DataTable`): dải tiêu đề nền nhạt bo 10, hàng cao 46. Cột có `sort` thì bấm tiêu đề để sắp xếp (aria-sort); trang tự phân trang thì dùng `sort`/`onSortChange` + `sortRows` để sắp **trước** khi cắt trang. `selected` + `onSelectedChange` thêm checkbox, dòng chọn nền mint; kèm `BulkBar` nổi giữa đáy. Cột đầu có thể dùng `tableText.thumbCell` + `Thumb`.
+- **Độ rộng cột**: cột nội dung cố định (ngày, mã, tiền, số lượng, chip, nút) đặt **px** theo bề rộng đo được (ngày `dd/mm/yyyy` 132px, tiền tới hàng triệu 148–168px, chip trạng thái 124–148px); cột tên/ghi chú để trống `width` cho tự giãn. `minWidth` = tổng cột px + phần tối thiểu của cột giãn, để khi khung hẹp bảng cuộn ngang trong khung thay vì cắt chữ. Kiểm bằng dò tràn ở 1024/1280/1440/375.
+- **Màu biểu đồ theo thực thể**: nhóm hàng giữ màu cố định theo thứ tự tạo (id), 5 nhóm đầu `--chart-1…5`, từ nhóm thứ 6 gộp xám "Nhóm khác (n)" — không tô theo hạng giá trị.
 - **Khác**: `Panel` (card bo 16, không viền, bóng nhẹ, có `title`/`action`), `InfoTiles` (ô key-value), `Stat` (số lớn), `TimedTask` (việc có giờ, mục xa nhạt dần bằng nền — chữ vẫn đạt AA), `FolderCard`, tranh SVG `Scene` (4 bảng màu `suong`/`dong`/`binhminh`/`song`), `Tray` (khay cơm), `Thumb`.
 - **Chữ**: Be Vietnam Pro 400/500/600/700; tiêu đề trang 28/500, tiêu đề card 16/600, số lớn 22–30/500; mọi con số tabular-nums (đặt sẵn ở `body`).
 
@@ -37,24 +39,25 @@ src/
 | Route | Màn | Ghi chú |
 | --- | --- | --- |
 | `/dang-nhap` | Đăng nhập | |
-| `/bua-trua` | Hôm nay (SF69) | `?ngay=`; dòng thời gian Suất → Thực đơn → Nhu cầu → Đơn → Nhận → Xuất → Đóng ngày theo trạng thái thật, chi phí ngày/suất, đóng/mở lại ngày (ghi chú khi chênh lệch) |
-| `/bua-trua/nhu-cau` | Nhu cầu & đề xuất (SF57/59) | `?ngay=`, `?du-phong=1` (tính lại kèm dự phòng có lý do), `?tao-don=1` (tạo đơn từ đề xuất); cảnh báo `is_outdated`, `shortages`; lịch sử bản tính |
+| `/bua-trua` | Tổng quan (SF69, bố cục SF78) | `?ngay=`; số suất theo khối (biểu đồ vòng), kho theo nhóm, việc trong ngày (7 bước theo trạng thái thật, lọc Cần làm/Tất cả), chi phí mỗi suất 30 ngày, thực đơn tuần (khay cơm, tìm món), ảnh suất ăn; đóng/mở lại ngày (ghi chú khi chênh lệch) |
+| `/bua-trua/nhu-cau` | Nhu cầu & đề xuất (SF57/59) + Đặt hàng (SF78) | `?ngay=`, `?du-phong=1` (tính lại kèm dự phòng có lý do); cảnh báo `is_outdated`, `shortages`; lịch sử bản tính. Khi bản đã duyệt còn dòng "Phải mua" và chưa có đơn: khối **Đặt hàng cho T? d/m** — chip mặt hàng cần mua, bảng giá nhập gần đây theo NCC (từ phiếu nhập đã chốt), ô nhu cầu 5 bước, khung phải dính (giá gần nhất, chọn NCC, ngày giao ≤ ngày ăn, ước tính Σ phải mua × giá gần nhất bằng Decimal) → "Tạo đơn từ đề xuất" mở `/bua-trua/don-dat?don=ID` |
 | `/bua-trua/don-dat` | Đơn đặt (SF63) | `?trang-thai=`, `?don=ID` (duyệt/gửi/huỷ/đóng phần còn lại, gửi kèm version, 409 → tải lại), `?tao=1` (đơn tay) |
 | `/bua-trua/nhan-hang` | Nhận hàng theo đơn (SF65) | `?don=ID`; lượng ≤ phần còn chờ + đơn giá → phiếu nhập nháp → chốt |
 | `/bua-trua/xuat-bep` | Xuất bếp theo ngày | `?ngay=`; tạo phiếu xuất theo nhu cầu còn thiếu → chốt; cần/đã xuất/chênh lệch |
-| `/kho` | Tồn kho | `?mat-hang=ID` mở ngăn kéo lịch sử giao dịch |
-| `/kho/phieu-nhap` | Phiếu nhập | `?tao=1` tạo nháp (`&mat-hang=`, `&ncc=` điền sẵn), `?phieu=ID` xem/chốt |
+| `/kho` | Tồn kho (SF78) | băng tranh "Mặt hàng N"; `?nhom=het-hang` hoặc `?nhom=<tên nhóm>` lọc sẵn; sắp xếp theo cột; chọn dòng → Nhập hàng/Xuất kho nhiều mặt hàng, Xem chi tiết, Xuất CSV; `?mat-hang=ID` (link cũ) chuyển sang trang chi tiết |
+| `/kho/mat-hang/:id` | Chi tiết mặt hàng (SF78) | ảnh bìa (đổi được, nhớ trên trình duyệt) + card tồn/giá vốn/giá trị; tab Tổng quan · Lịch sử · Nhập kho · Xuất kho · Kiểm kê; dùng trong món |
+| `/kho/phieu-nhap` | Phiếu nhập | `?tao=1` tạo nháp (`&mat-hang=1,2,3` mỗi mặt hàng một dòng, `&ncc=` điền sẵn), `?phieu=ID` xem/chốt |
 | `/kho/phieu-xuat` | Phiếu xuất | như phiếu nhập |
 | `/kho/kiem-ke` | Kiểm kê | phiếu đang đếm nhớ trên trình duyệt (API chưa có danh sách) |
 | `/kho/danh-muc` | Danh mục & mặt hàng | `?tab=mat-hang` hoặc `danh-muc`, `?tao=1`, `?sua=ID` |
 | `/mon-an` | Món & công thức | `?tao=1`, `?sua=ID`; định lượng hiện tới 6 số lẻ (0,4 g) |
-| `/mon-an/thuc-don` | Thực đơn tuần (FE-04/05) | `?tuan=YYYY-MM-DD`, `?sua-thuc-don=1` (phiên bản mới từ ngày mai), `?phien-ban=ID`, `?ngay-nghi=1` |
+| `/mon-an/thuc-don` | Thực đơn tuần (FE-04/05) | `?tuan=YYYY-MM-DD`, `?sua-thuc-don=1` (phiên bản mới từ ngày mai; ô "Có bữa trưa Thứ Bảy" bật thì thêm nhóm món T7 — SF79), `?phien-ban=ID`, `?ngay-nghi=1`; tuần có T7 xếp lưới 3×2 (6 cột từ 1600px). Ngày học trong tuần lọc bằng `isSchoolDay` (T2–T6 + T7 có ăn), không so `weekday < 5` |
 | `/lop-hoc` | Lớp học | `?tao=1`, `?sua=ID` |
 | `/lop-hoc/so-suat` | Số suất (FE-08) | `?ngay=`; mở ngày, nhập dự kiến/thực tế 0…sĩ số, ô trống ≠ 0, chốt/mở lại có lý do, 409 → tải lại |
 | `/lop-hoc/hoc-sinh` | Học sinh (FE-06) | `?lop=ID`, `?tao=1`, `?sua=ID`, `?nhap-csv=1` (kiểm tra dry-run rồi mới lưu) |
 | `/lop-hoc/thu-thuc-don` | Thư thực đơn (FE-07) | `?ngay=`; nhật ký gửi, Gửi lại (202), Gửi thử, nhãn "Chế độ thử" khi `EMAIL_MODE=dry_run` |
-| `/nha-cung-cap/:id` | Nhà cung cấp | danh sách trái / chi tiết phải |
-| `/bao-cao` | Báo cáo kho | `?thang=YYYY-MM`, `?muc=tong-quan`, `ton-kho`, `so-giao-dich` hoặc `theo-ngay` (SF70: chi phí ngày, suất thực tế, chi phí/suất, biểu đồ), Xuất CSV |
+| `/nha-cung-cap/:id` | Nhà cung cấp | băng tranh "Nhà cung cấp N" (breadcrumb tên NCC đang mở); danh sách trái / chi tiết phải |
+| `/bao-cao` | Báo cáo kho | băng tranh + card có tab mục và chọn tháng; `?thang=YYYY-MM`, `?muc=tong-quan`, `ton-kho`, `so-giao-dich` hoặc `theo-ngay` (SF70: chi phí ngày, suất thực tế, chi phí/suất, biểu đồ); bảng sắp xếp được; Xuất CSV |
 | `/tai-khoan` | Tài khoản (FE-02) | chỉ Hiệu trưởng; `?tao=1`, `?sua=ID`; khoá/mở khoá, đặt lại mật khẩu |
 | `/nhat-ky` | Nhật ký (FE-03) | chỉ Hiệu trưởng; `?actor=&action=&entity_type=&from=&to=&page=`, `?chi-tiet=ID` (trước → sau) |
 | `/huy-nhan/:token` | Huỷ nhận email (công khai) | ngoài khung đăng nhập; chỉ gọi API khi bấm "Xác nhận huỷ nhận" |

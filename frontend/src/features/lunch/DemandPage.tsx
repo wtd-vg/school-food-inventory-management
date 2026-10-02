@@ -4,11 +4,11 @@
  * - "Duyệt & giữ hàng": chia cần dùng thành lấy từ tồn / hàng đang chờ về / phải mua; giữ phần đó cho ngày ăn.
  *   Số suất đổi sau khi tính → 409, bản tính thành lỗi thời; màn tải lại và nhắc tính lại.
  * - is_outdated: bản đang dùng không còn khớp số suất/thực đơn. shortages: tồn ít hơn phần đã giữ (kiểm kê thiếu).
- * - "Tạo đơn từ đề xuất" (?tao-don=1) tạo đơn nháp cho phần phải mua rồi mở ở màn Đơn đặt.
+ * - SF78 "Đặt hàng" (OrderFromDemand): sau khi duyệt mà còn phần phải mua → chọn NCC + ngày giao, tạo đơn nháp rồi mở ở màn Đơn đặt.
  */
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { IconCheck, IconPlus, IconRefresh } from '../../components/icons';
+import { Link } from 'react-router-dom';
+import { IconCheck, IconRefresh } from '../../components/icons';
 import {
   Badge,
   Button,
@@ -18,10 +18,8 @@ import {
   EmptyState,
   ErrorState,
   KeyValueList,
-  Modal,
   PageHeader,
   SectionTitle,
-  SelectField,
   Skeleton,
   Stack,
   TextField,
@@ -33,19 +31,17 @@ import { normalizeDecimalInput } from '../../lib/decimal';
 import { formatDate, formatDateTime, formatNumber, formatQty, unitLabel } from '../../lib/format';
 import { ApiError, fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
-import { catalogApi } from '../../services/catalog';
 import { QTY_RULE } from '../../services/inventory';
 import { lunchApi, REVISION_STATUS, type DemandLine, type DemandRevision, type ReserveInput } from '../../services/lunch';
-import { shiftDate } from '../../services/menus';
 import { LunchTabs } from '../common/FeatureLayouts';
 import { useQueryParam, useUpdateParams } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
+import { OrderFromDemand } from './OrderFromDemand';
 import { DayPicker, isZero, useLunchDate } from './shared';
 
 export function DemandPage() {
   const [date, setDate] = useLunchDate();
   const [reserving] = useQueryParam('du-phong');
-  const [ordering] = useQueryParam('tao-don');
   const updateParams = useUpdateParams();
   const q = useApiQuery(() => lunchApi.demand(date), [date]);
   const [busy, setBusy] = useState<'calc' | 'approve' | null>(null);
@@ -98,21 +94,20 @@ export function DemandPage() {
   };
 
   const lineColumns: Column<DemandLine>[] = [
-    { key: 'food', header: 'Nguyên liệu', wrap: true, cell: (l) => <span className={tableText.strong}>{l.food_name}</span> },
+    { key: 'food', header: 'Nguyên liệu', width: '20%', cell: (l) => <span className={tableText.strong}>{l.food_name}</span> },
     { key: 'required', header: 'Cần dùng', align: 'right', cell: (l) => formatQty(l.required_qty, l.unit) },
     {
       key: 'reserve',
       header: 'Dự phòng',
       align: 'right',
-      wrap: true,
+      width: '22%',
       cell: (l) =>
         isZero(l.reserve_qty) ? (
           <span className={tableText.muted}>—</span>
         ) : (
           <span title={l.reserve_reason}>
             {formatQty(l.reserve_qty, l.unit)}
-            <br />
-            <span className={tableText.muted}>{l.reserve_reason}</span>
+            <span className={tableText.secondaryText}>{l.reserve_reason}</span>
           </span>
         ),
     },
@@ -126,7 +121,7 @@ export function DemandPage() {
             align: 'right' as const,
             cell: (l: DemandLine) =>
               isZero(l.to_buy_qty) ? (
-                <span className={tableText.muted}>0</span>
+                <span className={tableText.muted}>{formatQty(l.to_buy_qty, l.unit)}</span>
               ) : (
                 <span className={tableText.strong}>{formatQty(l.to_buy_qty, l.unit)}</span>
               ),
@@ -198,6 +193,8 @@ export function DemandPage() {
               </Callout>
             ) : null}
 
+            {approved && needsBuying && !approved.has_purchase_order ? <OrderFromDemand revision={approved} date={date} /> : null}
+
             {current ? (
               <>
                 <KeyValueList
@@ -233,16 +230,8 @@ export function DemandPage() {
                         Đề xuất này đã có đơn đặt cho phần phải mua.
                       </Callout>
                     ) : (
-                      <Callout
-                        tone="info"
-                        title="Cần mua thêm"
-                        action={
-                          <Button write icon={<IconPlus size={18} />} onClick={() => updateParams({ 'tao-don': '1' })}>
-                            Tạo đơn từ đề xuất
-                          </Button>
-                        }
-                      >
-                        Tạo đơn đặt nháp gồm mọi dòng "Phải mua", giữ hàng đó cho ngày ăn này.
+                      <Callout tone="info" role="status" title="Cần mua thêm">
+                        Chọn nhà cung cấp ở khung "Đặt hàng" phía trên để tạo đơn nháp gồm mọi dòng "Phải mua".
                       </Callout>
                     )
                   ) : (
@@ -293,7 +282,6 @@ export function DemandPage() {
           busy={busy === 'calc'}
         />
       ) : null}
-      {ordering && approved ? <FromDemandModal revision={approved} date={date} onClose={() => updateParams({ 'tao-don': null })} /> : null}
     </>
   );
 }
@@ -392,90 +380,5 @@ function ReserveDrawer({
         ))}
       </form>
     </Drawer>
-  );
-}
-
-function FromDemandModal({ revision, date, onClose }: { revision: DemandRevision; date: string; onClose: () => void }) {
-  const suppliers = useApiQuery(catalogApi.suppliers, []);
-  const navigate = useNavigate();
-  const toast = useToast();
-  const [supplierId, setSupplierId] = useState('');
-  const [expected, setExpected] = useState(shiftDate(date, -1));
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const toBuy = revision.lines.filter((l) => !isZero(l.to_buy_qty));
-
-  const submit = async () => {
-    const next: Record<string, string> = {};
-    if (!supplierId) next.supplier_id = 'Chọn nhà cung cấp.';
-    if (!expected) next.expected_date = 'Chọn ngày giao.';
-    else if (expected > date) next.expected_date = 'Hàng phải về trước hoặc đúng ngày ăn.';
-    setErrors(next);
-    if (Object.keys(next).length) return;
-    setBusy(true);
-    setError('');
-    try {
-      const po = await lunchApi.orderFromDemand({ revision_id: revision.id, supplier_id: Number(supplierId), expected_date: expected });
-      toast.show(`Đã tạo đơn ${po.code} (nháp).`);
-      navigate(`/bua-trua/don-dat?don=${po.id}`);
-    } catch (err) {
-      setError(messageOf(err));
-      setErrors(fieldsOf(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Modal
-      title="Tạo đơn từ đề xuất"
-      onClose={busy ? () => undefined : onClose}
-      actions={
-        <>
-          <Button variant="outline" disabled={busy} onClick={onClose}>
-            Huỷ
-          </Button>
-          <Button write busy={busy} onClick={submit}>
-            Tạo đơn nháp
-          </Button>
-        </>
-      }
-    >
-      <Stack>
-        <p>
-          Đơn gồm {toBuy.map((l) => `${l.food_name} ${formatQty(l.to_buy_qty, l.unit)}`).join(', ')} cho ngày ăn {formatDate(date)}. Đơn ở trạng thái
-          nháp; duyệt và gửi ở màn Đơn đặt.
-        </p>
-        {error ? (
-          <Callout tone="danger" role="alert">
-            {error}
-          </Callout>
-        ) : null}
-        {suppliers.error ? (
-          <ErrorState message={suppliers.error} onRetry={suppliers.reload} />
-        ) : (
-          <SelectField label="Nhà cung cấp" value={supplierId} onChange={(e) => setSupplierId(e.target.value)} error={errors.supplier_id} required>
-            <option value="">{suppliers.loading ? 'Đang tải…' : 'Chọn nhà cung cấp'}</option>
-            {(suppliers.data ?? [])
-              .filter((x) => x.is_active)
-              .map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
-                </option>
-              ))}
-          </SelectField>
-        )}
-        <TextField
-          label="Ngày giao dự kiến"
-          type="date"
-          max={date}
-          value={expected}
-          onChange={(e) => setExpected(e.target.value)}
-          error={errors.expected_date}
-          required
-        />
-      </Stack>
-    </Modal>
   );
 }

@@ -74,6 +74,7 @@ export function UsersPage() {
     {
       key: 'username',
       header: 'Tên đăng nhập',
+      width: '200px',
       cell: (u) => (
         <span className={tableText.strong}>
           {u.username}
@@ -85,17 +86,20 @@ export function UsersPage() {
     {
       key: 'role',
       header: 'Vai trò',
+      width: '172px',
       cell: (u) => (u.is_superuser ? <Badge tone="info">Quản trị hệ thống</Badge> : roleLabel(u.role ?? undefined)),
     },
     {
       key: 'status',
       header: 'Trạng thái',
+      width: '136px',
       cell: (u) => (u.is_active ? <Badge tone="ok">Hoạt động</Badge> : <Badge tone="danger">Đã khoá</Badge>),
     },
-    { key: 'last', header: 'Đăng nhập gần nhất', cell: (u) => <span className={tableText.muted}>{formatDateTime(u.last_login)}</span> },
+    { key: 'last', header: 'Đăng nhập gần nhất', width: '168px', cell: (u) => <span className={tableText.muted}>{formatDateTime(u.last_login)}</span> },
     {
       key: 'actions',
       header: 'Thao tác',
+      width: '300px',
       wrap: true,
       cell: (u) =>
         u.is_superuser ? (
@@ -139,7 +143,7 @@ export function UsersPage() {
       ) : !q.data?.length ? (
         <EmptyState title="Chưa có tài khoản" action={addButton} />
       ) : (
-        <DataTable caption="Danh sách tài khoản" rows={q.data} rowKey={(u) => u.id} columns={columns} minWidth="760px" />
+        <DataTable caption="Danh sách tài khoản" rows={q.data} rowKey={(u) => u.id} columns={columns} minWidth="1120px" />
       )}
 
       {create || editing ? (

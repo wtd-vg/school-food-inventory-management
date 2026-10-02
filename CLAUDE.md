@@ -19,7 +19,7 @@ Quản lý kho thực phẩm và bữa trưa cho **một trường / một kho**
 - **Giai đoạn 1 (SF01–SF42):** danh mục, nhập, xuất, kiểm kê, báo cáo, deploy.
 - **Giai đoạn 2 (SF43–SF72):** số suất theo lớp → thực đơn → nhu cầu nguyên liệu → đề xuất mua/giữ hàng → đơn đặt → nhận hàng → xuất cho bếp → đối chiếu/đóng ngày. Kế hoạch chi tiết: [GiaiDoan2_KeHoach.md](outputs/team-6/GiaiDoan2_KeHoach.md).
 - **Vai trò:** Quản lý (mọi nghiệp vụ), Hiệu trưởng (giám sát, quản lý tài khoản). Phụ huynh không có tài khoản, nhận email thực đơn hôm nay lúc 6h30.
-- **Thực đơn:** cố định theo thứ T2–T6, lặp hằng tuần. Chi tiết: plan_final §1 (R9–R12).
+- **Thực đơn:** cố định theo thứ T2–T6, Thứ Bảy tuỳ chọn theo từng phiên bản (SF79), lặp hằng tuần; Chủ nhật luôn nghỉ. Chi tiết: plan_final §1 (R9–R12).
 
 Ngoài phạm vi (không tự thêm): AI, nhiều bữa/khẩu phần, hồ sơ học sinh ngoài họ tên/lớp/email phụ huynh, lô/hạn dùng, quy cách đóng gói, trả/hủy sau xuất.
 

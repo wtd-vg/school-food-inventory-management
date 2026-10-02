@@ -65,7 +65,7 @@ export function GlobalSearch({ className, autoFocus }: { className?: string; aut
     if (want('food'))
       data.foods
         .filter((f) => matchesQuery(query, f.name, f.code))
-        .forEach((f) => out.push({ key: `f${f.id}`, kind: 'food', title: f.name, meta: f.code, to: `/kho?mat-hang=${f.id}` }));
+        .forEach((f) => out.push({ key: `f${f.id}`, kind: 'food', title: f.name, meta: f.code, to: `/kho/mat-hang/${f.id}` }));
     if (want('dish'))
       data.dishes
         .filter((d) => matchesQuery(query, d.name, d.code))
