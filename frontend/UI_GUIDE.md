@@ -51,7 +51,7 @@ src/
 | `/kho/kiem-ke` | Kiểm kê | phiếu đang đếm nhớ trên trình duyệt (API chưa có danh sách) |
 | `/kho/danh-muc` | Danh mục & mặt hàng | `?tab=mat-hang` hoặc `danh-muc`, `?tao=1`, `?sua=ID` |
 | `/mon-an` | Món & công thức | `?tao=1`, `?sua=ID`; định lượng hiện tới 6 số lẻ (0,4 g) |
-| `/mon-an/thuc-don` | Thực đơn tuần (FE-04/05) | `?tuan=YYYY-MM-DD`, `?sua-thuc-don=1` (phiên bản mới từ ngày mai), `?phien-ban=ID`, `?ngay-nghi=1` |
+| `/mon-an/thuc-don` | Thực đơn tuần (FE-04/05) | `?tuan=YYYY-MM-DD`, `?sua-thuc-don=1` (phiên bản mới từ ngày mai; ô "Có bữa trưa Thứ Bảy" bật thì thêm nhóm món T7 — SF79), `?phien-ban=ID`, `?ngay-nghi=1`; tuần có T7 xếp lưới 3×2 (6 cột từ 1600px). Ngày học trong tuần lọc bằng `isSchoolDay` (T2–T6 + T7 có ăn), không so `weekday < 5` |
 | `/lop-hoc` | Lớp học | `?tao=1`, `?sua=ID` |
 | `/lop-hoc/so-suat` | Số suất (FE-08) | `?ngay=`; mở ngày, nhập dự kiến/thực tế 0…sĩ số, ô trống ≠ 0, chốt/mở lại có lý do, 409 → tải lại |
 | `/lop-hoc/hoc-sinh` | Học sinh (FE-06) | `?lop=ID`, `?tao=1`, `?sua=ID`, `?nhap-csv=1` (kiểm tra dry-run rồi mới lưu) |
