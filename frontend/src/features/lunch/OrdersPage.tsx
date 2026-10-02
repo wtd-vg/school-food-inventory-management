@@ -76,7 +76,7 @@ export function OrdersPage() {
       header: <span className="sr-only">Thao tác</span>,
       align: 'right',
       cell: (o) => (
-        <Button size="xs" variant="secondary" onClick={() => updateParams({ don: String(o.id), tao: null })}>
+        <Button size="xs" variant="outline" onClick={() => updateParams({ don: String(o.id), tao: null })}>
           Xem
         </Button>
       ),
@@ -312,7 +312,7 @@ export function ReasonModal({
       onClose={busy ? () => undefined : onCancel}
       actions={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onCancel}>
+          <Button variant="outline" disabled={busy} onClick={onCancel}>
             Quay lại
           </Button>
           <Button
@@ -396,7 +396,7 @@ function CreateOrderDrawer({ onClose, onCreated }: { onClose: () => void; onCrea
       onClose={busy ? () => undefined : onClose}
       footer={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button write type="submit" form="po-form" busy={busy}>

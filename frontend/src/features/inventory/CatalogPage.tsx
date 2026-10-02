@@ -235,7 +235,7 @@ function FoodForm({ food, categories, onClose, onSaved }: { food: Food | null; c
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Huỷ
           </Button>
           <Button type="submit" form="food-form" write busy={busy}>
@@ -385,7 +385,7 @@ function CategoryForm({ category, itemCount, onClose, onSaved }: { category: Cat
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Huỷ
           </Button>
           <Button type="submit" form="category-form" write busy={busy}>

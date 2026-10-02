@@ -1,57 +1,197 @@
-/* Design tokens "Bếp Nhà Trường" (mẫu gốc design/*.html, quy tắc frontend/UI_GUIDE.md).
-   Đây là nơi DUY NHẤT được khai báo mã màu. Component chỉ dùng var(--...). */
+/* Design tokens "Bếp Nhà Trường" bản xanh lá rau (SF78, duyệt 02/10/2026; quy tắc frontend/UI_GUIDE.md).
+   Đây là nơi DUY NHẤT được khai báo mã màu. Component chỉ dùng var(--...).
+   Quy ước màu: xanh thương hiệu chỉ cho hành động (nút chính, tab chọn, dòng chọn, thanh dọc);
+   đỏ/cam chỉ cho trạng thái; gradient chỉ ở viền khung, băng tranh và điện thoại xem trước. */
 :root {
-  /* nền & bề mặt */
-  --bg: #FFF8EC;
-  --sidebar: #FFE9BF;
-  --surface: #FFFFFF;
-  --surface-sunken: #F6EEDF;
-  --surface-hover: #FFFCF5;
-  --warm-inner: #FFF6E0;
-  --warm-line: #F1D9A6;
-  --warm-muted: #6E5A2E;
-  --photo-a: #FFF0C9;
-  --photo-b: #E8EFD9;
+  /* ---------- khung app ---------- */
+  --frame-mint: #BFE6D2;
+  --frame-leaf: #D3EAA8;
+  --frame-cream: #FBF1CB;
+  --frame-outside: #FFFFFF;
+  --window: #FFFFFF;
+  --nav-top: #1F7A4D;
+  --nav-bottom: #17603C;
+  --nav-icon: rgba(255, 255, 255, .88);
+  --nav-hover: rgba(255, 255, 255, .14);
+  --content-top: #F6F9F5;
+  --content-bottom: #FFFFFF;
 
-  /* chữ & đường kẻ */
-  --ink: #2A2522;
-  --ink-hover: #3A332F;
-  --ink-soft: #4A3D33;
-  --muted: #6B5F55;
-  --line: #EADFC9;
-  --border: #D9CBB0;
-  --border-field: #E3D6BD;
-  --pending: #CDBFA6;
+  /* ---------- nền & bề mặt ---------- */
+  --bg: #F6F9F5;
+  --surface: #FFFFFF;
+  --surface-sunken: #F3F5F2;
+  --surface-hover: #F7F9F6;
+  --kv-bg: #F5F7F4;
+  --thead-bg: #F4F6F3;
+  --seg-bg: #F1F4F0;
+  --bulk-bg: #1E241F;
+  --bulk-divider: rgba(255, 255, 255, .22);
+  --bulk-hover: rgba(255, 255, 255, .12);
+
+  /* ---------- chữ & đường kẻ ---------- */
+  --ink: #1A1D1A;
+  --ink-hover: #2B312B;
+  --ink-soft: #3A423A;
+  --muted: #667066;
+  --line: #EDF0EC;
+  --border: #E1E5E0;
+  --border-field: #E1E5E0;
+  --pending: #C5CCC4;
   --on-ink: #FFFFFF;
 
-  /* thương hiệu & liên kết */
-  --brand: #FFC93C;
-  --link: #1D4F87;
-  --link-hover: #123A66;
+  /* ---------- thương hiệu (chỉ cho hành động) ---------- */
+  --brand: #1F7A4D;
+  --brand-strong: #17603C;
+  --brand-soft: #E4F2E8;
+  --brand-soft-hover: #D5EBDC;
+  --brand-tint: #F1F8F3;
+  --link: #17603C;
+  --link-hover: #0F4A2D;
+  --focus: #1F7A4D;
 
-  /* trạng thái: chữ / nền */
-  --ok: #1F6B3A;
-  --ok-bg: #E3F1E6;
-  --danger: #A5361A;
-  --danger-bg: #FFE4DA;
-  --warn: #6E4C00;
-  --warn-bg: #FFF0C2;
-  --info: #1D4F87;
-  --info-bg: #DCEBFA;
+  /* ---------- trạng thái: chữ / nền / viền ---------- */
+  --ok: #1E6B3F;          /* Đạt, đang hợp tác, đang dùng */
+  --ok-bg: #E6F4EA;
+  --ok-line: #BFE3CB;
+  --done: #17665D;        /* Hoàn tất, đã chốt, đã nấu */
+  --done-bg: #E3F4F2;
+  --done-line: #B9E2DC;
+  --info: #2453A6;        /* Mới, đang chuẩn bị */
+  --info-bg: #E8F0FD;
+  --info-line: #C9DAF7;
+  --review: #146283;      /* Đang duyệt */
+  --review-bg: #E5F4FB;
+  --review-line: #BFE3F2;
+  --warn: #9A4A0B;        /* Sắp hết, cần đặt, chưa chốt */
+  --warn-bg: #FFF0E3;
+  --warn-line: #F8D3B0;
+  --danger: #A8261B;      /* Hết hàng, quá hạn, lỗi */
+  --danger-bg: #FDECEA;
+  --danger-line: #F5C6C0;
+  --draft: #7A5A00;       /* Nháp */
+  --draft-bg: #FFF6D9;
+  --draft-line: #F2DD9A;
+  --paused: #5B3FA6;      /* Tạm dừng */
+  --paused-bg: #F1ECFB;
+  --paused-line: #DCD0F5;
+  --neutral: #586058;     /* Huỷ, ngừng dùng */
+  --neutral-bg: #F1F3F1;
+  --neutral-line: #DDE1DC;
 
-  /* biểu đồ & nhóm chi phí */
-  --chart-bar: #E3B341;
-  --chart-over: #A5361A;
-  --cat-protein: #8C3B1E;
-  --cat-veg: #5E7F2E;
-  --cat-dry: #C99A2E;
-  --cat-dairy: #3B6FA8;
+  /* ---------- việc có giờ ---------- */
+  --task-bg: #FFF7E6;
+  --task-bar: #F2B33D;
+  --task-ink: #7A5200;
+  --task-time-bg: #FBE7B5;
+  /* mục xa hơn nhạt dần bằng nền/dải, chữ vẫn đạt AA */
+  --task-bg-2: #FFFAEE;
+  --task-bar-2: #F6CB72;
+  --task-time-bg-2: #FCEDC8;
+  --task-bg-3: #FFFBF2;
+  --task-bar-3: #F8DA9C;
+  --task-time-bg-3: #FDF0D2;
+  --task-ink-2: #86621C;
 
-  /* hiệu ứng */
-  --overlay: rgba(42, 37, 34, .28);
-  --overlay-video: rgba(42, 37, 34, .72);
+  /* ---------- biểu đồ: mỗi hạng mục một màu, thứ tự cố định (đã chạy validate_palette) ---------- */
+  --chart-1: #1F7A4D;
+  --chart-2: #E8735A;
+  --chart-3: #4A7FD9;
+  --chart-4: #E0A02E;
+  --chart-5: #8B6BD6;
+  --chart-soft: #C9E3D2;
+  --chart-track: #EEF2ED;
+  --chart-over: #E8735A;
 
-  /* SF77: trang đăng nhập (nền đào ấm, phiến pastel, vòng kính). Cảnh WebGL đọc các mã này lúc chạy. */
+  /* ---------- tranh minh hoạ (SVG) ---------- */
+  --ill-steam: rgba(255, 255, 255, .78);
+  --ill-field: rgba(255, 255, 255, .34);
+  --ill-fade: rgba(255, 255, 255, .92);
+  --ill-fade-clear: rgba(255, 255, 255, 0);
+  /* sương: mint */
+  --ill-suong-sky-1: #EAF6EF;
+  --ill-suong-sky-2: #D7EEE1;
+  --ill-suong-sun: #FFF4CC;
+  --ill-suong-hill-1: #CBE7D6;
+  --ill-suong-hill-2: #B2DBC3;
+  --ill-suong-hill-3: #93C9AA;
+  --ill-suong-hill-4: #74B48F;
+  /* đồng: lúa xanh, trời xanh */
+  --ill-dong-sky-1: #DCEEFB;
+  --ill-dong-sky-2: #EEF7FC;
+  --ill-dong-sun: #FFF1B8;
+  --ill-dong-hill-1: #CFE6A6;
+  --ill-dong-hill-2: #AFD585;
+  --ill-dong-hill-3: #8DC166;
+  --ill-dong-hill-4: #6AA64B;
+  /* bình minh: hồng đào */
+  --ill-binhminh-sky-1: #FFE7DC;
+  --ill-binhminh-sky-2: #FFF3E8;
+  --ill-binhminh-sun: #FFD9A8;
+  --ill-binhminh-hill-1: #F7D3C2;
+  --ill-binhminh-hill-2: #EFB9A3;
+  --ill-binhminh-hill-3: #D99C86;
+  --ill-binhminh-hill-4: #B9806E;
+  /* sông: teal */
+  --ill-song-sky-1: #DDF1F0;
+  --ill-song-sky-2: #EEF8F7;
+  --ill-song-sun: #FFF0C4;
+  --ill-song-hill-1: #BFE0DC;
+  --ill-song-hill-2: #9CCFC9;
+  --ill-song-hill-3: #77B8B1;
+  --ill-song-hill-4: #529C95;
+  /* khay cơm */
+  --tray: #FFFFFF;
+  --tray-edge: #E6E9E4;
+  --tray-cell: #F6F7F4;
+  --tray-rice: #FBF7EC;
+  --tray-grain: #D9CFB4;
+  --tray-veg: #4F9A55;
+  --tray-veg-line: #2F7038;
+  --tray-soup: #F1C04F;
+  --tray-soup-light: #F8DA8C;
+  --tray-main-1: #B85C38;
+  --tray-main-2: #E07A55;
+  --tray-main-3: #D99A3A;
+  --tray-main-4: #D8664A;
+  --tray-main-5: #A86B4A;
+  --tray-dot: rgba(255, 255, 255, .45);
+  --tray-bg-1: #F7E9DE;
+  --tray-bg-2: #E5F2E8;
+  --tray-bg-3: #E6EEF9;
+  --tray-bg-4: #F1ECF8;
+  --tray-bg-5: #FBF2DA;
+  /* ô thu nhỏ theo loại hàng (nền pastel + icon) */
+  /* không dùng đỏ/cam (dành cho trạng thái) */
+  --thumb-veg-bg: #EFF6E2;
+  --thumb-veg: #4E6B1F;
+  --thumb-meat-bg: #FBEAF0;
+  --thumb-meat: #8E3557;
+  --thumb-sea-bg: #E3F4F2;
+  --thumb-sea: #17665D;
+  --thumb-dairy-bg: #E8F0FD;
+  --thumb-dairy: #2453A6;
+  --thumb-dry-bg: #F3EEE4;
+  --thumb-dry: #6B5531;
+  --thumb-other-bg: #F1F3F1;
+  --thumb-other: #586058;
+
+  /* ---------- hiệu ứng ---------- */
+  --overlay: rgba(20, 30, 20, .32);
+  --overlay-video: rgba(20, 30, 20, .72);
+  --shadow-card: 0 1px 2px rgba(20, 40, 20, .04), 0 6px 20px -12px rgba(20, 40, 20, .18);
+  --shadow-seg: 0 1px 2px rgba(20, 40, 20, .1), 0 2px 6px -2px rgba(20, 40, 20, .1);
+  --shadow-drawer: -20px 0 40px -20px rgba(20, 40, 20, .32);
+  --shadow-pop: 0 12px 32px -12px rgba(20, 40, 20, .32);
+  --shadow-bar: 0 -6px 20px -12px rgba(20, 40, 20, .3);
+  --shadow-bulk: 0 16px 36px -14px rgba(20, 30, 20, .55);
+
+  /* ---------- trang đăng nhập (SF77, giữ bảng màu ấm riêng) ---------- */
+  --login-brand: #FFC93C;
+  --login-tag: #FFE9BF;
+  --login-warm-inner: #FFF6E0;
+  --login-warm-line: #F1D9A6;
+  --login-warm-muted: #6E5A2E;
+  --login-link: #1D4F87;
   --login-peach-1: #FFE6D6;
   --login-peach-2: #FFC6A6;
   --login-glow: #FFF5EC;
@@ -64,31 +204,35 @@
   --login-window-edge: rgba(255, 255, 255, .72);
   --login-plate: rgba(255, 251, 246, .66);
   --login-shadow: 0 40px 80px -36px rgba(120, 60, 30, .45), 0 2px 6px rgba(120, 60, 30, .08);
-  --shadow-seg: 0 1px 2px rgba(60, 40, 10, .12);
-  --shadow-drawer: -20px 0 40px -20px rgba(42, 37, 34, .35);
-  --shadow-pop: 0 12px 32px -12px rgba(42, 37, 34, .35);
-  --shadow-bar: 0 -6px 20px -12px rgba(42, 37, 34, .3);
 
-  /* bo góc */
+  /* ---------- bo góc ---------- */
+  --r-frame: 30px;
+  --r-window: 22px;
   --r-badge: 6px;
   --r-seg-item: 9px;
   --r-input-sm: 10px;
+  --r-thead: 10px;
   --r-md: 12px;
   --r-logo: 13px;
-  --r-card: 14px;
+  --r-mark: 9px;
+  --r-bulk: 14px;
+  --r-card: 16px;
   --r-day: 16px;
   --r-warm: 22px;
   --r-phone: 38px;
   --r-pill: 999px;
 
-  /* chữ */
+  /* ---------- chữ ---------- */
   --font-body: 'Be Vietnam Pro', system-ui, sans-serif;
   --font-display: 'Baloo 2', 'Be Vietnam Pro', system-ui, sans-serif;
 
-  /* khung trang */
-  --sidebar-w: 232px;
-  --sidebar-w-compact: 76px;
+  /* ---------- khung trang ---------- */
+  --frame-pad: 8px;
+  --topbar-h: 60px;
+  --rail-w: 64px;
   --tabbar-h: 64px;
-  --control-h: 44px;
+  --control-h: 40px;
+  --touch: 44px;
+  --gap: 18px;
   --motion: 200ms ease-out;
 }

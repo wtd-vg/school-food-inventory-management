@@ -16,24 +16,37 @@
 }
 
 .primary {
-  background: var(--ink);
+  background: var(--brand);
   color: var(--on-ink);
 }
 
 .primary:hover:not(:disabled) {
-  background: var(--ink-hover);
+  background: var(--brand-strong);
   color: var(--on-ink);
 }
 
+/* Nút phụ: nền mint, chữ xanh đậm */
 .secondary {
   padding: 0 16px;
-  background: transparent;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--brand-soft-hover);
+  color: var(--brand-strong);
+}
+
+/* Nút viền: nền trắng, viền xám nhạt */
+.outline {
+  padding: 0 16px;
+  background: var(--surface);
   border-color: var(--border);
   color: var(--ink);
 }
 
-.secondary:hover:not(:disabled) {
-  background: var(--surface-sunken);
+.outline:hover:not(:disabled) {
+  background: var(--surface-hover);
   color: var(--ink);
 }
 
@@ -57,12 +70,21 @@
 }
 
 .sm {
-  height: 40px;
+  height: var(--control-h);
+  padding: 0 14px;
+  font-size: 14px;
 }
 
+/* xs: nút trong ô bảng; vẫn giữ vùng bấm 40px theo quy tắc truy cập. */
 .xs {
-  height: 36px;
+  height: var(--control-h);
   padding: 0 10px;
+  font-size: 14px;
+}
+
+.caret {
+  margin-left: -2px;
+  margin-right: -4px;
 }
 
 .block {
@@ -70,7 +92,7 @@
 }
 
 .button:disabled {
-  opacity: .45;
+  opacity: .5;
   cursor: not-allowed;
 }
 
@@ -96,18 +118,23 @@
   width: var(--control-h);
   height: var(--control-h);
   flex: none;
-  border: none;
+  border: 1px solid var(--border);
   border-radius: var(--r-md);
-  background: var(--surface-sunken);
+  background: var(--surface);
   color: var(--ink);
 }
 
 .iconButton:hover:not(:disabled) {
-  background: var(--line);
+  background: var(--surface-hover);
 }
 
 .iconGhost {
+  border-color: transparent;
   background: transparent;
+}
+
+.iconGhost:hover:not(:disabled) {
+  background: var(--surface-sunken);
 }
 
 .iconButton:disabled {

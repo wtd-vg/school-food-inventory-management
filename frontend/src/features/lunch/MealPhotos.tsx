@@ -209,7 +209,7 @@ function UploadModal({ date, blob, preview, onClose, onDone }: { date: string; b
       onClose={busy ? () => undefined : onClose}
       actions={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button write busy={busy} onClick={submit}>
@@ -260,7 +260,7 @@ function ViewModal({ photo, canDelete, onClose, onDeleted }: { photo: MealPhoto;
                 Xóa ảnh
               </Button>
             ) : null}
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="outline" onClick={onClose}>
               Đóng
             </Button>
           </>

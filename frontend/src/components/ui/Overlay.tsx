@@ -157,7 +157,7 @@ export function ConfirmDialog({ title, children, confirmLabel, cancelLabel = 'Hu
       role="alertdialog"
       actions={
         <>
-          <Button variant="secondary" onClick={onCancel} disabled={busy} data-autofocus>
+          <Button variant="outline" onClick={onCancel} disabled={busy} data-autofocus>
             {cancelLabel}
           </Button>
           <Button variant={tone === 'danger' ? 'danger' : 'primary'} onClick={onConfirm} busy={busy}>

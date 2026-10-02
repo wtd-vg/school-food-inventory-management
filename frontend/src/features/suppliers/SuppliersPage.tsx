@@ -312,7 +312,7 @@ function SupplierForm({ supplier, onClose, onSaved }: { supplier: Supplier | nul
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Huỷ
           </Button>
           <Button type="submit" form="supplier-form" write busy={busy}>

@@ -238,7 +238,7 @@ function CountSheet({ stocktake, onChange }: { stocktake: Stocktake; onChange: (
           title={error.conflict ? 'Tồn kho đã thay đổi trong lúc đếm' : 'Chưa chốt được kiểm kê'}
           action={
             error.conflict ? (
-              <Button variant="secondary" size="sm" onClick={() => onChange(null)}>
+              <Button variant="outline" size="sm" onClick={() => onChange(null)}>
                 Làm phiếu mới
               </Button>
             ) : undefined
@@ -358,7 +358,7 @@ function VarianceCell({ item }: { item: StocktakeItem }) {
   if (item.counted_qty === null) return <span className={tableText.muted}>Chưa đếm</span>;
   const negative = item.variance.trim().startsWith('-');
   const zero = /^-?0(\.0+)?$/.test(item.variance.trim());
-  if (zero) return <Badge tone="ok">Khớp</Badge>;
+  if (zero) return <Badge tone="done">Khớp</Badge>;
   return (
     <span className={negative ? styles.varMinus : styles.varPlus}>
       {negative ? '' : '+'}

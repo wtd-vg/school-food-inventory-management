@@ -202,7 +202,7 @@ function ClassForm({ schoolClass, onClose, onSaved }: { schoolClass: SchoolClass
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Huỷ
           </Button>
           <Button type="submit" form="class-form" write busy={busy}>

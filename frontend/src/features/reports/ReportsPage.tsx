@@ -42,7 +42,7 @@ import styles from './ReportsPage.module.css';
 
 type Section = 'tong-quan' | 'ton-kho' | 'so-giao-dich' | 'theo-ngay';
 const SECTIONS: Section[] = ['tong-quan', 'ton-kho', 'so-giao-dich', 'theo-ngay'];
-const TONES: Segment['tone'][] = ['protein', 'veg', 'dry', 'dairy'];
+const TONES: Segment['tone'][] = [1, 2, 3, 4, 5];
 
 const dec = (v: string) => parseDec(v) ?? ZERO;
 const neg = (d: Dec): Dec => ({ v: -d.v, s: d.s });
@@ -240,7 +240,7 @@ function DailySection({ report, label }: { report: DailyReport; label: string })
           { key: 'actual', header: 'Thực tế', align: 'right', cell: (d) => (d.actual_total == null ? '—' : formatNumber(d.actual_total, 0)) },
           { key: 'cost', header: 'Chi phí ngày', align: 'right', cell: (d) => <span className={tableText.strong}>{formatMoney(d.cost)}</span> },
           { key: 'per', header: 'Chi phí/suất', align: 'right', cell: (d) => (d.cost_per_serving ? formatMoney(d.cost_per_serving) : '—') },
-          { key: 'closed', header: 'Đóng ngày', cell: (d) => (d.closed ? <Badge tone="ok">Đã đóng</Badge> : <Badge>Chưa đóng</Badge>) },
+          { key: 'closed', header: 'Đóng ngày', cell: (d) => (d.closed ? <Badge tone="done">Đã đóng</Badge> : <Badge tone="warn">Chưa đóng</Badge>) },
         ]}
       />
     </Stack>

@@ -1,18 +1,21 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { useAuth } from '../../auth/AuthContext';
-import { IconLock } from '../icons';
+import { IconChevronDown, IconLock } from '../icons';
 import styles from './Button.module.css';
 
 export const VIEWER_TITLE = 'Hiệu trưởng chỉ xem';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  /** primary = xanh thương hiệu; secondary = nền mint; outline = nền trắng viền xám. */
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'md' | 'sm' | 'xs';
   icon?: ReactNode;
   block?: boolean;
   busy?: boolean;
   /** Thao tác ghi nghiệp vụ: Hiệu trưởng thấy nút bị khoá + icon ổ khoá, không bị ẩn. */
   write?: boolean;
+  /** Nút mở menu nhiều loại (▾ ở cuối). */
+  caret?: boolean;
 };
 
 export function Button({
@@ -22,6 +25,7 @@ export function Button({
   block,
   busy,
   write,
+  caret,
   disabled,
   className,
   title,
@@ -52,6 +56,7 @@ export function Button({
     >
       {leading}
       {children}
+      {caret ? <IconChevronDown size={16} className={styles.caret} /> : null}
     </button>
   );
 }

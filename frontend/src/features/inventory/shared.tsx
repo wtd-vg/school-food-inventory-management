@@ -57,7 +57,7 @@ export function focusFirstInvalid(formId: string) {
 
 export function DocStatusBadge({ status }: { status: DocStatus | 'draft' | 'posted' }) {
   const posted = status.toUpperCase() === 'POSTED';
-  return posted ? <Badge tone="ok">Đã chốt</Badge> : <Badge tone="warn">Nháp</Badge>;
+  return posted ? <Badge tone="done">Đã chốt</Badge> : <Badge tone="draft">Nháp</Badge>;
 }
 
 export type DraftLine = { key: number; foodId: string; quantity: string; unitPrice: string };

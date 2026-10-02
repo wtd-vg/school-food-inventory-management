@@ -56,9 +56,9 @@
 }
 
 .drawerTitle {
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
@@ -119,8 +119,8 @@
 }
 
 .modalTitle {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 600;
   line-height: 1.25;
 }
 
@@ -160,7 +160,7 @@
   gap: 10px;
   padding: 12px 16px;
   border-radius: var(--r-md);
-  background: var(--ink);
+  background: var(--bulk-bg);
   color: var(--on-ink);
   font-size: 15px;
   box-shadow: var(--shadow-pop);
