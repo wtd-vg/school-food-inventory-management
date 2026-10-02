@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
-import { IconBowl } from '../../components/icons';
+import { IconBowl, IconPlay } from '../../components/icons';
 import { APP_NAME, SCHOOL_NAME } from '../../components/layout/nav';
 import { Button, Callout, TextField } from '../../components/ui';
 import { fieldsOf, messageOf } from '../../lib/http';
+import { IntroVideo } from './IntroVideo';
 import styles from './LoginPage.module.css';
 
 export function LoginPage() {
@@ -19,6 +20,7 @@ export function LoginPage() {
   const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
   const [formError, setFormError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
 
   if (status === 'authed') return <Navigate to={from} replace />;
 
@@ -61,6 +63,11 @@ export function LoginPage() {
             Đăng nhập
           </h1>
           <p className={styles.lead}>Quản lý kho và bữa trưa bán trú.</p>
+          <button type="button" className={styles.videoTag} onClick={() => setShowVideo(true)}>
+            <IconPlay size={14} fill="currentColor" />
+            Xem video giới thiệu
+            <span className={styles.videoTime}>1:30</span>
+          </button>
         </div>
 
         {sessionExpired ? (
@@ -114,6 +121,7 @@ export function LoginPage() {
 
         <p className={styles.foot}>Quên mật khẩu? Liên hệ Hiệu trưởng.</p>
       </section>
+      {showVideo ? <IntroVideo onClose={() => setShowVideo(false)} /> : null}
     </main>
   );
 }

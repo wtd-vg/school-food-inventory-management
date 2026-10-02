@@ -114,6 +114,11 @@ export const IconClose = (p: IconProps) => (
     <path d="M6 6l12 12M18 6L6 18" />
   </Svg>
 );
+export const IconPlay = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M7 4.5v15l12-7.5z" />
+  </Svg>
+);
 export const IconBell = (p: IconProps) => (
   <Svg {...p}>
     <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z" />

@@ -92,6 +92,39 @@
   padding-right: 64px;
 }
 
+/* SF76: thẻ mở video giới thiệu (khung phủ IntroVideo). */
+.videoTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--warm-line);
+  border-radius: var(--r-pill);
+  background: var(--warm-inner);
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--motion), border-color var(--motion);
+}
+
+.videoTag:hover {
+  background: var(--sidebar);
+  border-color: var(--brand);
+}
+
+.videoTag:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+.videoTime {
+  color: var(--warm-muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
 .foot {
   font-size: 13px;
   color: var(--muted);
