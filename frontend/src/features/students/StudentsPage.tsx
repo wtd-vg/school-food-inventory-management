@@ -45,7 +45,7 @@ import {
   type Student,
   type StudentInput,
 } from '../../services/students';
-import { ClassTabs } from '../common/FeatureLayouts';
+import { ClassTabs, classCrumbs } from '../common/FeatureLayouts';
 import { focusFirstInvalid, useQueryParam, useUpdateParams } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
 import styles from './StudentsPage.module.css';
@@ -149,6 +149,9 @@ export function StudentsPage() {
   return (
     <>
       <PageHeader
+        variant="banner"
+        scene="binhminh"
+        breadcrumb={classCrumbs('Học sinh')}
         title="Học sinh"
         description="Họ tên, lớp và email phụ huynh để gửi thực đơn hằng ngày. Email được mã hoá, chỉ hiện dạng che."
         actions={

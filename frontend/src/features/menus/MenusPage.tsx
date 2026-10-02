@@ -33,7 +33,7 @@ import { fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { catalogApi, type Dish } from '../../services/catalog';
 import { menusApi, shiftDate, WEEKDAY_LABELS, type Holiday, type MenuDay, type MenuVersion } from '../../services/menus';
-import { DishTabs } from '../common/FeatureLayouts';
+import { DishTabs, dishCrumbs } from '../common/FeatureLayouts';
 import { formatPortion } from '../dishes/DishesPage';
 import { useQueryParam, useUpdateParams } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
@@ -96,6 +96,7 @@ export function MenusPage() {
     {
       key: 'range',
       header: 'Áp dụng',
+      width: '26%',
       cell: (v) => (
         <span className={tableText.strong}>
           {formatDate(v.effective_from)} → {v.effective_to ? formatDate(v.effective_to) : 'nay'}
@@ -105,11 +106,22 @@ export function MenusPage() {
     {
       key: 'state',
       header: 'Trạng thái',
+      width: '16%',
       cell: (v) =>
         v.is_current ? <Badge tone="ok">Đang áp dụng</Badge> : v.is_editable ? <Badge tone="info">Sắp áp dụng</Badge> : <Badge>Lịch sử</Badge>,
     },
     { key: 'note', header: 'Ghi chú', wrap: true, cell: (v) => v.note || '—' },
-    { key: 'by', header: 'Người lập', cell: (v) => <span className={tableText.muted}>{v.created_by} · {formatDateTime(v.created_at)}</span> },
+    {
+      key: 'by',
+      header: 'Người lập',
+      width: '22%',
+      cell: (v) => (
+        <>
+          <span className={`${tableText.primaryText} ${styles.byName}`}>{v.created_by}</span>
+          <span className={`${styles.byTime} num`}>{formatDateTime(v.created_at)}</span>
+        </>
+      ),
+    },
     {
       key: 'actions',
       header: <span className="sr-only">Thao tác</span>,
@@ -165,7 +177,7 @@ export function MenusPage() {
 
   return (
     <>
-      <PageHeader title="Thực đơn tuần" actions={editButton} />
+      <PageHeader variant="banner" scene="dong" breadcrumb={dishCrumbs('Thực đơn tuần')} title="Thực đơn tuần" actions={editButton} />
       <DishTabs />
       <Stack gap="lg">
         <Toolbar>

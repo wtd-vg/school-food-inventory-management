@@ -60,20 +60,28 @@ export function OrdersPage() {
   );
 
   const columns: Column<PurchaseOrder>[] = [
-    { key: 'code', header: 'Mã đơn', cell: (o) => <span className={tableText.strong}>{o.code}</span> },
-    { key: 'supplier', header: 'Nhà cung cấp', wrap: true, cell: (o) => o.supplier_name },
-    { key: 'expected', header: 'Giao dự kiến', cell: (o) => formatDate(o.expected_date) },
-    { key: 'for', header: 'Cho ngày ăn', cell: (o) => (o.lunch_date ? formatDate(o.lunch_date) : <span className={tableText.muted}>Đơn tay</span>) },
+    { key: 'code', header: 'Mã đơn', width: '152px', sort: (o) => o.code, cell: (o) => <span className={tableText.strong}>{o.code}</span> },
+    { key: 'supplier', header: 'Nhà cung cấp', sort: (o) => o.supplier_name, cell: (o) => o.supplier_name },
+    { key: 'expected', header: 'Giao dự kiến', width: '132px', sort: (o) => o.expected_date, cell: (o) => formatDate(o.expected_date) },
+    {
+      key: 'for',
+      header: 'Cho ngày ăn',
+      width: '132px',
+      sort: (o) => o.lunch_date ?? '',
+      cell: (o) => (o.lunch_date ? formatDate(o.lunch_date) : <span className={tableText.muted}>Đơn tay</span>),
+    },
     {
       key: 'lines',
-      header: 'Hàng',
+      header: 'Hàng (đã nhận/đặt)',
+      // Danh sách mặt hàng có thể dài: cho xuống dòng thay vì cắt.
       wrap: true,
       cell: (o) => o.lines.map((l) => `${l.food_name} ${formatQty(l.qty_received, l.unit)}/${formatQty(l.qty_ordered, l.unit)}`).join(' · '),
     },
-    { key: 'status', header: 'Trạng thái', cell: (o) => <PoStatusBadge status={o.status} /> },
+    { key: 'status', header: 'Trạng thái', width: '148px', sort: (o) => o.status, cell: (o) => <PoStatusBadge status={o.status} /> },
     {
       key: 'open',
       header: <span className="sr-only">Thao tác</span>,
+      width: '92px',
       align: 'right',
       cell: (o) => (
         <Button size="xs" variant="outline" onClick={() => updateParams({ don: String(o.id), tao: null })}>
@@ -111,7 +119,7 @@ export function OrdersPage() {
             Đơn từ đề xuất tạo ở màn Nhu cầu & đề xuất.
           </EmptyState>
         ) : (
-          <DataTable caption="Danh sách đơn đặt" rows={rows} rowKey={(o) => o.id} columns={columns} minWidth="860px" />
+          <DataTable caption="Danh sách đơn đặt" rows={rows} rowKey={(o) => o.id} columns={columns} minWidth="1100px" />
         )}
       </Stack>
 
@@ -243,7 +251,7 @@ function OrderDrawer({ id, onClose, onChanged }: { id: number; onClose: () => vo
             rows={po.lines}
             rowKey={(l) => l.id}
             columns={[
-              { key: 'food', header: 'Mặt hàng', wrap: true, cell: (l) => <span className={tableText.strong}>{l.food_name}</span> },
+              { key: 'food', header: 'Mặt hàng', cell: (l) => <span className={tableText.strong}>{l.food_name}</span> },
               { key: 'ordered', header: 'Đặt', align: 'right', cell: (l) => formatQty(l.qty_ordered, l.unit) },
               { key: 'received', header: 'Đã nhận', align: 'right', cell: (l) => formatQty(l.qty_received, l.unit) },
               { key: 'open', header: 'Còn chờ', align: 'right', cell: (l) => formatQty(l.qty_open, l.unit) },

@@ -30,7 +30,7 @@ import { messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
 import { MAIL_STATUS, notificationsApi, type NotificationRow } from '../../services/notifications';
 import { SendMenuDrawer } from './SendMenuDrawer';
-import { ClassTabs } from '../common/FeatureLayouts';
+import { ClassTabs, classCrumbs } from '../common/FeatureLayouts';
 import { useQueryParam } from '../inventory/shared';
 import s from '../inventory/shared.module.css';
 
@@ -71,6 +71,9 @@ export function NotificationsPage() {
   return (
     <>
       <PageHeader
+        variant="banner"
+        scene="binhminh"
+        breadcrumb={classCrumbs('Thư thực đơn')}
         title="Thư thực đơn"
         description="Quản lý bấm gửi sau khi tải ảnh suất ăn: mỗi email phụ huynh nhận một thư/ngày gồm thực đơn và ảnh (gộp các bé)."
         actions={
