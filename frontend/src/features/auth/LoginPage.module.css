@@ -1,22 +1,48 @@
+/* SF77: nền đào ấm (GlassScene vẽ phía sau), thẻ chia đôi: form bên trái, ô cửa nhìn xuyên vào cảnh bên phải.
+   Nền gradient CSS bên dưới là bản dự phòng khi máy không có WebGL. */
 .page {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 24px 16px;
-  background: var(--bg);
+  padding: 32px 16px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--login-peach-1) 0%, var(--login-peach-2) 100%);
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+  width: min(1040px, 100%);
+  min-height: 600px;
+  border-radius: 28px;
+  box-shadow: var(--login-shadow);
+  animation: shellIn 760ms cubic-bezier(.2, .75, .2, 1) both;
 }
 
 .card {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 22px;
-  width: min(420px, 100%);
-  padding: 32px 32px 28px;
-  border-radius: var(--r-warm);
+  padding: 48px 44px 36px;
+  border-radius: 28px 0 0 28px;
   background: var(--surface);
-  box-shadow: var(--shadow-pop);
 }
+
+.card > * {
+  animation: rise 620ms cubic-bezier(.2, .75, .2, 1) both;
+}
+
+.card > :nth-child(1) { animation-delay: 140ms; }
+.card > :nth-child(2) { animation-delay: 200ms; }
+.card > :nth-child(3) { animation-delay: 260ms; }
+.card > :nth-child(4) { animation-delay: 320ms; }
+.card > :nth-child(5) { animation-delay: 380ms; }
+.card > :nth-child(6) { animation-delay: 440ms; }
 
 .brand {
   display: flex;
@@ -34,6 +60,11 @@
   background: var(--brand);
   color: var(--ink);
   transform: rotate(-5deg);
+  transition: transform 400ms cubic-bezier(.3, 1.6, .5, 1);
+}
+
+.brand:hover .logo {
+  transform: rotate(4deg) scale(1.06);
 }
 
 .brandName {
@@ -49,7 +80,7 @@
 }
 
 .title {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -92,31 +123,104 @@
   padding-right: 64px;
 }
 
-/* SF76: thẻ mở video giới thiệu (khung phủ IntroVideo). */
+.foot {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Ô cửa: trong suốt để thấy cảnh WebGL, viền sáng như mép kính; chữ nằm trên tấm kính mờ ở đáy. */
+.window {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 28px;
+  border: 1px solid var(--login-window-edge);
+  border-left: none;
+  border-radius: 0 28px 28px 0;
+  background: var(--login-window-tint);
+}
+
+.plate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 22px 24px 24px;
+  border: 1px solid var(--login-window-edge);
+  border-radius: 20px;
+  background: var(--login-plate);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  animation: rise 760ms cubic-bezier(.2, .75, .2, 1) 320ms both;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--warm-muted);
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.12;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.sub {
+  max-width: 44ch;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
 .videoTag {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 6px 12px 6px 10px;
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
   border: 1px solid var(--warm-line);
   border-radius: var(--r-pill);
   background: var(--warm-inner);
   color: var(--ink-soft);
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--motion), border-color var(--motion);
+  transition: transform var(--motion), background var(--motion), border-color var(--motion), box-shadow var(--motion);
 }
 
 .videoTag:hover {
-  background: var(--sidebar);
+  transform: translateY(-1px);
   border-color: var(--brand);
+  background: var(--sidebar);
+  box-shadow: var(--shadow-pop);
 }
 
 .videoTag:focus-visible {
   outline: 2px solid var(--link);
   outline-offset: 2px;
+}
+
+.videoIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--on-ink);
+  transition: transform var(--motion);
+}
+
+.videoTag:hover .videoIcon {
+  transform: scale(1.1);
 }
 
 .videoTime {
@@ -125,14 +229,66 @@
   font-variant-numeric: tabular-nums;
 }
 
-.foot {
-  font-size: 13px;
-  color: var(--muted);
-  text-align: center;
+.videoTagWindow {
+  margin-top: 6px;
+}
+
+.videoTagMobile {
+  display: none;
+  margin-top: 12px;
+}
+
+@keyframes shellIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(.985);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* Màn hẹp: một cột chỉ còn form, cảnh động vẫn chạy phía sau; thẻ video chuyển vào form. */
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(440px, 100%);
+    min-height: 0;
+  }
+
+  .card {
+    border-radius: 24px;
+  }
+
+  .window {
+    display: none;
+  }
+
+  .videoTagMobile {
+    display: inline-flex;
+  }
 }
 
 @media (max-width: 480px) {
   .card {
-    padding: 24px 20px;
+    padding: 28px 22px 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell,
+  .card > *,
+  .plate {
+    animation: none;
+  }
+
+  .logo,
+  .videoTag,
+  .videoIcon {
+    transition: none;
   }
 }
