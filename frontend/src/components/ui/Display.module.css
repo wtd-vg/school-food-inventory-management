@@ -341,18 +341,13 @@
 .skeletonRow {
   height: 44px;
   border-radius: var(--r-md);
-  background: linear-gradient(90deg, var(--surface-sunken) 0%, var(--surface-hover) 50%, var(--surface-sunken) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s linear infinite;
+  background: var(--surface-sunken);
+  animation: pulse 1.4s var(--ease-out) infinite;
 }
 
-@keyframes shimmer {
-  from {
-    background-position: 100% 0;
-  }
-
-  to {
-    background-position: -100% 0;
+@keyframes pulse {
+  50% {
+    opacity: .55;
   }
 }
 
