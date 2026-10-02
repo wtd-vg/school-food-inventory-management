@@ -63,6 +63,7 @@ Khi mâu thuẫn, thứ tự ưu tiên: yêu cầu trực tiếp của chủ d�
 | Ảnh suất ăn (SF73) | Model `MealPhoto` (0021), API `lunch-days/<date>/photos/`, `meal-photos/<id>/(image/)`, khu ảnh ở trang Hôm nay; bằng chứng `outputs/team-6/evidence/SF73_*.png` | Gửi ảnh cho phụ huynh (chưa duyệt) |
 | Dữ liệu mẫu | `seed_sample`: 20 nguyên liệu, 11 món, thực đơn T2–T6, 6 lớp, 30 học sinh, 10 ngày ăn đã đóng | — |
 | Video giới thiệu (SF76, 02/10) | Thẻ "Xem video giới thiệu" ở trang đăng nhập mở khung phát trang tĩnh `/gioi-thieu/` (GSAP 3.12.5, Tone.js 14.8.49 tự host, font app); nginx cho nhúng cùng origin riêng đường dẫn này; thử trên nginx 1.27 + CSP thật: phát được, console không vi phạm CSP; bằng chứng `outputs/team-6/evidence/SF76_*.png` | Thuyết minh tiếng Anh, chưa có bản tiếng Việt |
+| Trang đăng nhập mới (SF77, 02/10) | Nền WebGL tự viết (vòng kính mờ bẻ sáng/tách màu giữa phiến pastel, màu từ `tokens.css`, tự hạ chất lượng trên máy yếu, khung tĩnh khi giảm chuyển động, nền CSS khi không có WebGL); thẻ chia đôi form + ô cửa; video đổi sang teaser 1 phút (`/gioi-thieu/`, CSP riêng cho blob của Tone.js); thử nginx 1.27 + CSP thật: console sạch, 165 FPS trên RTX 3050; bằng chứng `SF77_*.png` | Chưa đo trên máy cấu hình yếu thật |
 
 "Có code", "test đạt" và "đã nghiệm thu" là ba trạng thái khác nhau.
 

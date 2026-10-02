@@ -58,7 +58,7 @@ export function IntroVideo({ onClose }: { onClose: () => void }) {
         <div className={styles.frame}>
           <iframe ref={frameRef} src={INTRO_VIDEO_URL} title="Video giới thiệu SchoolFood" allow="fullscreen" />
         </div>
-        <p className={styles.hint}>Bấm Play để xem, có nhạc và thuyết minh tiếng Anh. Phím F: toàn màn hình · M: tắt tiếng.</p>
+        <p className={styles.hint}>Teaser 1 phút, có nhạc và thuyết minh tiếng Anh. Phím Space: tạm dừng · R: xem lại.</p>
       </div>
     </div>,
     document.body,
