@@ -116,7 +116,7 @@ export function MenusPage() {
       align: 'right',
       cell: (v) => (
         <span className={s.inlineGroup}>
-          <Button size="xs" variant="secondary" onClick={() => updateParams({ 'phien-ban': String(v.id) })}>
+          <Button size="xs" variant="outline" onClick={() => updateParams({ 'phien-ban': String(v.id) })}>
             Xem
           </Button>
           {v.is_editable ? (
@@ -170,13 +170,13 @@ export function MenusPage() {
       <Stack gap="lg">
         <Toolbar>
           <span className={s.inlineGroup}>
-            <Button variant="secondary" icon={<IconChevronLeft size={18} />} onClick={() => setWeek(shiftDate(weekStart, -7))}>
+            <Button variant="outline" icon={<IconChevronLeft size={18} />} onClick={() => setWeek(shiftDate(weekStart, -7))}>
               Tuần trước
             </Button>
             <Button variant="ghost" icon={<IconCalendar size={18} />} onClick={() => setWeek(today)}>
               Tuần này
             </Button>
-            <Button variant="secondary" onClick={() => setWeek(shiftDate(weekStart, 7))}>
+            <Button variant="outline" onClick={() => setWeek(shiftDate(weekStart, 7))}>
               Tuần sau
               <IconChevronRight size={18} />
             </Button>
@@ -272,7 +272,7 @@ export function MenusPage() {
 
 function sourceBadge(day: MenuDay) {
   if (day.status !== 'menu') return null;
-  if (day.source === 'snapshot') return <Badge tone="ok">Đã chốt cho ngày</Badge>;
+  if (day.source === 'snapshot') return <Badge tone="done">Đã chốt cho ngày</Badge>;
   if (day.source === 'version') return <Badge tone="info">Theo thực đơn cố định</Badge>;
   return <Badge tone="warn">Chưa lập thực đơn</Badge>;
 }
@@ -413,7 +413,7 @@ function MenuForm({
       onClose={busy ? () => undefined : onClose}
       footer={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button write type="submit" form="menu-form" busy={busy} disabled={!available.length}>
@@ -516,7 +516,7 @@ function HolidayForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
       onClose={busy ? () => undefined : onClose}
       footer={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button write type="submit" form="holiday-form" busy={busy}>

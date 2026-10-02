@@ -6,8 +6,11 @@
 import type { CSSProperties, ReactNode } from 'react';
 import styles from './Chart.module.css';
 
-/** highlight: ghi giá trị trên đỉnh cột (không đổi màu; màu đỏ dành cho "vượt mức"). */
-export type BarDatum = { key: string; label: string; value: number; display: string; highlight?: boolean };
+/**
+ * highlight: ghi giá trị trên đỉnh cột. tone: 'current' (xanh đậm, ví dụ hôm nay), 'over' (san hô = trạng thái vượt mức);
+ * mặc định cột xanh nhạt.
+ */
+export type BarDatum = { key: string; label: string; value: number; display: string; highlight?: boolean; tone?: 'current' | 'over' };
 
 export function BarChart({ data, caption, axis }: { data: BarDatum[]; caption: string; axis: (v: number) => string }) {
   const max = Math.max(...data.map((d) => d.value), 0);
@@ -32,7 +35,7 @@ export function BarChart({ data, caption, axis }: { data: BarDatum[]; caption: s
               const pct = top > 0 ? (d.value / top) * 100 : 0;
               return (
                 <li key={d.key} className={styles.barCell} tabIndex={0} aria-label={`${d.label}: ${d.display}`}>
-                  <span className={styles.bar} style={{ '--h': `${pct}%` } as CSSProperties}>
+                  <span className={`${styles.bar} ${d.tone ? styles[`bar-${d.tone}`] : ''}`} style={{ '--h': `${pct}%` } as CSSProperties}>
                     {d.highlight ? <span className={styles.barValue}>{d.display}</span> : null}
                   </span>
                   <span className={styles.tip} aria-hidden="true">
@@ -62,9 +65,10 @@ function niceCeil(v: number): number {
   return 10 * base;
 }
 
-export type Segment = { key: string; label: ReactNode; value: number; display: string; tone: 'protein' | 'veg' | 'dry' | 'dairy' | 'other' };
+/** tone 1–5 = màu hạng mục theo thứ tự cố định (--chart-1…5, đã kiểm CVD); 'other' = xám cho phần gộp. */
+export type Segment = { key: string; label: ReactNode; value: number; display: string; tone: 1 | 2 | 3 | 4 | 5 | 'other' };
 
-/** Thanh cơ cấu (bản vẽ 08 "Chi vào đâu"): cao 12, bo tròn, các đoạn màu + chú giải. */
+/** Thanh cơ cấu: cao 14, khe 2px giữa các đoạn, chú giải kèm số và % (nhãn trực tiếp, không chỉ dựa màu). */
 export function CostBar({ segments, caption }: { segments: Segment[]; caption: string }) {
   const total = segments.reduce((n, s) => n + s.value, 0);
   return (

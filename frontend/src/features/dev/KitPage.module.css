@@ -35,3 +35,10 @@
   font-size: 13px;
   color: var(--muted);
 }
+
+.trayBox,
+.sceneBox {
+  height: 128px;
+  border-radius: var(--r-card);
+  overflow: hidden;
+}

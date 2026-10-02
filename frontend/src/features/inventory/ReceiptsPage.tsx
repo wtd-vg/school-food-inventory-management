@@ -277,7 +277,7 @@ function CreateReceiptDrawer({
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Huỷ
           </Button>
           <Button type="submit" form="create-receipt" write busy={busy}>
@@ -376,7 +376,7 @@ function ReceiptDrawer({
         footer={
           draft ? (
             <>
-              <Button variant="secondary" onClick={onClose}>
+              <Button variant="outline" onClick={onClose}>
                 Đóng
               </Button>
               <Button write icon={<IconCheck size={18} />} onClick={() => setConfirm(true)}>
@@ -384,7 +384,7 @@ function ReceiptDrawer({
               </Button>
             </>
           ) : (
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="outline" onClick={onClose}>
               Đóng
             </Button>
           )

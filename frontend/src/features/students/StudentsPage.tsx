@@ -127,7 +127,7 @@ export function StudentsPage() {
       align: 'right',
       cell: (st) => (
         <span className={s.inlineGroup}>
-          <Button write size="xs" variant="secondary" onClick={() => updateParams({ sua: String(st.id), tao: null })}>
+          <Button write size="xs" variant="outline" onClick={() => updateParams({ sua: String(st.id), tao: null })}>
             Sửa
           </Button>
           <Button
@@ -331,7 +331,7 @@ function StudentForm({
       onClose={busy ? () => undefined : onClose}
       footer={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button write type="submit" form="student-form" busy={busy}>
@@ -443,7 +443,7 @@ function RevealModal({ student, contact, onClose }: { student: Student; contact:
       onClose={busy ? () => undefined : onClose}
       actions={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Đóng
           </Button>
           {!email ? (
@@ -556,7 +556,7 @@ function ImportModal({ classes, onClose, onSaved }: { classes: SchoolClass[]; on
       onClose={busy ? () => undefined : onClose}
       actions={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Đóng
           </Button>
           <Button write busy={busy} disabled={!canSave} onClick={save}>

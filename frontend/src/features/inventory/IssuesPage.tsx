@@ -270,7 +270,7 @@ function CreateIssueDrawer({
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Huỷ
           </Button>
           <Button type="submit" form="create-issue" write busy={busy}>
@@ -340,7 +340,7 @@ function IssueDrawer({ issue, foodById, onClose, onPosted }: { issue: Issue; foo
         footer={
           draft ? (
             <>
-              <Button variant="secondary" onClick={onClose}>
+              <Button variant="outline" onClick={onClose}>
                 Đóng
               </Button>
               <Button write icon={<IconCheck size={18} />} onClick={() => setConfirm(true)}>
@@ -348,7 +348,7 @@ function IssueDrawer({ issue, foodById, onClose, onPosted }: { issue: Issue; foo
               </Button>
             </>
           ) : (
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="outline" onClick={onClose}>
               Đóng
             </Button>
           )

@@ -6,28 +6,42 @@
 .table {
   width: 100%;
   min-width: var(--table-min, 640px);
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
-  font-size: 15px;
+  font-size: 14.5px;
 }
 
 .col {
   width: var(--w, auto);
 }
 
+/* Dải tiêu đề cột: nền nhạt bo 10, chữ 12.5 màu phụ */
 .table th {
-  padding: 0 12px 10px;
-  border-bottom: 1px solid var(--line);
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  background: var(--thead-bg);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   text-align: left;
   white-space: nowrap;
 }
 
+.table th:first-child {
+  border-radius: var(--r-thead) 0 0 var(--r-thead);
+  padding-left: 16px;
+}
+
+.table th:last-child {
+  border-radius: 0 var(--r-thead) var(--r-thead) 0;
+  padding-right: 16px;
+}
+
 .table td {
-  height: 52px;
-  padding: 6px 12px;
+  height: 46px;
+  padding: 4px 12px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
   white-space: nowrap;
@@ -35,8 +49,77 @@
   text-overflow: ellipsis;
 }
 
+.table td:first-child {
+  padding-left: 16px;
+}
+
+.table td:last-child {
+  padding-right: 16px;
+}
+
 .table tbody tr:hover td {
   background: var(--surface-hover);
+}
+
+.table tbody tr.selectedRow td {
+  background: var(--brand-soft);
+}
+
+/* Nút sắp xếp trong tiêu đề cột: vùng bấm cao bằng dải (40). */
+.sortBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.sortBtn:hover {
+  color: var(--ink);
+}
+
+.right .sortBtn {
+  flex-direction: row-reverse;
+}
+
+.sortIcon {
+  flex: none;
+  color: var(--pending);
+}
+
+.sortIconOn {
+  flex: none;
+  color: var(--brand);
+}
+
+.checkCol {
+  width: 48px;
+}
+
+.table .checkCell {
+  width: 48px;
+  padding: 0 0 0 14px;
+  text-overflow: clip;
+}
+
+.check {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  vertical-align: middle;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+/* Vùng bấm 40px cho checkbox: label/ô bao quanh đã cao 46. */
+.checkCell {
+  cursor: pointer;
 }
 
 .right {
@@ -59,6 +142,22 @@
 /* Ô tên mặt hàng: tên 600 + nhóm 13 muted (bản vẽ Kho hàng) */
 .primaryText {
   font-weight: 600;
+}
+
+/* Ô đầu có ô thu nhỏ 30px (icon theo loại hàng) + tên */
+.thumbCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.thumbCell > :last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .secondaryText {
@@ -98,11 +197,16 @@
   text-decoration: underline;
 }
 
-/* Mã chứng từ: dạng link như mã lô trong bản vẽ. */
+/* Mã chứng từ: chữ xanh gạch chân như mã lô trong bản vẽ. */
 .rowLink {
   composes: rowButton;
   color: var(--link);
   text-decoration: underline;
+}
+
+.rowLink:hover,
+.rowLink:focus-visible {
+  color: var(--link-hover);
 }
 
 .cellActions {
@@ -144,8 +248,26 @@
     background: var(--surface);
   }
 
-  .table tbody tr:hover td {
+  .table tbody tr:hover td,
+  .table tbody tr.selectedRow td {
     background: transparent;
+  }
+
+  .table tbody tr.selectedRow {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+  }
+
+  .table td:first-child,
+  .table td:last-child {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .table .checkCell {
+    width: auto;
+    padding: 0;
+    justify-content: flex-start;
   }
 
   .table td {

@@ -1,0 +1,190 @@
+/* ---------- Đồi ruộng bậc thang: mỗi bảng màu đặt lại biến cục bộ ---------- */
+.scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.scene-suong {
+  --s1: var(--ill-suong-sky-1);
+  --s2: var(--ill-suong-sky-2);
+  --sun: var(--ill-suong-sun);
+  --h1: var(--ill-suong-hill-1);
+  --h2: var(--ill-suong-hill-2);
+  --h3: var(--ill-suong-hill-3);
+  --h4: var(--ill-suong-hill-4);
+}
+
+.scene-dong {
+  --s1: var(--ill-dong-sky-1);
+  --s2: var(--ill-dong-sky-2);
+  --sun: var(--ill-dong-sun);
+  --h1: var(--ill-dong-hill-1);
+  --h2: var(--ill-dong-hill-2);
+  --h3: var(--ill-dong-hill-3);
+  --h4: var(--ill-dong-hill-4);
+}
+
+.scene-binhminh {
+  --s1: var(--ill-binhminh-sky-1);
+  --s2: var(--ill-binhminh-sky-2);
+  --sun: var(--ill-binhminh-sun);
+  --h1: var(--ill-binhminh-hill-1);
+  --h2: var(--ill-binhminh-hill-2);
+  --h3: var(--ill-binhminh-hill-3);
+  --h4: var(--ill-binhminh-hill-4);
+}
+
+.scene-song {
+  --s1: var(--ill-song-sky-1);
+  --s2: var(--ill-song-sky-2);
+  --sun: var(--ill-song-sun);
+  --h1: var(--ill-song-hill-1);
+  --h2: var(--ill-song-hill-2);
+  --h3: var(--ill-song-hill-3);
+  --h4: var(--ill-song-hill-4);
+}
+
+.sky1 {
+  stop-color: var(--s1);
+}
+
+.sky2 {
+  stop-color: var(--s2);
+}
+
+.sun {
+  fill: var(--sun);
+  opacity: .9;
+}
+
+.hill1 {
+  fill: var(--h1);
+}
+
+.hill2 {
+  fill: var(--h2);
+}
+
+.hill3 {
+  fill: var(--h3);
+}
+
+.hill4 {
+  fill: var(--h4);
+}
+
+.fields path {
+  fill: none;
+  stroke: var(--ill-field);
+  stroke-width: 1.4;
+}
+
+.steam path {
+  fill: none;
+  stroke: var(--ill-steam);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* ---------- Khay cơm ---------- */
+.tray {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.trayBg1 { --tray-bg: var(--tray-bg-1); }
+.trayBg2 { --tray-bg: var(--tray-bg-2); }
+.trayBg3 { --tray-bg: var(--tray-bg-3); }
+.trayBg4 { --tray-bg: var(--tray-bg-4); }
+.trayBg5 { --tray-bg: var(--tray-bg-5); }
+
+.trayBack {
+  fill: var(--tray-bg);
+}
+
+.trayBody {
+  fill: var(--tray);
+  stroke: var(--tray-edge);
+  stroke-width: 2;
+}
+
+.rice {
+  fill: var(--tray-rice);
+}
+
+.grain {
+  fill: var(--tray-grain);
+}
+
+.main1 { fill: var(--tray-main-1); }
+.main2 { fill: var(--tray-main-2); }
+.main3 { fill: var(--tray-main-3); }
+.main4 { fill: var(--tray-main-4); }
+.main5 { fill: var(--tray-main-5); }
+
+.mainDot {
+  fill: var(--tray-dot);
+}
+
+.veg {
+  fill: var(--tray-veg);
+}
+
+.vegLine {
+  fill: none;
+  stroke: var(--tray-veg-line);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.soupCell {
+  fill: var(--tray-soup-light);
+}
+
+.soup {
+  fill: var(--tray-soup);
+}
+
+/* ---------- Ô thu nhỏ theo loại hàng ---------- */
+.thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.thumb-veg {
+  background: var(--thumb-veg-bg);
+  color: var(--thumb-veg);
+}
+
+.thumb-meat {
+  background: var(--thumb-meat-bg);
+  color: var(--thumb-meat);
+}
+
+.thumb-sea {
+  background: var(--thumb-sea-bg);
+  color: var(--thumb-sea);
+}
+
+.thumb-dairy {
+  background: var(--thumb-dairy-bg);
+  color: var(--thumb-dairy);
+}
+
+.thumb-dry,
+.thumb-egg {
+  background: var(--thumb-dry-bg);
+  color: var(--thumb-dry);
+}
+
+.thumb-other {
+  background: var(--thumb-other-bg);
+  color: var(--thumb-other);
+}

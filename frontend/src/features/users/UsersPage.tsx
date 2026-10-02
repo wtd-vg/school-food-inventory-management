@@ -102,7 +102,7 @@ export function UsersPage() {
           <span className={tableText.muted}>Sửa trong trang quản trị</span>
         ) : (
           <span className={s.inlineGroup}>
-            <Button size="xs" variant="secondary" onClick={() => updateParams({ sua: String(u.id), tao: null })}>
+            <Button size="xs" variant="outline" onClick={() => updateParams({ sua: String(u.id), tao: null })}>
               Sửa
             </Button>
             <Button
@@ -117,7 +117,7 @@ export function UsersPage() {
             >
               {u.is_active ? 'Khoá' : 'Mở khoá'}
             </Button>
-            <Button size="xs" variant="secondary" onClick={() => setResetting(u)}>
+            <Button size="xs" variant="outline" onClick={() => setResetting(u)}>
               Đặt lại mật khẩu
             </Button>
           </span>
@@ -225,7 +225,7 @@ function UserForm({ account, onClose, onSaved }: { account: Account | null; onCl
       onClose={busy ? () => undefined : onClose}
       footer={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button type="submit" form="user-form" busy={busy}>
@@ -325,7 +325,7 @@ function PasswordForm({ account, onClose }: { account: Account; onClose: () => v
       onClose={busy ? () => undefined : onClose}
       actions={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button type="submit" form="password-form" busy={busy}>

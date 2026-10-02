@@ -354,7 +354,7 @@ function ReserveDrawer({
       width="560px"
       footer={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button write type="submit" form="reserve-form" busy={busy}>
@@ -433,7 +433,7 @@ function FromDemandModal({ revision, date, onClose }: { revision: DemandRevision
       onClose={busy ? () => undefined : onClose}
       actions={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button write busy={busy} onClick={submit}>

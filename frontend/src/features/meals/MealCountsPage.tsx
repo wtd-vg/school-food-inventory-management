@@ -267,7 +267,7 @@ export function MealCountsPage() {
                 <span className={styles.statLabel}>Dự kiến</span>
                 <span className={`${styles.statValue} num`}>{plannedSum === null ? '—' : formatNumber(plannedSum, 0)}</span>
                 {plannedLocked ? (
-                  <Badge tone="ok">Đã chốt {formatDateTime(day.planned_confirmed_at)}</Badge>
+                  <Badge tone="done">Đã chốt {formatDateTime(day.planned_confirmed_at)}</Badge>
                 ) : (
                   <Badge tone="warn">Chưa chốt · {missing('planned')} lớp chưa nhập</Badge>
                 )}
@@ -276,7 +276,7 @@ export function MealCountsPage() {
                 <span className={styles.statLabel}>Thực tế</span>
                 <span className={`${styles.statValue} num`}>{actualSum === null ? '—' : formatNumber(actualSum, 0)}</span>
                 {actualLocked ? (
-                  <Badge tone="ok">Đã chốt {formatDateTime(day.actual_confirmed_at)}</Badge>
+                  <Badge tone="done">Đã chốt {formatDateTime(day.actual_confirmed_at)}</Badge>
                 ) : (
                   <Badge tone="warn">Chưa chốt · {missing('actual')} lớp chưa nhập</Badge>
                 )}
@@ -415,7 +415,7 @@ function ReopenModal({
       onClose={busy ? () => undefined : onClose}
       actions={
         <>
-          <Button variant="secondary" disabled={busy} onClick={onClose}>
+          <Button variant="outline" disabled={busy} onClick={onClose}>
             Huỷ
           </Button>
           <Button write busy={busy} onClick={submit}>
