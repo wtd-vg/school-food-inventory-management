@@ -4,10 +4,11 @@
  * Chi phí ngày = giá trị xuất cho bếp của ngày; chi phí/suất chia cho số suất THỰC TẾ đã chốt.
  * Đóng ngày cần chốt thực tế và mọi phiếu xuất đã chốt; có chênh lệch (đã xuất − cần) thì phải ghi chú. Mở lại cần lý do.
  * SF73: ảnh suất ăn thực tế của ngày (MealPhotos). Đây là trang mở đầu sau đăng nhập.
+ * SF78: dải ô số liệu, thanh tiến trình 7 bước nằm ngang, thẻ "Việc tiếp theo", thẻ thực đơn, chi tiết từng bước.
  */
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-import { IconCheck, IconLock } from '../../components/icons';
+import { IconArrowOut, IconBowl, IconChart, IconCheck, IconChevronRight, IconLock, IconUsers } from '../../components/icons';
 import {
   Badge,
   Button,
@@ -16,148 +17,26 @@ import {
   KeyValueList,
   Modal,
   PageHeader,
-  SectionTitle,
   Skeleton,
   Stack,
+  StatGrid,
+  StatTile,
   TextareaField,
   useToast,
 } from '../../components/ui';
-import { formatDate, formatDateTime, formatMoney, formatNumber, formatQty, todayISO } from '../../lib/format';
+import { formatDate, formatDateTime, formatMoney, formatMoneyShort, formatNumber, formatQty, todayISO } from '../../lib/format';
 import { fieldsOf, messageOf } from '../../lib/http';
 import { useApiQuery } from '../../lib/useApiQuery';
-import { inventoryApi, type Issue } from '../../services/inventory';
-import { lunchApi, type DayCost, type DayDemand, type PurchaseOrder } from '../../services/lunch';
-import { mealsApi, type MealDay } from '../../services/meals';
+import { inventoryApi } from '../../services/inventory';
+import { lunchApi, type DayCost } from '../../services/lunch';
+import { mealsApi } from '../../services/meals';
 import { menusApi, type MenuDay } from '../../services/menus';
 import { LunchTabs } from '../common/FeatureLayouts';
-import s from '../inventory/shared.module.css';
 import { MealPhotos } from './MealPhotos';
 import { ReasonModal } from './OrdersPage';
 import { DayPicker, isZero, useLunchDate } from './shared';
+import { STATE_BADGE, buildSteps, type Step } from './todaySteps';
 import styles from './TodayPage.module.css';
-
-type StepState = 'done' | 'doing' | 'todo' | 'warn' | 'skip';
-type Step = { key: string; title: string; state: StepState; detail: ReactNode; link?: { to: string; label: string } };
-
-const STATE_BADGE: Record<StepState, { label: string; tone: 'ok' | 'info' | 'neutral' | 'warn' }> = {
-  done: { label: 'Xong', tone: 'ok' },
-  doing: { label: 'Đang làm', tone: 'info' },
-  todo: { label: 'Chưa làm', tone: 'neutral' },
-  warn: { label: 'Cần xem lại', tone: 'warn' },
-  skip: { label: 'Không cần', tone: 'neutral' },
-};
-
-/** Ghép trạng thái thật của các API thành 7 bước. Ngày nghỉ: chỉ bước Thực đơn có nghĩa. */
-function buildSteps(
-  date: string,
-  meal: MealDay | undefined,
-  menu: MenuDay | undefined,
-  demand: DayDemand | undefined,
-  orders: PurchaseOrder[],
-  issues: Issue[],
-  cost: DayCost | null,
-): Step[] {
-  const q = `?ngay=${date}`;
-  const steps: Step[] = [];
-
-  // 1. Số suất
-  if (!meal || meal.status === 'not_open') {
-    steps.push({ key: 'suat', title: 'Số suất', state: 'todo', detail: 'Ngày chưa mở.', link: { to: `/lop-hoc/so-suat${q}`, label: 'Mở ngày, nhập số suất' } });
-  } else {
-    const planned = meal.planned_confirmed_at ? `Dự kiến ${formatNumber(meal.planned_total, 0)} suất (đã chốt)` : 'Dự kiến chưa chốt';
-    const actual = meal.actual_confirmed_at ? `thực tế ${formatNumber(meal.actual_total, 0)} suất (đã chốt)` : 'thực tế chưa chốt';
-    steps.push({
-      key: 'suat',
-      title: 'Số suất',
-      state: meal.actual_confirmed_at ? 'done' : meal.planned_confirmed_at ? 'doing' : 'todo',
-      detail: `${planned}; ${actual}.`,
-      link: { to: `/lop-hoc/so-suat${q}`, label: 'Số suất' },
-    });
-  }
-
-  // 2. Thực đơn
-  if (menu && menu.status !== 'menu') {
-    steps.push({ key: 'menu', title: 'Thực đơn', state: 'skip', detail: menu.status === 'holiday' ? `Ngày nghỉ: ${menu.holiday_name ?? 'ngày lễ'}.` : 'Nghỉ cuối tuần.' });
-  } else {
-    steps.push({
-      key: 'menu',
-      title: 'Thực đơn',
-      state: menu?.dishes.length ? 'done' : 'todo',
-      detail: menu?.dishes.length ? menu.dishes.map((d) => d.dish_name).join(', ') : 'Chưa có thực đơn cho ngày này.',
-      link: { to: `/mon-an/thuc-don?tuan=${date}`, label: 'Thực đơn tuần' },
-    });
-  }
-
-  // 3. Nhu cầu
-  const current = demand?.current ?? null;
-  const approved = current?.status === 'approved' ? current : null;
-  steps.push({
-    key: 'nhu-cau',
-    title: 'Nhu cầu & đề xuất',
-    state: demand?.is_outdated ? 'warn' : approved ? 'done' : current ? 'doing' : 'todo',
-    detail: demand?.is_outdated
-      ? 'Số suất hoặc thực đơn đã đổi sau khi tính: tính lại.'
-      : approved
-        ? `Đã duyệt bản ${approved.revision} (${formatNumber(approved.servings, 0)} suất).`
-        : current
-          ? `Bản tính ${current.revision} chưa duyệt.`
-          : 'Chưa tính nhu cầu.',
-    link: { to: `/bua-trua/nhu-cau${q}`, label: 'Nhu cầu & đề xuất' },
-  });
-
-  // 4. Đơn đặt & 5. Nhận hàng
-  const needBuy = approved ? approved.lines.some((l) => !isZero(l.to_buy_qty)) : false;
-  const live = orders.filter((o) => o.status !== 'cancelled');
-  if (approved && !needBuy && !live.length) {
-    steps.push({ key: 'don', title: 'Đơn đặt', state: 'skip', detail: 'Tồn và hàng chờ về đã đủ, không cần mua.' });
-    steps.push({ key: 'nhan', title: 'Nhận hàng', state: 'skip', detail: 'Không có đơn cho ngày này.' });
-  } else {
-    const sentOrDone = live.length > 0 && live.every((o) => o.status === 'sent' || o.status === 'closed');
-    steps.push({
-      key: 'don',
-      title: 'Đơn đặt',
-      state: !live.length ? 'todo' : sentOrDone ? 'done' : 'doing',
-      detail: live.length ? live.map((o) => `${o.code} (${o.supplier_name})`).join(', ') : needBuy ? 'Cần tạo đơn cho phần phải mua.' : 'Chưa có đề xuất đã duyệt.',
-      link: { to: live.length === 1 ? `/bua-trua/don-dat?don=${live[0].id}` : '/bua-trua/don-dat', label: 'Đơn đặt' },
-    });
-    const allIn = live.length > 0 && live.every((o) => o.status === 'closed');
-    const open = live.flatMap((o) => o.lines.filter((l) => !isZero(l.qty_open)).map((l) => `${l.food_name} còn ${formatQty(l.qty_open, l.unit)}`));
-    steps.push({
-      key: 'nhan',
-      title: 'Nhận hàng',
-      state: allIn ? 'done' : live.some((o) => o.status === 'sent') ? 'doing' : 'todo',
-      detail: allIn ? 'Đã nhận đủ / đã đóng đơn.' : open.length ? open.join(' · ') : 'Chưa có hàng về.',
-      link: { to: live.length === 1 ? `/bua-trua/nhan-hang?don=${live[0].id}` : '/bua-trua/nhan-hang', label: 'Nhận hàng' },
-    });
-  }
-
-  // 6. Xuất bếp
-  const posted = issues.filter((i) => i.status === 'POSTED');
-  const drafts = issues.filter((i) => i.status === 'DRAFT');
-  const missing = (cost?.foods ?? []).filter((f) => f.variance.startsWith('-'));
-  steps.push({
-    key: 'xuat',
-    title: 'Xuất bếp',
-    state: drafts.length ? 'doing' : posted.length && !missing.length ? 'done' : posted.length ? 'doing' : 'todo',
-    detail: drafts.length
-      ? `Có ${drafts.length} phiếu xuất nháp chưa chốt.`
-      : posted.length
-        ? missing.length
-          ? `Còn thiếu: ${missing.map((f) => `${f.food_name} ${formatQty(f.variance.slice(1), f.unit)}`).join(', ')}.`
-          : `Đã xuất ${posted.map((i) => i.code).join(', ')}.`
-        : 'Chưa xuất cho bếp.',
-    link: { to: `/bua-trua/xuat-bep${q}`, label: 'Xuất bếp' },
-  });
-
-  // 7. Đóng ngày
-  steps.push({
-    key: 'dong',
-    title: 'Đóng ngày',
-    state: cost?.closed ? 'done' : 'todo',
-    detail: cost?.closed && cost.close ? `Đóng bởi ${cost.close.closed_by} lúc ${formatDateTime(cost.close.closed_at)}.` : 'Chưa đóng ngày.',
-  });
-  return steps;
-}
 
 export function TodayPage() {
   const [date, setDate] = useLunchDate();
@@ -187,11 +66,13 @@ export function TodayPage() {
   const c = cost.data ?? null;
   const steps = loading || error ? [] : buildSteps(date, meal.data, menuDay, demand.data, dayOrders, dayIssues, c);
   const doneCount = steps.filter((st) => st.state === 'done' || st.state === 'skip').length;
+  const nextIndex = steps.findIndex((st) => st.state === 'todo' || st.state === 'doing' || st.state === 'warn');
+  const openMeal = meal.data && meal.data.status !== 'not_open' ? meal.data : null;
 
   return (
     <>
       <PageHeader
-        overline={date === todayISO() ? 'Hôm nay' : undefined}
+        overline={date === todayISO() ? 'Hôm nay' : 'Ngày ăn'}
         title={`Bữa trưa ${formatDate(date)}`}
         description="Theo dõi một ngày ăn từ số suất tới đóng ngày, chi phí mỗi suất theo số suất thực tế."
         actions={
@@ -215,37 +96,97 @@ export function TodayPage() {
           <ErrorState message={error} onRetry={reloadAll} />
         ) : (
           <>
-            <section className={styles.cost} aria-label="Chi phí ngày">
-              <div className={styles.costItem}>
-                <span className={styles.costLabel}>Chi phí ngày</span>
-                <span className={`${styles.costValue} num`}>{c ? formatMoney(c.cost) : '—'}</span>
-              </div>
-              <div className={styles.costItem}>
-                <span className={styles.costLabel}>Suất thực tế</span>
-                <span className={`${styles.costValue} num`}>{c?.actual_total != null ? formatNumber(c.actual_total, 0) : '—'}</span>
-              </div>
-              <div className={styles.costItem}>
-                <span className={styles.costLabel}>Chi phí / suất</span>
-                <span className={`${styles.costValue} num`}>{c?.cost_per_serving ? formatMoney(c.cost_per_serving) : '—'}</span>
-                {c && !c.cost_per_serving && c.cost_per_serving_reason ? <span className={s.muted}>{c.cost_per_serving_reason}</span> : null}
-              </div>
-              <div className={styles.costItem}>
-                <span className={styles.costLabel}>Trạng thái</span>
+            <StatGrid label="Số liệu ngày ăn">
+              <StatTile
+                label="Suất dự kiến"
+                icon={<IconUsers size={18} />}
+                tone="accent"
+                value={openMeal?.planned_total != null ? formatNumber(openMeal.planned_total, 0) : 'chưa có'}
+                muted={openMeal?.planned_total == null}
+                hint={openMeal?.planned_confirmed_at ? 'đã chốt' : 'chưa chốt'}
+              />
+              <StatTile
+                label="Suất thực tế"
+                icon={<IconCheck size={18} />}
+                tone="ok"
+                value={openMeal?.actual_confirmed_at && openMeal.actual_total != null ? formatNumber(openMeal.actual_total, 0) : 'chưa chốt'}
+                muted={!openMeal?.actual_confirmed_at}
+                hint={openMeal?.actual_confirmed_at ? 'đã chốt sau bữa trưa' : 'nhập sau bữa trưa'}
+              />
+              <StatTile
+                label="Chi phí ngày"
+                icon={<IconArrowOut size={18} />}
+                tone="warn"
+                value={c ? formatMoneyShort(c.cost) : '—'}
+                muted={!c}
+                hint="giá trị xuất cho bếp"
+              />
+              <StatTile
+                label="Chi phí / suất"
+                icon={<IconChart size={18} />}
+                tone="info"
+                value={c?.cost_per_serving ? formatMoney(c.cost_per_serving) : '—'}
+                muted={!c?.cost_per_serving}
+                hint={c?.cost_per_serving ? 'theo suất thực tế' : (c?.cost_per_serving_reason ?? 'chưa có số liệu')}
+              />
+            </StatGrid>
+
+            <section className={styles.progress} aria-labelledby="today-progress">
+              <div className={styles.progressHead}>
+                <h2 className={styles.progressTitle} id="today-progress">
+                  Tiến độ ngày ăn
+                </h2>
+                <span className={styles.progressCount}>
+                  {doneCount}/{steps.length} bước
+                </span>
                 {c?.closed ? <Badge tone="ok">Đã đóng ngày</Badge> : <Badge tone="warn">Chưa đóng</Badge>}
               </div>
+              <div
+                className={styles.bar}
+                role="progressbar"
+                aria-label="Số bước đã xong"
+                aria-valuemin={0}
+                aria-valuemax={steps.length}
+                aria-valuenow={doneCount}
+              >
+                <span className={styles.barFill} style={{ '--p': `${(doneCount / Math.max(1, steps.length)) * 100}%` } as CSSProperties} />
+              </div>
+              <ol className={styles.tracker}>
+                {steps.map((st, i) => (
+                  <li key={st.key} className={`${styles.node} ${styles[st.state]} ${i === nextIndex ? styles.current : ''}`}>
+                    <span className={styles.dot} aria-hidden="true">
+                      {st.state === 'done' ? <IconCheck size={16} strokeWidth={2.6} /> : i + 1}
+                    </span>
+                    <span className={styles.nodeTitle}>{st.title}</span>
+                    <span className={styles.nodeState}>{STATE_BADGE[st.state].label}</span>
+                  </li>
+                ))}
+              </ol>
             </section>
 
-            <SectionTitle>
-              Tiến độ ({doneCount}/{steps.length} bước)
-            </SectionTitle>
-            <ol className={styles.timeline}>
-              {steps.map((st, i) => (
-                <li key={st.key} className={`${styles.step} ${styles[st.state]}`}>
-                  <span className={styles.marker} aria-hidden="true">
-                    {st.state === 'done' ? <IconCheck size={16} /> : i + 1}
-                  </span>
-                  <div className={styles.stepBody}>
+            <div className={styles.split}>
+              <NextStep
+                step={nextIndex >= 0 ? steps[nextIndex] : null}
+                index={nextIndex}
+                total={steps.length}
+                closed={Boolean(c?.closed)}
+                canClose={Boolean(c)}
+                onClose={() => setDialog('close')}
+              />
+              <MenuCard date={date} menu={menuDay} />
+            </div>
+
+            <section aria-labelledby="today-steps">
+              <h2 className={styles.sectionHead} id="today-steps">
+                Chi tiết từng bước
+              </h2>
+              <ol className={styles.steps}>
+                {steps.map((st, i) => (
+                  <li key={st.key} className={`${styles.stepCard} ${styles[st.state]}`}>
                     <div className={styles.stepHead}>
+                      <span className={styles.stepNo} aria-hidden="true">
+                        {st.state === 'done' ? <IconCheck size={14} strokeWidth={2.6} /> : i + 1}
+                      </span>
                       <h3 className={styles.stepTitle}>{st.title}</h3>
                       <Badge tone={STATE_BADGE[st.state].tone}>{STATE_BADGE[st.state].label}</Badge>
                     </div>
@@ -253,14 +194,15 @@ export function TodayPage() {
                     {st.link ? (
                       <Link className={styles.stepLink} to={st.link.to}>
                         {st.link.label}
+                        <IconChevronRight size={16} />
                       </Link>
                     ) : null}
-                  </div>
-                </li>
-              ))}
-            </ol>
+                  </li>
+                ))}
+              </ol>
+            </section>
 
-            <MealPhotos date={date} dayOpen={Boolean(meal.data && meal.data.status !== 'not_open')} closed={Boolean(c?.closed)} />
+            <MealPhotos date={date} dayOpen={Boolean(openMeal)} closed={Boolean(c?.closed)} />
 
             {c?.close ? (
               <KeyValueList
@@ -297,6 +239,88 @@ export function TodayPage() {
         />
       ) : null}
     </>
+  );
+}
+
+/** Thẻ "Việc tiếp theo": bước đầu tiên chưa xong, kèm nút đi thẳng tới màn làm bước đó. */
+function NextStep({
+  step,
+  index,
+  total,
+  closed,
+  canClose,
+  onClose,
+}: {
+  step: Step | null;
+  index: number;
+  total: number;
+  closed: boolean;
+  canClose: boolean;
+  onClose: () => void;
+}) {
+  if (!step) {
+    return (
+      <section className={`${styles.next} ${styles.nextDone}`} aria-label="Việc tiếp theo">
+        <p className={styles.nextEyebrow}>Việc tiếp theo</p>
+        <p className={styles.nextTitle}>{closed ? 'Ngày ăn đã hoàn tất' : 'Đã xong mọi bước'}</p>
+        <p className={styles.nextDetail}>
+          {closed ? 'Chi phí mỗi suất đã chốt theo số suất thực tế.' : 'Kiểm tra lại rồi đóng ngày để chốt chi phí.'}
+        </p>
+      </section>
+    );
+  }
+  return (
+    <section className={styles.next} aria-label="Việc tiếp theo">
+      <p className={styles.nextEyebrow}>
+        Việc tiếp theo · bước {index + 1}/{total}
+      </p>
+      <p className={styles.nextTitle}>{step.title}</p>
+      <p className={styles.nextDetail}>{step.detail}</p>
+      {step.link ? (
+        <Link className={styles.nextCta} to={step.link.to}>
+          Mở {step.link.label.toLowerCase()}
+          <IconChevronRight size={18} />
+        </Link>
+      ) : step.key === 'dong' ? (
+        <Button write icon={<IconCheck size={18} />} disabled={!canClose} onClick={onClose}>
+          Đóng ngày
+        </Button>
+      ) : null}
+    </section>
+  );
+}
+
+/** Thực đơn của ngày dạng chip món; ngày nghỉ hiện lý do. */
+function MenuCard({ date, menu }: { date: string; menu: MenuDay | undefined }) {
+  const off = menu && menu.status !== 'menu';
+  return (
+    <section className={styles.menu} aria-labelledby="today-menu">
+      <div className={styles.menuHead}>
+        <span className={styles.menuIcon} aria-hidden="true">
+          <IconBowl size={20} />
+        </span>
+        <h2 className={styles.menuTitle} id="today-menu">
+          {menu ? `Thực đơn ${menu.weekday_label}` : 'Thực đơn'}
+        </h2>
+      </div>
+      {off ? (
+        <p className={styles.menuEmpty}>{menu.status === 'holiday' ? `Ngày nghỉ: ${menu.holiday_name ?? 'ngày lễ'}.` : 'Nghỉ cuối tuần.'}</p>
+      ) : menu?.dishes.length ? (
+        <ul className={styles.dishes}>
+          {menu.dishes.map((d) => (
+            <li key={d.dish_id} className={styles.dish}>
+              {d.dish_name}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.menuEmpty}>Chưa có thực đơn cho ngày này.</p>
+      )}
+      <Link className={styles.stepLink} to={`/mon-an/thuc-don?tuan=${date}`}>
+        Thực đơn tuần
+        <IconChevronRight size={16} />
+      </Link>
+    </section>
   );
 }
 
