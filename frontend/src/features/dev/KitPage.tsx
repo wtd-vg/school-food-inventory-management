@@ -312,7 +312,7 @@ function Sf78Kit() {
       </Panel>
       <Panel title="Việc hôm nay">
         <ul className={styles.stack}>
-          <TimedTask title="Gửi thư thực đơn cho phụ huynh" detail="Tự động mỗi ngày học" period="SÁNG" time="06:30" done />
+          <TimedTask title="Số suất" detail="Dự kiến đã chốt" period="BƯỚC" time="1" done />
           <TimedTask title="Chốt số suất dự kiến" detail="10 lớp chưa nhập" period="SÁNG" time="08:00" />
           <TimedTask title="Xuất kho cho bếp" period="SÁNG" time="09:00" fade={1} />
           <TimedTask title="Đóng ngày" period="CHIỀU" time="14:00" fade={2} />

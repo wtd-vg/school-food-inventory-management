@@ -127,3 +127,35 @@ export function formatLongToday(): string {
 export function countLabel(n: number, noun: string): string {
   return `${formatNumber(n, 0)} ${noun}`;
 }
+
+/** "Thứ Sáu, 2/10/2026 · 9:45" cho góc phải tiêu đề trang tổng quan (giờ Việt Nam). */
+export function formatNowStamp(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: TZ,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  const weekday = get('weekday');
+  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${get('day')}/${get('month')}/${get('year')} · ${Number(get('hour'))}:${get('minute')}`;
+}
+
+/** "Thứ Hai 19/10" cho thẻ ngày trong tuần. */
+export function formatWeekdayShort(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  const names = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  return `${names[wd]} ${d}/${m}`;
+}
+
+/** Nhãn trục tiền gọn: 1,2 tr · 30 k · 500. */
+export function formatAxisMoney(v: number): string {
+  if (v >= 1_000_000) return `${formatNumber(String(Math.round(v / 100_000) / 10), 1)} tr`;
+  if (v >= 1_000) return `${formatNumber(String(Math.round(v / 1_000)), 0)} k`;
+  return formatNumber(String(Math.round(v)), 0);
+}

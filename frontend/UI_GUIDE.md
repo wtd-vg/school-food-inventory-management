@@ -37,13 +37,14 @@ src/
 | Route | Màn | Ghi chú |
 | --- | --- | --- |
 | `/dang-nhap` | Đăng nhập | |
-| `/bua-trua` | Hôm nay (SF69) | `?ngay=`; dòng thời gian Suất → Thực đơn → Nhu cầu → Đơn → Nhận → Xuất → Đóng ngày theo trạng thái thật, chi phí ngày/suất, đóng/mở lại ngày (ghi chú khi chênh lệch) |
+| `/bua-trua` | Tổng quan (SF69, bố cục SF78) | `?ngay=`; số suất theo khối (biểu đồ vòng), kho theo nhóm, việc trong ngày (7 bước theo trạng thái thật, lọc Cần làm/Tất cả), chi phí mỗi suất 30 ngày, thực đơn tuần (khay cơm, tìm món), ảnh suất ăn; đóng/mở lại ngày (ghi chú khi chênh lệch) |
 | `/bua-trua/nhu-cau` | Nhu cầu & đề xuất (SF57/59) | `?ngay=`, `?du-phong=1` (tính lại kèm dự phòng có lý do), `?tao-don=1` (tạo đơn từ đề xuất); cảnh báo `is_outdated`, `shortages`; lịch sử bản tính |
 | `/bua-trua/don-dat` | Đơn đặt (SF63) | `?trang-thai=`, `?don=ID` (duyệt/gửi/huỷ/đóng phần còn lại, gửi kèm version, 409 → tải lại), `?tao=1` (đơn tay) |
 | `/bua-trua/nhan-hang` | Nhận hàng theo đơn (SF65) | `?don=ID`; lượng ≤ phần còn chờ + đơn giá → phiếu nhập nháp → chốt |
 | `/bua-trua/xuat-bep` | Xuất bếp theo ngày | `?ngay=`; tạo phiếu xuất theo nhu cầu còn thiếu → chốt; cần/đã xuất/chênh lệch |
-| `/kho` | Tồn kho | `?mat-hang=ID` mở ngăn kéo lịch sử giao dịch |
-| `/kho/phieu-nhap` | Phiếu nhập | `?tao=1` tạo nháp (`&mat-hang=`, `&ncc=` điền sẵn), `?phieu=ID` xem/chốt |
+| `/kho` | Tồn kho (SF78) | băng tranh "Mặt hàng N"; `?nhom=het-hang` hoặc `?nhom=<tên nhóm>` lọc sẵn; sắp xếp theo cột; chọn dòng → Nhập hàng/Xuất kho nhiều mặt hàng, Xem chi tiết, Xuất CSV; `?mat-hang=ID` (link cũ) chuyển sang trang chi tiết |
+| `/kho/mat-hang/:id` | Chi tiết mặt hàng (SF78) | ảnh bìa (đổi được, nhớ trên trình duyệt) + card tồn/giá vốn/giá trị; tab Tổng quan · Lịch sử · Nhập kho · Xuất kho · Kiểm kê; dùng trong món |
+| `/kho/phieu-nhap` | Phiếu nhập | `?tao=1` tạo nháp (`&mat-hang=1,2,3` mỗi mặt hàng một dòng, `&ncc=` điền sẵn), `?phieu=ID` xem/chốt |
 | `/kho/phieu-xuat` | Phiếu xuất | như phiếu nhập |
 | `/kho/kiem-ke` | Kiểm kê | phiếu đang đếm nhớ trên trình duyệt (API chưa có danh sách) |
 | `/kho/danh-muc` | Danh mục & mặt hàng | `?tab=mat-hang` hoặc `danh-muc`, `?tao=1`, `?sua=ID` |
