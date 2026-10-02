@@ -50,6 +50,20 @@
   /* hiệu ứng */
   --overlay: rgba(42, 37, 34, .28);
   --overlay-video: rgba(42, 37, 34, .72);
+
+  /* SF77: trang đăng nhập (nền đào ấm, phiến pastel, vòng kính). Cảnh WebGL đọc các mã này lúc chạy. */
+  --login-peach-1: #FFE6D6;
+  --login-peach-2: #FFC6A6;
+  --login-glow: #FFF5EC;
+  --login-slab-mint: #CDEBDC;
+  --login-slab-lilac: #DDD4F3;
+  --login-slab-butter: #FFE7A6;
+  --login-slab-sky: #CFE2F6;
+  --login-slab-rose: #F8CFD6;
+  --login-window-tint: rgba(255, 255, 255, .06);
+  --login-window-edge: rgba(255, 255, 255, .72);
+  --login-plate: rgba(255, 251, 246, .66);
+  --login-shadow: 0 40px 80px -36px rgba(120, 60, 30, .45), 0 2px 6px rgba(120, 60, 30, .08);
   --shadow-seg: 0 1px 2px rgba(60, 40, 10, .12);
   --shadow-drawer: -20px 0 40px -20px rgba(42, 37, 34, .35);
   --shadow-pop: 0 12px 32px -12px rgba(42, 37, 34, .35);
