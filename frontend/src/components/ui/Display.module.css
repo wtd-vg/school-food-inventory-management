@@ -604,6 +604,22 @@ a.taskLink:hover {
   background: var(--task-time-bg-3);
 }
 
+/* SF80: thẻ Đóng ngày luôn cam đậm, kể cả khi ở vị trí mờ dần (đặt sau .fadeN để thắng). */
+.taskClose .taskLink {
+  border-left-color: var(--task-close-bar);
+  background: var(--task-close-bg);
+  color: var(--task-close-ink);
+}
+
+a.taskClose .taskLink:hover,
+.taskClose a.taskLink:hover {
+  color: var(--task-close-ink);
+}
+
+.taskClose .taskTime {
+  background: var(--task-close-time-bg);
+}
+
 .taskDone .taskTitle {
   text-decoration: line-through;
   text-decoration-thickness: 1px;

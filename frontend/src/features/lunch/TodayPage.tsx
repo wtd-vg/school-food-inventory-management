@@ -439,6 +439,7 @@ function StepsCard({ steps }: { steps: Step[] }) {
                 fade={view === 'all' ? 0 : (Math.min(i, 2) as 0 | 1 | 2)}
                 done={isDone}
                 to={st.link?.to}
+                tone={st.key === 'dong' ? 'close' : 'default'}
               />
             );
           })}

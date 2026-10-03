@@ -365,6 +365,7 @@ export function TimedTask({
   fade = 0,
   done,
   to,
+  tone = 'default',
 }: {
   title: ReactNode;
   detail?: ReactNode;
@@ -373,6 +374,8 @@ export function TimedTask({
   fade?: 0 | 1 | 2;
   done?: boolean;
   to?: string;
+  /** 'close': thẻ Đóng ngày màu cam đậm (SF80). */
+  tone?: 'default' | 'close';
 }) {
   const body = (
     <>
@@ -386,7 +389,7 @@ export function TimedTask({
       </span>
     </>
   );
-  const cls = [styles.task, fade ? styles[`fade${fade}`] : '', done ? styles.taskDone : ''].join(' ');
+  const cls = [styles.task, fade ? styles[`fade${fade}`] : '', tone === 'close' ? styles.taskClose : '', done ? styles.taskDone : ''].join(' ');
   return (
     <li className={cls}>
       {to ? (

@@ -91,6 +91,11 @@
   --task-bar-3: #F8DA9C;
   --task-time-bg-3: #FDF0D2;
   --task-ink-2: #86621C;
+  /* SF80: thẻ "Đóng ngày" (bước 7) màu cam đậm, tách khỏi các bước khác. Chữ đạt AA trên nền. */
+  --task-close-bg: #FFE1CC;
+  --task-close-bar: #D9480F;
+  --task-close-ink: #8A2F06;
+  --task-close-time-bg: #FFC4A0;
 
   /* ---------- biểu đồ: mỗi hạng mục một màu, thứ tự cố định (đã chạy validate_palette) ---------- */
   --chart-1: #1F7A4D;
