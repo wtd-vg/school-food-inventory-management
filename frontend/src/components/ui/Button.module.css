@@ -1,0 +1,143 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--control-h);
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background-color var(--motion), border-color var(--motion);
+}
+
+.primary {
+  background: var(--brand);
+  color: var(--on-ink);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--brand-strong);
+  color: var(--on-ink);
+}
+
+/* Nút phụ: nền mint, chữ xanh đậm */
+.secondary {
+  padding: 0 16px;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--brand-soft-hover);
+  color: var(--brand-strong);
+}
+
+/* Nút viền: nền trắng, viền xám nhạt */
+.outline {
+  padding: 0 16px;
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+.outline:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.ghost {
+  padding: 0 12px;
+  background: transparent;
+  color: var(--ink);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.danger {
+  background: var(--danger);
+  color: var(--on-ink);
+}
+
+.danger:hover:not(:disabled) {
+  filter: brightness(.92);
+}
+
+.sm {
+  height: var(--control-h);
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+/* xs: nút trong ô bảng; vẫn giữ vùng bấm 40px theo quy tắc truy cập. */
+.xs {
+  height: var(--control-h);
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.caret {
+  margin-left: -2px;
+  margin-right: -4px;
+}
+
+.block {
+  width: 100%;
+}
+
+.button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h);
+  height: var(--control-h);
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.iconGhost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.iconGhost:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.iconButton:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}

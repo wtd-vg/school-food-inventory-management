@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SchoolFood · Video giới thiệu</title>
+<style>
+/* Font tự host của app (frontend/src/styles/fonts.css), không gọi Google Fonts. */
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/baloo2-var-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/baloo2-var-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/baloo2-var-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/baloo2-var-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/baloo2-var-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/baloo2-var-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-400-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-400-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-500-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-500-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-600-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-600-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-600-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-700-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-700-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/bevietnampro-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+:root{
+  --night:#15110F; --ink:#2A2522; --cream:#FFF8EC; --yellow:#FFC93C; --warm:#FFE9BF; --warm2:#FFF6E0;
+  --line:#EADFC9; --muted:#6B5F55; --green:#1F6B3A; --leaf:#5E7F2E; --leaf2:#8DB34A; --protein:#8C3B1E;
+  --dairy:#3B6FA8; --orange:#E3B341; --red:#C2452A;
+  --display:'Baloo 2',system-ui,sans-serif; --body:'Be Vietnam Pro',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:#000;overflow:hidden}
+body{font-family:var(--body);-webkit-font-smoothing:antialiased;color:var(--ink)}
+body.idle,body.idle *{cursor:none!important}
+
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:50% 50%;overflow:hidden;background:var(--night)}
+#bg{position:absolute;inset:0;background:var(--night)}
+#world{position:absolute;inset:0;transform-origin:50% 50%}
+section{position:absolute;inset:0;visibility:hidden}
+.abs{position:absolute}
+.mask{display:inline-block;overflow:hidden;vertical-align:bottom;padding:0 .04em}
+.mask>span{display:inline-block}
+.ch{display:inline-block;will-change:transform}
+
+/* motif */
+#dot{position:absolute;left:0;top:0;width:22px;height:22px;border-radius:50%;background:var(--yellow);
+  box-shadow:0 0 40px 8px rgba(255,201,60,.55);z-index:20;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#dotIcon{width:58%;height:58%;visibility:hidden}
+#dotIcon path{fill:none;stroke:var(--ink);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* S1 hook */
+#stat{position:absolute;left:0;right:0;top:320px;text-align:center;font:800 300px/1 var(--display);color:#fff;letter-spacing:-4px;
+  text-shadow:0 0 70px rgba(255,201,60,.22);font-variant-numeric:tabular-nums}
+#l1{position:absolute;left:0;right:0;top:640px;text-align:center;font:700 62px/1.1 var(--display);color:#E9E2D6;letter-spacing:8px;text-transform:uppercase}
+#l2{position:absolute;left:0;right:0;top:730px;text-align:center;font:800 104px/1 var(--display);color:#fff}
+#w1{display:inline-block;color:#FF7A50}
+#w2{display:inline-block;color:var(--yellow)}
+#cite{position:absolute;left:80px;top:64px;font:500 22px/1.4 var(--body);color:#8f8578;letter-spacing:.3px}
+#cite b{color:#cbbfae;font-weight:600}
+
+/* S2 problem */
+#s2 .shake{position:absolute;inset:0}
+#pwords{position:absolute;left:0;right:0;top:96px;height:130px;text-align:center}
+#pwords div{position:absolute;left:0;right:0;font:800 104px/1 var(--display);color:#EDE6DA;visibility:hidden;
+  text-shadow:4px 0 0 rgba(255,60,60,.55),-4px 0 0 rgba(60,220,255,.55)}
+#clip{left:150px;top:270px;width:400px;height:520px}
+#sheet{left:1280px;top:270px;width:520px;height:390px;background:#3a3631;border-radius:14px;padding:18px;box-shadow:0 30px 60px -20px #000}
+#sheet .grid{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:6px;height:100%}
+#sheet .c{background:#4a453f;border-radius:6px;font:600 24px/1 var(--body);color:#d8d0c3;display:flex;align-items:center;padding:0 14px;white-space:nowrap;overflow:hidden}
+#sheet .c.h{background:#2c2925;color:#a49a8c;font-size:18px;letter-spacing:1px;text-transform:uppercase}
+#sheet .c.bad{color:#ff8f7a;background:#55403a}
+.carton{position:absolute;width:96px;height:140px}
+#bin{left:1450px;top:700px;width:230px;height:250px}
+.grain{position:absolute;left:0;top:0;width:13px;height:8px;border-radius:50%;background:var(--yellow);visibility:hidden;z-index:15}
+.gbar{position:absolute;left:0;width:1920px;visibility:hidden;mix-blend-mode:screen}
+
+/* S3 */
+#turn{position:absolute;left:0;right:0;top:300px;text-align:center;font:800 96px/1.08 var(--display);color:#fff}
+
+/* S4 */
+#wordmark{position:absolute;left:0;right:0;top:590px;text-align:center;font:800 168px/1 var(--display);color:var(--ink);letter-spacing:-2px}
+#wordmark .f{color:var(--protein)}
+#tagline{position:absolute;left:0;right:0;top:800px;text-align:center;font:600 42px/1.2 var(--body);color:var(--muted)}
+.blob{position:absolute;border-radius:50%;filter:blur(2px)}
+
+/* Features */
+#sf{perspective:1800px}
+.fh{position:absolute;left:150px;top:320px;width:650px;visibility:hidden}
+.fh .k{font:700 22px/1 var(--body);letter-spacing:4px;text-transform:uppercase;color:var(--protein);margin-bottom:22px}
+.fh h2{font:800 96px/.98 var(--display);color:var(--ink);letter-spacing:-1px}
+.fh p{margin-top:30px;font:500 31px/1.45 var(--body);color:var(--muted)}
+#shell{position:absolute;left:860px;top:170px;width:920px;height:740px;border-radius:32px;background:#fff;visibility:hidden;
+  box-shadow:0 50px 90px -40px rgba(42,37,34,.45),0 0 0 1px var(--line);transform-style:preserve-3d;z-index:10}
+.pane{position:absolute;inset:0;padding:46px 52px;visibility:hidden}
+.ph{display:flex;align-items:center;gap:18px;margin-bottom:22px}
+.ph .t{font:800 44px/1 var(--display)}
+.ph .sp{flex:1}
+.ph .d{font:600 22px var(--body);color:var(--muted)}
+.live{display:flex;align-items:center;gap:10px;background:#E3F1E6;color:var(--green);font:700 20px var(--body);padding:8px 16px;border-radius:999px}
+.live i{width:12px;height:12px;border-radius:50%;background:var(--yellow);box-shadow:0 0 0 0 rgba(255,201,60,.8)}
+.row{display:grid;grid-template-columns:250px 1fr 190px;align-items:center;gap:26px;height:84px;border-bottom:1px solid var(--line)}
+.row .n{font:600 29px var(--body)}
+.row .n small{display:block;font:500 18px var(--body);color:var(--muted);margin-top:2px}
+.track{height:20px;border-radius:10px;background:#F3EADA;overflow:hidden}
+.fill{height:100%;width:100%;border-radius:10px;transform-origin:0 50%;transform:scaleX(0)}
+.row .v{font:800 34px/1 var(--display);text-align:right;font-variant-numeric:tabular-nums}
+.row .v small{font:600 20px var(--body);color:var(--muted)}
+.low{display:inline-block;margin-left:8px;font:700 15px var(--body);color:#6E4C00;background:#FFF0C2;padding:3px 9px;border-radius:6px;vertical-align:middle}
+.toast{position:absolute;left:52px;right:52px;bottom:40px;height:84px;border-radius:20px;background:var(--ink);color:#fff;display:flex;align-items:center;gap:18px;padding:0 26px;font:600 27px var(--body);visibility:hidden}
+.toast .ok{width:44px;height:44px;border-radius:50%;background:#2E9D57;display:flex;align-items:center;justify-content:center;flex:none}
+.toast b{color:var(--yellow)}
+.chip{position:absolute;font:800 26px var(--display);color:var(--green);background:#E3F1E6;border-radius:999px;padding:6px 16px;visibility:hidden}
+
+.eq{display:flex;align-items:baseline;justify-content:center;gap:22px;margin:4px 0 6px;font:800 76px/1 var(--display)}
+.eq .p{display:inline-block;visibility:hidden}
+.eq .p small{font:600 24px var(--body);color:var(--muted);margin-left:6px}
+.eq .op{color:#C9B998}
+.eq .res{color:var(--protein)}
+#chart{display:block;margin:14px auto 0}
+#chart text{font-family:var(--body)}
+
+.po{display:flex;align-items:center;gap:16px;padding:22px 26px;border:1px solid var(--line);border-radius:22px;background:var(--warm2)}
+.po .code{font:800 34px var(--display)}
+.po .sup{font:500 22px var(--body);color:var(--muted)}
+.pill{position:relative;overflow:hidden;height:40px;min-width:120px;border-radius:999px;font:700 20px/40px var(--body);text-align:center}
+.pill span{display:block}
+.poline{display:flex;justify-content:space-between;align-items:baseline;margin:22px 6px 0;font:600 30px var(--body)}
+.poline b{font:800 40px var(--display)}
+.btn{position:relative;overflow:hidden;margin-top:24px;height:78px;border-radius:20px;background:var(--ink);color:#fff;font:700 28px/78px var(--body);text-align:center}
+.btn .ripple{position:absolute;left:50%;top:50%;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:50%;background:rgba(255,201,60,.55);transform:scale(0)}
+.recv{display:flex;align-items:center;gap:34px;margin-top:30px}
+.recv .lbl{font:700 22px var(--body);letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.recv .big{font:800 64px/1 var(--display);margin-top:6px;font-variant-numeric:tabular-nums}
+.recv .err{margin-top:12px;font:700 23px var(--body);color:var(--red);visibility:hidden}
+#cur{position:absolute;left:0;top:0;width:44px;height:44px;z-index:30;visibility:hidden;filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))}
+
+.screen{position:absolute;inset:14px;border-radius:50px;background:var(--cream);overflow:hidden}
+.notch{position:absolute;left:50%;top:14px;width:120px;height:30px;margin-left:-60px;border-radius:20px;background:var(--ink);z-index:2}
+.mailhead{background:var(--yellow);padding:62px 28px 22px}
+.mailhead .s{font:800 15px var(--body);letter-spacing:2px;text-transform:uppercase}
+.mailhead .t{font:800 40px/1.05 var(--display);margin-top:6px}
+.mailhead .d{font:500 19px var(--body);margin-top:2px}
+.mailbody{padding:18px 24px}
+.hi{font:500 17px/1.45 var(--body);color:var(--ink)}
+.dishes{margin-top:12px;background:var(--warm2);border-radius:16px;padding:10px 16px}
+.dish{display:flex;align-items:center;gap:12px;height:44px;font:600 19px var(--body);border-top:1px solid var(--line)}
+.dish:first-child{border-top:0}
+.dish i{width:26px;height:26px;border-radius:50%;background:var(--warm);font:800 14px/26px var(--body);text-align:center;font-style:normal}
+.photoLbl{margin-top:16px;font:800 13px var(--body);letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.photo{position:relative;margin-top:8px;border-radius:16px;overflow:hidden}
+.photo .flash{position:absolute;inset:0;background:#fff;visibility:hidden}
+.realtag{position:absolute;left:10px;bottom:10px;background:rgba(42,37,34,.85);color:#fff;font:700 14px var(--body);padding:6px 11px;border-radius:999px;visibility:hidden}
+.sent{position:absolute;left:150px;top:780px;display:flex;align-items:center;gap:14px;background:var(--ink);color:#fff;font:700 28px var(--body);
+  padding:18px 28px;border-radius:999px;visibility:hidden;z-index:12;box-shadow:0 20px 40px -20px rgba(0,0,0,.5)}
+.env{position:absolute;width:58px;height:40px;visibility:hidden;z-index:11}
+
+/* S6 impact */
+#stats{position:absolute;left:150px;right:150px;top:150px;display:grid;grid-template-columns:repeat(3,1fr);gap:40px}
+.stat{text-align:center}
+.sn{display:flex;align-items:flex-end;justify-content:center;gap:16px}
+.roll{height:250px;overflow:hidden;font:800 250px/250px var(--display);color:var(--ink)}
+.roll .col{display:flex;flex-direction:column}
+.unit{font:800 80px/1 var(--display);color:var(--ink);margin-bottom:44px}
+.stat .cap{font:600 34px/1.3 var(--body);color:#4A3D33;margin-top:4px}
+.kid{position:absolute;top:690px;width:150px;height:260px}
+.confetti{position:absolute;left:0;top:0;width:16px;height:16px;border-radius:4px;visibility:hidden}
+
+/* S7 CTA */
+#ctaLogo{position:absolute;left:860px;top:180px;width:200px;height:200px;border-radius:52px;background:var(--yellow);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 30px 60px -20px rgba(140,90,0,.45);visibility:hidden}
+#ctaLogo svg{width:58%;height:58%}
+#ctaLogo path{fill:none;stroke:var(--ink);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+#ctaName{position:absolute;left:0;right:0;top:420px;text-align:center;font:800 150px/1 var(--display);letter-spacing:-2px}
+#ctaName .f{color:var(--protein)}
+#ctaTag{position:absolute;left:0;right:0;top:600px;text-align:center;font:600 40px/1.2 var(--body);color:var(--muted)}
+#url{position:absolute;left:50%;top:715px;transform:translateX(-50%);height:96px;padding:0 44px;border-radius:999px;background:var(--ink);color:#fff;
+  font:700 46px/96px var(--body);white-space:nowrap;visibility:hidden}
+#url .slot{display:inline-block;width:20px}
+#iris{position:absolute;inset:0;background:var(--yellow);visibility:hidden;z-index:25}
+#flash{position:absolute;inset:0;background:var(--yellow);visibility:hidden;z-index:19}
+
+/* overlay */
+#grain{position:absolute;inset:0;width:1920px;height:1080px;pointer-events:none;opacity:.07;mix-blend-mode:overlay;z-index:40}
+#vignette{position:absolute;inset:0;pointer-events:none;z-index:39;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.28) 100%)}
+#subs{position:absolute;left:0;right:0;bottom:56px;height:80px;z-index:45;pointer-events:none}
+.sub{position:absolute;left:50%;bottom:0;max-width:1500px;padding:16px 30px;border-radius:18px;background:rgba(21,17,15,.74);
+  color:#fff;font:600 36px/1.3 var(--body);text-align:center;white-space:nowrap;visibility:hidden;backdrop-filter:blur(6px)}
+.sub .w{display:inline-block;margin:0 .14em}
+
+/* start + controls (outside stage) */
+#start{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;
+  background:radial-gradient(circle at 50% 40%,#2c241e 0%,var(--night) 70%);color:#fff;text-align:center}
+#start .lg{width:120px;height:120px;border-radius:32px;background:var(--yellow);display:flex;align-items:center;justify-content:center}
+#start .lg svg{width:60%;height:60%}
+#start .lg path{fill:none;stroke:var(--ink);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+#start h1{font:800 64px/1 var(--display)}
+#start p{font:500 20px var(--body);color:#b8ad9f}
+#playBig{width:150px;height:150px;border-radius:50%;border:0;background:var(--yellow);color:var(--ink);font:800 30px var(--display);cursor:pointer;
+  box-shadow:0 0 0 0 rgba(255,201,60,.6);animation:pulse 1.8s infinite;display:flex;align-items:center;justify-content:center;gap:8px}
+#playBig:hover{transform:scale(1.05)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,201,60,.55)}100%{box-shadow:0 0 0 34px rgba(255,201,60,0)}}
+#controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:12px;padding:10px 16px;
+  border-radius:999px;background:rgba(21,17,15,.82);transition:opacity .35s;opacity:1}
+body.playing:not(.showui) #controls{opacity:0;pointer-events:none}
+#controls button{width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:#fff;font-size:20px;cursor:pointer}
+#controls button:hover{background:rgba(255,255,255,.12)}
+#bar{width:340px;height:6px;border-radius:3px;background:rgba(255,255,255,.2);overflow:hidden}
+#barFill{height:100%;width:100%;background:var(--yellow);transform-origin:0 50%;transform:scaleX(0)}
+#time{font:600 14px var(--body);color:#cfc6b9;min-width:84px;text-align:right;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"></div>
+  <div id="world">
+
+    <!-- S1 HOOK -->
+    <section id="s1">
+      <div id="cite">Estimate for U.S. school cafeterias · <b>WWF, Food Waste Warriors (2019)</b></div>
+      <div id="stat">0</div>
+      <div id="l1"></div>
+      <div id="l2"><span class="mask"><span id="w1">wasted.</span></span> <span class="mask"><span id="w2">every year.</span></span></div>
+    </section>
+
+    <!-- S2 PROBLEM -->
+    <section id="s2">
+      <div class="shake" id="shake">
+        <div id="pwords"><div>Guesswork.</div><div>Paper lists.</div><div>Spreadsheets nobody trusts.</div><div>Leftovers by noon.</div></div>
+        <svg id="clip" class="abs" viewBox="0 0 400 520">
+          <rect x="10" y="30" width="380" height="480" rx="26" fill="#5b544c"/>
+          <rect x="34" y="66" width="332" height="420" rx="10" fill="#d9d3c8"/>
+          <rect x="140" y="12" width="120" height="48" rx="14" fill="#8a8176"/>
+          <g fill="none" stroke="#6d655c" stroke-width="5" stroke-linecap="round" class="scrib">
+            <path d="M64 120 h170"/><path d="M64 175 h120"/><path d="M64 230 h200"/><path d="M64 285 h90"/><path d="M64 340 h160"/><path d="M64 395 h130"/>
+          </g>
+          <g font-family="Baloo 2, sans-serif" font-weight="800" fill="#8d5a4f">
+            <text x="268" y="132" font-size="44">?</text><text x="214" y="187" font-size="38">20kg?</text><text x="290" y="242" font-size="44">??</text>
+            <text x="180" y="297" font-size="34">18?</text><text x="250" y="352" font-size="44">?</text>
+          </g>
+          <path d="M200 175 l60 -20" stroke="#8d5a4f" stroke-width="6" stroke-linecap="round"/>
+        </svg>
+        <div id="sheet" class="abs"><div class="grid" id="grid"></div></div>
+        <div id="cartons"></div>
+        <svg id="bin" class="abs" viewBox="0 0 230 250">
+          <rect x="18" y="20" width="194" height="26" rx="10" fill="#6d665e"/>
+          <rect x="88" y="4" width="54" height="22" rx="8" fill="#6d665e"/>
+          <path d="M34 54 h162 l-16 186 h-130 z" fill="#4c4640"/>
+          <g stroke="#3a352f" stroke-width="8" stroke-linecap="round"><path d="M80 80 l6 136"/><path d="M115 80 v136"/><path d="M150 80 l-6 136"/></g>
+        </svg>
+      </div>
+      <div class="gbar" id="gb1" style="top:210px;height:26px;background:linear-gradient(90deg,transparent,rgba(255,60,80,.6),rgba(60,220,255,.6),transparent)"></div>
+      <div class="gbar" id="gb2" style="top:520px;height:14px;background:linear-gradient(90deg,rgba(60,220,255,.5),transparent,rgba(255,60,80,.5))"></div>
+      <div class="gbar" id="gb3" style="top:780px;height:34px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)"></div>
+    </section>
+
+    <!-- S3 TURN -->
+    <section id="s3"><div id="turn">What if every gram<br>had a place?</div></section>
+
+    <!-- S4 REVEAL -->
+    <section id="s4">
+      <div id="blobs"></div>
+      <div id="wordmark">School<span class="f">Food</span></div>
+      <div id="tagline"><span class="mask"><span>Inventory &amp; school lunch,</span></span> <span class="mask"><span>managed in one place.</span></span></div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="sf">
+      <div class="fh" id="fh1"><div class="k"><span class="mask"><span>01 · Stock</span></span></div><h2><span class="mask"><span>Live stock.</span></span></h2>
+        <p><span class="mask"><span>Every delivery and every issue</span></span><br><span class="mask"><span>lands in one ledger — instantly.</span></span></p></div>
+      <div class="fh" id="fh2"><div class="k"><span class="mask"><span>02 · Demand</span></span></div><h2><span class="mask"><span>Demand,</span></span><br><span class="mask"><span>to the gram.</span></span></h2>
+        <p><span class="mask"><span>Headcount × recipe. Reserve, stock</span></span><br><span class="mask"><span>and incoming orders already counted.</span></span></p></div>
+      <div class="fh" id="fh3"><div class="k"><span class="mask"><span>03 · Order</span></span></div><h2><span class="mask"><span>Order exactly</span></span><br><span class="mask"><span>what's missing.</span></span></h2>
+        <p><span class="mask"><span>Send it, receive it in parts.</span></span><br><span class="mask"><span>Over-delivery gets blocked.</span></span></p></div>
+      <div class="fh" id="fh4"><div class="k"><span class="mask"><span>04 · Parents</span></span></div><h2><span class="mask"><span>Parents see</span></span><br><span class="mask"><span>the real lunch.</span></span></h2>
+        <p><span class="mask"><span>One tap sends today's menu</span></span><br><span class="mask"><span>with real photos from the kitchen.</span></span></p></div>
+
+      <div id="shell">
+        <!-- pane 1: stock -->
+        <div class="pane" id="p1">
+          <div class="ph"><div class="t">Stock</div><div class="live"><i></i>Live</div><div class="sp"></div><div class="d">Thu · 01/10/2026</div></div>
+          <div id="rows"></div>
+          <div class="chip" id="plus13" style="right:60px;top:300px">+13.000 kg</div>
+          <div class="toast" id="toast1"><div class="ok"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <span>Receipt posted · <b>+13.000 kg</b> lean pork</span></div>
+        </div>
+        <!-- pane 2: demand -->
+        <div class="pane" id="p2">
+          <div class="ph"><div class="t">Demand &amp; purchase</div><div class="sp"></div><div class="d">Fri · 02/10</div></div>
+          <div class="eq"><span class="p" id="e1">300<small>meals</small></span><span class="p op" id="e2">×</span><span class="p" id="e3">70<small>g pork</small></span><span class="p op" id="e4">=</span><span class="p res" id="e5"><span id="e5n">0.000</span><small>kg</small></span></div>
+          <svg id="chart" width="820" height="420" viewBox="0 0 820 420"></svg>
+        </div>
+        <!-- pane 3: order -->
+        <div class="pane" id="p3">
+          <div class="ph"><div class="t">Purchase order</div></div>
+          <div class="po"><div><div class="code">PO-0412</div><div class="sup">Fresh Farm Co. · for Fri 02/10</div></div><div class="sp" style="flex:1"></div>
+            <div class="pill" id="pill"><span id="pillA" style="background:#FFF0C2;color:#6E4C00">Draft</span><span id="pillB" style="background:#E3F1E6;color:var(--green);position:absolute;inset:0;transform:translateY(100%)">Sent ✓</span></div></div>
+          <div class="poline"><span>Lean pork</span><b>13.000 kg</b></div>
+          <div class="btn" id="sendBtn"><span id="btnTxt" style="display:block">Send to supplier</span><span id="btnTxt2" style="position:absolute;inset:0;visibility:hidden">Sent to Fresh Farm Co. ✓</span><div class="ripple" id="ripple"></div></div>
+          <div class="recv">
+            <svg width="190" height="190" viewBox="0 0 190 190"><circle cx="95" cy="95" r="80" fill="none" stroke="#F3EADA" stroke-width="18"/>
+              <circle id="ring" cx="95" cy="95" r="80" fill="none" stroke="var(--orange)" stroke-width="18" stroke-linecap="round" transform="rotate(-90 95 95)"/>
+              <path id="ringOk" d="M66 97l19 19 40-42" fill="none" stroke="#2E9D57" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div><div class="lbl">Received</div><div class="big"><span id="rcv">0.000</span> <span style="color:#C9B998">/ 13.000 kg</span></div>
+              <div class="err" id="err">✕ Exceeds the order — blocked</div></div>
+          </div>
+          <div class="chip" id="plus4" style="right:70px;top:610px;background:#FFE4DA;color:var(--red)">+4.000 kg</div>
+          <svg id="cur" viewBox="0 0 24 24"><path d="M4 2l15 9-6.5 1.6L16 20l-3 1.4-3.4-7.2L4 19z" fill="#fff" stroke="#2A2522" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+        <!-- pane 4: phone / parent email -->
+        <div class="pane" id="p4" style="padding:0">
+          <div class="notch"></div>
+          <div class="screen" id="screen"><div id="scroll">
+            <div class="mailhead"><div class="s">🍚 Hoa Sen Primary</div><div class="t">Lunch menu</div><div class="d">Thursday, 01/10/2026</div></div>
+            <div class="mailbody">
+              <div class="hi">Dear parents of <b>Minh An</b>, here is today's lunch — and how it really looked.</div>
+              <div class="dishes" id="dishes">
+                <div class="dish"><i>1</i>Steamed rice</div><div class="dish"><i>2</i>Tofu in tomato sauce</div>
+                <div class="dish"><i>3</i>Sweet-leaf soup</div><div class="dish"><i>4</i>Banana</div>
+              </div>
+              <div class="photoLbl">Real photo from today</div>
+              <div class="photo" id="photo">
+                <svg viewBox="0 0 360 230" width="100%" style="display:block">
+                  <rect width="360" height="230" fill="#E7DCC8"/>
+                  <rect x="18" y="18" width="324" height="194" rx="22" fill="#BFC8CF"/>
+                  <rect x="32" y="32" width="150" height="100" rx="14" fill="#AEB8C0"/><rect x="194" y="32" width="134" height="100" rx="14" fill="#AEB8C0"/>
+                  <rect x="32" y="142" width="200" height="58" rx="14" fill="#AEB8C0"/><rect x="242" y="142" width="86" height="58" rx="14" fill="#AEB8C0"/>
+                  <ellipse cx="107" cy="88" rx="60" ry="36" fill="#FBF8F1"/><ellipse cx="96" cy="78" rx="22" ry="9" fill="#fff"/>
+                  <g fill="#D9622E"><rect x="214" y="58" width="28" height="26" rx="6"/><rect x="250" y="66" width="28" height="26" rx="6"/><rect x="282" y="52" width="28" height="26" rx="6"/><rect x="232" y="92" width="28" height="24" rx="6"/><rect x="270" y="96" width="28" height="24" rx="6"/></g>
+                  <g fill="#6FA03C"><circle cx="228" cy="54" r="4"/><circle cx="266" cy="88" r="4"/><circle cx="300" cy="90" r="4"/></g>
+                  <ellipse cx="132" cy="171" rx="88" ry="20" fill="#9CBF5A"/><g fill="#3E7A2A"><ellipse cx="96" cy="168" rx="16" ry="7"/><ellipse cx="130" cy="176" rx="18" ry="7"/><ellipse cx="168" cy="166" rx="15" ry="6"/></g>
+                  <path d="M256 178 q30 -40 62 -6 q-30 -14 -62 6z" fill="#F4C430"/>
+                </svg>
+                <div class="flash" id="pflash"></div>
+                <div class="realtag" id="realtag">📷 Class 1A · 11:42</div>
+              </div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+      <div class="sent" id="sent"><span style="color:var(--yellow)">✈</span>Sent to every parent</div>
+      <svg class="env" id="env1" viewBox="0 0 58 40"><rect width="58" height="40" rx="6" fill="#fff" stroke="#2A2522" stroke-width="2"/><path d="M3 4l26 18L55 4" fill="none" stroke="#2A2522" stroke-width="2.5"/></svg>
+      <svg class="env" id="env2" viewBox="0 0 58 40"><rect width="58" height="40" rx="6" fill="#FFC93C" stroke="#2A2522" stroke-width="2"/><path d="M3 4l26 18L55 4" fill="none" stroke="#2A2522" stroke-width="2.5"/></svg>
+      <svg class="env" id="env3" viewBox="0 0 58 40"><rect width="58" height="40" rx="6" fill="#fff" stroke="#2A2522" stroke-width="2"/><path d="M3 4l26 18L55 4" fill="none" stroke="#2A2522" stroke-width="2.5"/></svg>
+    </section>
+
+    <!-- S6 IMPACT -->
+    <section id="s6">
+      <div id="stats"></div>
+      <div id="kids"></div>
+      <div id="confetti"></div>
+    </section>
+
+    <!-- S7 CTA -->
+    <section id="s7">
+      <div id="ctaLogo"><svg viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7c0-1.5 1-2 1-3.5M12 7c0-1.5 1-2 1-3.5M16 7c0-1.5 1-2 1-3.5"/></svg></div>
+      <div id="ctaName">School<span class="f">Food</span></div>
+      <div id="ctaTag"><span class="mask"><span>Inventory &amp; school lunch, managed in one place.</span></span></div>
+      <div id="url"><span id="urlA">schoolfoodusth</span><span class="slot" id="slot"></span><span id="urlB">store</span></div>
+    </section>
+  </div>
+
+  <div id="flash"></div>
+  <div id="iris"></div>
+  <div id="dot"><svg id="dotIcon" viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path class="steam" d="M8 7c0-1.5 1-2 1-3.5M12 7c0-1.5 1-2 1-3.5M16 7c0-1.5 1-2 1-3.5"/></svg></div>
+  <div id="grains"></div>
+  <div id="vignette"></div>
+  <canvas id="grain" width="480" height="270"></canvas>
+  <div id="subs"></div>
+</div>
+
+<div id="start">
+  <div class="lg"><svg viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7c0-1.5 1-2 1-3.5M12 7c0-1.5 1-2 1-3.5M16 7c0-1.5 1-2 1-3.5"/></svg></div>
+  <h1>SchoolFood</h1>
+  <button id="playBig" aria-label="Play">▶ Play</button>
+  <p>60-second teaser · turn your sound on</p>
+</div>
+<div id="controls">
+  <button id="btnPlay" aria-label="Play / pause">▶</button>
+  <button id="btnRestart" aria-label="Restart">↺</button>
+  <div id="bar"><div id="barFill"></div></div>
+  <div id="time">0:00 / 1:00</div>
+</div>
+
+<script src="/gioi-thieu/vendor/gsap-3.12.5.min.js"></script>
+<script src="/gioi-thieu/vendor/tone-14.8.49.js"></script>
+<script src="/gioi-thieu/teaser.js"></script>
+</body>
+</html>

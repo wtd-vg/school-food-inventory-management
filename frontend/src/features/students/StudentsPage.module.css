@@ -1,0 +1,55 @@
+.contacts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+}
+
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.hint {
+  font-variant-numeric: tabular-nums;
+}
+
+.current {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface-sunken);
+}
+
+.consent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.error {
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.revealed {
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--kv-bg);
+  font-size: 17px;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.rowErrors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}

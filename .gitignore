@@ -1,0 +1,44 @@
+# Secret và cấu hình riêng của từng máy
+.env
+.env.prod
+
+# Production: bản sao lưu DB và file tĩnh do collectstatic sinh ra
+backups/
+backend/staticfiles/
+
+# Python tạo tự động
+.venv/
+venv/
+env/
+ENV/
+*.sqlite3
+db.sqlite3
+__pycache__/
+*.py[cod]
+
+# Node tạo tự động
+frontend/node_modules/
+frontend/dist/
+frontend/.vite-cache/
+
+# Cache và file tạm
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tmp/
+
+# Editor và hệ điều hành
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# File khóa tạm khi mở tài liệu Office
+~$*.docx
+~$*.xlsx
+
+# Tài liệu nội bộ, ảnh nghiệm thu, bản thiết kế: giữ trên máy, không đưa lên repo
+outputs/
+design/
+plan_final.md
+SchoolFood_Checklist.xlsx

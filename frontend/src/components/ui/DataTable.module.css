@@ -1,0 +1,325 @@
+.wrap {
+  /* relative: nhãn sr-only (absolute) trong bảng nằm trong khung cuộn, không đẩy cả trang cuộn ngang */
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: var(--table-min, 640px);
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 14.5px;
+}
+
+.col {
+  width: var(--w, auto);
+}
+
+/* Dải tiêu đề cột: nền nhạt bo 10, chữ 12.5 màu phụ */
+.table th {
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  background: var(--thead-bg);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table th:first-child {
+  border-radius: var(--r-thead) 0 0 var(--r-thead);
+  padding-left: 16px;
+}
+
+.table th:last-child {
+  border-radius: 0 var(--r-thead) var(--r-thead) 0;
+  padding-right: 16px;
+}
+
+.table td {
+  height: 46px;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table td:first-child {
+  padding-left: 16px;
+}
+
+.table td:last-child {
+  padding-right: 16px;
+}
+
+.table tbody tr:hover td {
+  background: var(--surface-hover);
+}
+
+.table tbody tr.selectedRow td {
+  background: var(--brand-soft);
+}
+
+/* Nút sắp xếp trong tiêu đề cột: vùng bấm cao bằng dải (40). */
+.sortBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.sortBtn:hover {
+  color: var(--ink);
+}
+
+.right .sortBtn {
+  flex-direction: row-reverse;
+}
+
+.sortIcon {
+  flex: none;
+  color: var(--pending);
+}
+
+.sortIconOn {
+  flex: none;
+  color: var(--brand);
+}
+
+.checkCol {
+  width: 48px;
+}
+
+.table .checkCell {
+  width: 48px;
+  padding: 0 0 0 14px;
+  text-overflow: clip;
+}
+
+.check {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  vertical-align: middle;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+/* Vùng bấm 40px cho checkbox: label/ô bao quanh đã cao 46. */
+.checkCell {
+  cursor: pointer;
+}
+
+.right {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.center {
+  text-align: center !important;
+}
+
+.wrapText {
+  white-space: normal !important;
+}
+
+.caption {
+  text-align: left;
+}
+
+/* Ô tên mặt hàng: tên 600 + nhóm 13 muted (bản vẽ Kho hàng) */
+.primaryText {
+  font-weight: 600;
+}
+
+/* Ô đầu có ô thu nhỏ 30px (icon theo loại hàng) + tên */
+.thumbCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.thumbCell > :last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.secondaryText {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* Tên/mã mở ngăn kéo: chữ đậm màu mực như bản vẽ, gạch chân khi rê chuột hoặc focus. */
+.rowButton {
+  display: inline;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  text-underline-offset: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowButton:hover,
+.rowButton:focus-visible {
+  color: var(--link);
+  text-decoration: underline;
+}
+
+/* Mã chứng từ: chữ xanh gạch chân như mã lô trong bản vẽ. */
+.rowLink {
+  composes: rowButton;
+  color: var(--link);
+  text-decoration: underline;
+}
+
+.rowLink:hover,
+.rowLink:focus-visible {
+  color: var(--link-hover);
+}
+
+.cellActions {
+  display: inline-flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* Điện thoại: mỗi dòng thành một thẻ, ô có nhãn cột (data-label) bên trái, giá trị bên phải. */
+@media (max-width: 767px) {
+  .wrap {
+    overflow-x: visible;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table colgroup,
+  .table thead {
+    display: none;
+  }
+
+  .table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .table tr {
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    background: var(--surface);
+  }
+
+  .table tbody tr:hover td,
+  .table tbody tr.selectedRow td {
+    background: transparent;
+  }
+
+  .table tbody tr.selectedRow {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+  }
+
+  .table td:first-child,
+  .table td:last-child {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .table .checkCell {
+    width: auto;
+    padding: 0;
+    justify-content: flex-start;
+  }
+
+  .table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    height: auto;
+    min-height: 36px;
+    padding: 4px 0;
+    border-bottom: none;
+    text-align: right;
+    white-space: normal;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    flex: none;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .table td:not([data-label])::before {
+    content: none;
+  }
+
+  .table td:empty {
+    display: none;
+  }
+
+  .firstCell {
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid var(--line) !important;
+    margin-bottom: 4px;
+    text-align: left !important;
+    font-size: 16px;
+  }
+
+  .right {
+    text-align: right !important;
+  }
+}
+
+/* Ô chứa nút thao tác (44px): lề nhỏ, không cắt "…". */
+.actionCell {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}

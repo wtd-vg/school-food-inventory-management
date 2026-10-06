@@ -1,0 +1,14 @@
+# Framework backend.
+Django==5.2.17
+
+# Driver để Django kết nối PostgreSQL.
+psycopg[binary]==3.3.5
+
+# WSGI server cho production (SF38); dev vẫn dùng runserver.
+gunicorn==23.0.0
+
+# Mã hóa email phụ huynh (BE-04, đã duyệt 01/10/2026).
+cryptography==46.0.3
+
+# SF73: đọc, xoay, nén ảnh suất ăn thực tế (đã duyệt 01/10/2026).
+Pillow==12.0.0

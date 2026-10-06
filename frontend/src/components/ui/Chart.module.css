@@ -1,0 +1,366 @@
+/* Biểu đồ cột (bản vẽ 08) */
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plot {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  height: 260px;
+}
+
+.axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-bottom: 22px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.axis span {
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.axis span:last-child {
+  transform: none;
+}
+
+.area {
+  position: relative;
+  min-width: 0;
+}
+
+.grid {
+  position: absolute;
+  inset: 0 0 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.grid span {
+  height: 1px;
+  background: var(--line);
+}
+
+.bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  list-style: none;
+}
+
+.barCell {
+  position: relative;
+  flex: 1 1 0;
+  max-width: 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+  padding-bottom: 22px;
+  border-radius: 4px;
+  outline-offset: 0;
+}
+
+.bar {
+  position: relative;
+  width: 62%;
+  height: var(--h, 0%);
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--chart-soft);
+}
+
+.bar-current {
+  background: var(--chart-1);
+}
+
+.bar-over {
+  background: var(--chart-over);
+}
+
+.barValue {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.barLabel {
+  position: absolute;
+  bottom: 0;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tip {
+  position: absolute;
+  bottom: calc(var(--h, 0%) + 30px);
+  left: 50%;
+  z-index: 2;
+  display: none;
+  padding: 6px 10px;
+  border-radius: var(--r-input-sm);
+  background: var(--bulk-bg);
+  color: var(--on-ink);
+  font-size: 13px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.barCell:hover .tip,
+.barCell:focus-visible .tip {
+  display: block;
+}
+
+.barCell:hover .bar,
+.barCell:focus-visible .bar {
+  filter: brightness(.92);
+}
+
+/* Thanh cơ cấu chi phí */
+.costWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.costBar {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--chart-track);
+}
+
+.segment {
+  width: var(--w);
+  min-width: 4px;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.legendRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+
+.legendName {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.legendValue {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.legendPct {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.tone-1 {
+  background: var(--chart-1);
+}
+
+.tone-2 {
+  background: var(--chart-2);
+}
+
+.tone-3 {
+  background: var(--chart-3);
+}
+
+.tone-4 {
+  background: var(--chart-4);
+}
+
+.tone-5 {
+  background: var(--chart-5);
+}
+
+.tone-other {
+  background: var(--pending);
+}
+
+@media (max-width: 767px) {
+  .plot {
+    height: 220px;
+  }
+
+  .barLabel {
+    display: none;
+  }
+
+  .barCell:nth-child(5n + 1) .barLabel {
+    display: block;
+  }
+}
+
+/* Card hẹp */
+.compact .plot {
+  height: 170px;
+}
+
+.compact .bars {
+  gap: 3px;
+}
+
+.compact .bar {
+  width: 70%;
+}
+
+/* ---------- Biểu đồ vòng ---------- */
+.donutWrap {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+
+.donut {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.donut svg {
+  width: 100%;
+  height: 100%;
+}
+
+.donutTrack {
+  fill: none;
+  stroke: var(--chart-track);
+  stroke-width: 12;
+}
+
+.donutSeg {
+  fill: none;
+  stroke-width: 12;
+}
+
+.stroke-1 { stroke: var(--chart-1); }
+.stroke-2 { stroke: var(--chart-2); }
+.stroke-3 { stroke: var(--chart-3); }
+.stroke-4 { stroke: var(--chart-4); }
+.stroke-5 { stroke: var(--chart-5); }
+.stroke-other { stroke: var(--pending); }
+
+.donutCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+}
+
+.donutValue {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.donutLabel {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.donutLegend {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+}
+
+.donutRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 24px;
+  font-size: 14px;
+}
+
+/* ---------- Thanh ngang ---------- */
+.hbars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.hbarRow {
+  display: grid;
+  grid-template-columns: minmax(0, 9.5rem) minmax(0, 1fr) 3.2rem;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.hbarLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-soft);
+}
+
+.hbarTrack {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--chart-track);
+  overflow: hidden;
+}
+
+.hbarFill {
+  display: block;
+  width: var(--w);
+  min-width: 4px;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  background: var(--chart-1);
+}
+
+.hbarValue {
+  font-weight: 600;
+  text-align: right;
+}

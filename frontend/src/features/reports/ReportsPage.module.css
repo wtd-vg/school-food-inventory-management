@@ -1,0 +1,129 @@
+/* Đầu card: tab mục báo cáo bên trái, chọn tháng bên phải */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.toolbar > :first-child {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.monthNav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.monthLabel {
+  min-width: 108px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Câu tóm tắt lớn (bản vẽ 08: "Tháng 9 bếp nấu 13.765 suất…") */
+.summary {
+  max-width: 900px;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.summary strong {
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 44px;
+  align-items: start;
+}
+
+.mainCol,
+.sideCol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sideCol {
+  gap: 26px;
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 8px;
+}
+
+.note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.empty {
+  padding: 16px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.lossList {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin-bottom: 12px;
+}
+
+.lossList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 15px;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.foodFilter {
+  width: 220px;
+  gap: 0;
+}
+
+/* Cột phụ 320px chỉ đặt cạnh khi cột chính còn đủ rộng; hẹp hơn thì xếp dọc để bảng không bị cắt. */
+@media (max-width: 1279px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+
+@media (max-width: 767px) {
+  .summary {
+    font-size: 16px;
+  }
+
+  .foodFilter {
+    width: 100%;
+  }
+}

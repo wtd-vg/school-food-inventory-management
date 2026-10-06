@@ -1,0 +1,12 @@
+/* Hàng công cụ trong card: ô tìm kiếm trái, bộ lọc nhóm phải (cuộn ngang khi hẹp). */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.toolbar > :last-child {
+  min-width: 0;
+}
