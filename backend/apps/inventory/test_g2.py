@@ -1,7 +1,7 @@
 """G2 SF55–SF72: nhu cầu → đề xuất → đơn đặt → nhận hàng → xuất bếp → chi phí → đóng ngày.
 
-Kiểm thử 8 kịch bản contract outputs/team-6/contracts/G2_SF55_SF72_nhu_cau_dat_hang_xuat_ngay.md §5 qua API
-thật (Client, CSRF bật), số chuẩn README.md §6:
+Kiểm thử 8 kịch bản nghiệp vụ G2 (nhu cầu → đặt → nhận → xuất → đóng ngày) qua API
+thật (Client, CSRF bật), số chuẩn:
 300 suất × (60 g + 10 g thịt) = 21 kg; dự phòng 1; tồn 5; đơn cũ chờ về 4 → mua 13; nhận 10 rồi 3, thêm 4 bị chặn.
 Ngày ăn D là một Thứ Hai ≥ 14 ngày sau hôm nay (thực đơn chỉ lập được từ ngày mai), không phụ thuộc lịch thật.
 """

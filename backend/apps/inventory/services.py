@@ -119,7 +119,7 @@ def post_receipt(receipt_id, user=None):
     if not lines:
         raise ValidationError("Phiếu nhập không có dòng hàng nào.")
 
-    # SF62: thứ tự khóa đầu phiếu → đơn đặt → food → allocation → dòng đơn (plan_final §3).
+    # SF62: thứ tự khóa đầu phiếu → đơn đặt → food → allocation → dòng đơn.
     po_line_ids = sorted({line.po_line_id for line in lines if line.po_line_id})
     if po_line_ids:
         order_ids = sorted(set(PurchaseOrderLine.objects.filter(id__in=po_line_ids).values_list("order_id", flat=True)))

@@ -1,5 +1,5 @@
 /**
- * Số thập phân chính xác cho UI, không dùng float (README.md §5.3).
+ * Số thập phân chính xác cho UI, không dùng float.
  * Giá trị = v / 10^s. Chỉ dùng để xem trước tổng tiền, kiểm tra ô nhập;
  * con số chính thức luôn do backend tính và trả về dạng chuỗi.
  */

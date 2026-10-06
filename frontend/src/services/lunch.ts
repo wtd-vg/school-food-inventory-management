@@ -1,6 +1,6 @@
 /**
  * Chuỗi bữa trưa G2 (SF55–SF72): khớp JSON của demand_views.py, purchase_views.py, day_views.py và views.py
- * (phiếu nhập/xuất). Contract: outputs/team-6/contracts/G2_SF55_SF72_nhu_cau_dat_hang_xuat_ngay.md §4.
+ * (phiếu nhập/xuất).
  * Mọi số lượng/tiền là chuỗi Decimal; thao tác đổi trạng thái đơn gửi kèm version (sai → 409).
  */
 import type { BadgeTone } from '../components/ui';

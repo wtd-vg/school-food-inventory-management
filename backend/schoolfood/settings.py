@@ -90,7 +90,7 @@ if "test" in sys.argv:
     if DATABASES["default"]["HOST"] not in {"localhost", "127.0.0.1", "::1", "db"}:
         raise ImproperlyConfigured(
             "Từ chối chạy test trên DB host không phải local. "
-            "Bỏ DATABASE_URL và đặt DB_HOST=127.0.0.1 (xem README.md §4)."
+            "Bỏ DATABASE_URL và đặt DB_HOST=127.0.0.1 (xem README.md, mục Kiểm tra)."
         )
 
 # BE-10 (R12): mật khẩu ≥ 10 ký tự, không phổ biến, không giống tên đăng nhập, không toàn số.
