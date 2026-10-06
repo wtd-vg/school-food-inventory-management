@@ -145,7 +145,7 @@ class ThuBayBanChupVaThuTests(CsrfClientMixin, TestCase):
 
 
 class ThuBayNhuCauTests(G2Fixture, TestCase):
-    """Chuỗi G2 trên Thứ Bảy: 300 suất × (60 g + 10 g thịt) = 21 kg như ngày thường (README.md §6)."""
+    """Chuỗi G2 trên Thứ Bảy: 300 suất × (60 g + 10 g thịt) = 21 kg như ngày thường."""
 
     def setUp(self):
         self.dung_du_lieu()  # version T2–T6 từ thứ Hai D, không có Thứ Bảy

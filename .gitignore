@@ -36,3 +36,9 @@ Thumbs.db
 # File khóa tạm khi mở tài liệu Office
 ~$*.docx
 ~$*.xlsx
+
+# Tài liệu nội bộ, ảnh nghiệm thu, bản thiết kế: giữ trên máy, không đưa lên repo
+outputs/
+design/
+plan_final.md
+SchoolFood_Checklist.xlsx

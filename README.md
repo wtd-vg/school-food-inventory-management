@@ -2,16 +2,9 @@
 
 SchoolFood quản lý kho thực phẩm và bữa trưa cho một trường, viết bằng React/TypeScript, Django và PostgreSQL.
 
-- **Đã có:** nhập–xuất–kiểm kê dùng chung một sổ kho, báo cáo, nền lớp/ngày ăn, món ăn, giao diện "Bếp Nhà Trường". Bản production chạy tại https://schoolfoodusth.store.
-- **Đang làm:** bảo mật (vai trò Quản lý/Hiệu trưởng, khóa đăng nhập, nhật ký thao tác), thực đơn cố định theo thứ, gửi email thực đơn cho phụ huynh mỗi sáng.
-- **Kế hoạch, hiện trạng và lỗi mở:** [plan_final.md](plan_final.md).
-
-## Bắt đầu theo vai trò
-
-- **Thành viên:** đọc [hướng dẫn chung](outputs/team-6/SchoolFood_HuongDan_Chung.md), [task được giao](outputs/team-6/SchoolFood_HuongDan_Task.md), [quy chuẩn Git](GIT_WORKFLOW.md) và [hướng dẫn giao diện](frontend/UI_GUIDE.md).
-- **Leader/reviewer:** xem [plan_final.md](plan_final.md), [kiến trúc](architecture.md), [kế hoạch G2](outputs/team-6/GiaiDoan2_KeHoach.md) và [checklist](SchoolFood_Checklist.xlsx).
-
-"Có code", "test đạt" và "đã nghiệm thu" là ba trạng thái khác nhau. Không tự đánh dấu Excel.
+- **Chức năng:** danh mục, nhập–xuất–kiểm kê dùng chung một sổ kho; lớp, số suất, món, thực đơn cố định theo thứ (Thứ Bảy tuỳ chọn); nhu cầu → đặt hàng → nhận hàng → xuất bếp → đóng ngày, chi phí mỗi suất; ảnh suất ăn và email thực đơn cho phụ huynh; vai trò Quản lý/Hiệu trưởng, khóa đăng nhập, nhật ký thao tác; báo cáo.
+- **Production:** https://schoolfoodusth.store.
+- **Tài liệu:** [kiến trúc](architecture.md), [bảo mật và vận hành](docs/SECURITY.md), [quy chuẩn Git](GIT_WORKFLOW.md), [hướng dẫn giao diện](frontend/UI_GUIDE.md).
 
 ## Chạy local bằng Docker
 
@@ -54,7 +47,16 @@ docker compose exec frontend npm run build
 docker compose logs --tail 100 backend frontend
 ```
 
-Test backend chạy trên PostgreSQL riêng (bắt buộc vì có trigger PL/pgSQL). Lệnh đầy đủ ở [README.md §4](README.md). Settings từ chối chạy test khi host DB không phải local.
+Test backend chạy trên PostgreSQL riêng (bắt buộc vì có trigger PL/pgSQL). Settings từ chối chạy test khi host DB không phải local; không bao giờ trỏ test vào DB thật.
+
+```powershell
+$pw = [guid]::NewGuid().ToString('N')
+docker run -d --rm --name sf-test-db -e POSTGRES_USER=sf_test -e POSTGRES_PASSWORD=$pw -e POSTGRES_DB=sf_test -p 127.0.0.1:55429:5432 postgres:17-alpine
+Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+$env:DB_HOST="127.0.0.1"; $env:DB_PORT="55429"; $env:DB_USER="sf_test"; $env:DB_PASSWORD=$pw; $env:DB_NAME="sf_test"
+python backend/manage.py test apps.inventory --noinput
+docker stop sf-test-db
+```
 
 ```powershell
 docker compose down
@@ -64,7 +66,13 @@ Lệnh dừng trên giữ volume. Không thêm `-v` nếu cần giữ dữ liệ
 
 ## Deploy
 
-EC2 + Docker Compose + Cloudflare Tunnel. Dùng các lệnh `npm run ec2:*` trong [package.json](package.json), xem [README.md §4](README.md). `.env.prod` chỉ nằm trên server.
+EC2 + Docker Compose + Cloudflare Tunnel. `.env.prod` chỉ nằm trên server. Trên EC2, trong thư mục repo:
+
+```bash
+git pull --ff-only && npm run ec2:build && npm run ec2:up && npm run ec2:migrate && npm run ec2:check && npm run ec2:ledger-audit
+```
+
+`ec2:migrate` luôn sao lưu DB (pg_dump) trước khi migrate. Các lệnh khác: xem `scripts` trong [package.json](package.json) và [docs/SECURITY.md](docs/SECURITY.md).
 
 ## Cấu trúc chính
 
@@ -77,8 +85,6 @@ EC2 + Docker Compose + Cloudflare Tunnel. Dùng các lệnh `npm run ec2:*` tron
 | `frontend/src/features/` | Màn hình theo nghiệp vụ |
 | `frontend/src/components/`, `lib/`, `services/` | Component dùng chung, định dạng/Decimal/HTTP, gọi API |
 | `compose.yaml`, `compose.prod.yaml`, `Dockerfile`, `deploy/` | Môi trường local và production |
-| `design/` | Mẫu giao diện gốc |
-| `outputs/team-6/` | Thẻ task, kế hoạch G2, contract, checklist, bằng chứng |
 
 ## Quy trình phát triển
 

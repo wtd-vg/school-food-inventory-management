@@ -101,5 +101,5 @@ export function VidụPage() {
 
 1. `npm run build` đạt.
 2. `grep -rnE "#[0-9a-fA-F]{3,8}" src --include=*.css --include=*.tsx` chỉ còn `tokens.css`.
-3. Chạy app, thao tác bằng tài khoản **Quản lý và Hiệu trưởng**; đi hết bằng bàn phím; xem ở 1440, 1024, 375 px. Ảnh nghiệm thu lưu `outputs/team-6/evidence/<MÃ>_*.png` (1280 và 375 px).
+3. Chạy app, thao tác bằng tài khoản **Quản lý và Hiệu trưởng**; đi hết bằng bàn phím; xem ở 1440, 1024, 375 px. Chụp ảnh nghiệm thu 1280 và 375 px đính kèm PR (không commit ảnh vào repo).
 4. Rà từng màn: không ô bảng, chip hay nút nào tràn chữ hoặc bị bẻ dòng; chip không bị kéo giãn; trang không cuộn ngang (thiếu chỗ thì tăng chiều cao, không bóp chữ).

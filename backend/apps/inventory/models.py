@@ -707,7 +707,7 @@ class NotificationLog(models.Model):
 
 # =========================================================================
 # ĐỢT 2 — SF55 NHU CẦU & PHÂN BỔ · SF61 ĐƠN ĐẶT · SF67 XUẤT THEO NGÀY & ĐÓNG NGÀY
-# Thứ tự khóa (plan_final §3): đầu chứng từ → LunchDay/DemandRevision/PurchaseOrder → FoodItem (id tăng)
+# Thứ tự khóa: đầu chứng từ → LunchDay/DemandRevision/PurchaseOrder → FoodItem (id tăng)
 # → StockAllocation (id tăng) → PurchaseOrderLine (id tăng).
 # =========================================================================
 QTY_LIMIT = Decimal("100000000000")

@@ -1,6 +1,6 @@
 # SchoolFood Architecture
 
-Cập nhật 30/09/2026. Hiện trạng dưới đây thuộc `origin/dev1@7df9bcf`; local `4a2c191` chưa pull. Các mục G2 phía sau gồm thiết kế đã có một phần và phần dự kiến, không thay bằng chứng triển khai. Hiện trạng mới nhất, lỗi mở và lộ trình: [plan_final.md](plan_final.md).
+Tài liệu thiết kế kiến trúc SchoolFood (cập nhật 06/10/2026, theo `dev1`). Danh sách API đầy đủ: `backend/apps/inventory/urls.py`.
 
 ## 1. Hiện trạng và công nghệ
 
@@ -23,7 +23,6 @@ Nháp không đổi tồn; chốt atomic, khóa đầu phiếu rồi FoodItem th
 
 Migration có hai nhánh 0008 nối bởi 0012, tới 0013. DB sạch chạy đủ 94 test và không drift model. DB từng chạy mixed-0008 tại f00048d bị trùng bảng khi nâng cấp: ISSUE-001 là việc phải xử lý trước đồng bộ DB cũ. Không xóa migration hoặc reset DB theo kế hoạch N1 lịch sử. Đối chiếu nguồn/giá/ngày/người thực hiện trên DB riêng; không tạo giả dữ liệu thiếu.
 
-Contract SF25/31/43 nằm trong outputs/team-6/contracts trên dev1; checkout cũ có thể chưa có. Dùng git ls-tree/git show origin/dev1 để đọc đúng ref. Cổng G2.0 chỉ đóng sau bằng chứng đối chiếu, sửa blocker và review; không chỉ dựa vào test DB sạch.
 
 ## 3. Phạm vi G2 và sơ đồ dữ liệu dự kiến
 
@@ -85,7 +84,7 @@ Tồn dành cho kế hoạch vẫn nằm trong quantity; nghiệp vụ xuất kh
 
 ## 6. Contract API và tổ chức mã
 
-API trên dev1: /api/auth/*, /api/categories/, /api/foods/, /api/suppliers/, /api/receipts/, /api/issues/, /api/stocktakes/, /api/classes/, /api/dishes/, /api/reports/stock/, /api/reports/transactions/ và route chi tiết/chốt trong urls.py. Có thêm /api/lunch-days/<date>/counts|lock|reopen. Chưa có API thực đơn ngày, nhu cầu, đặt hàng. Lỗi Class/recipe API ghi trong plan_final.md §5.
+API: /api/auth/*, /api/users/, /api/audit-logs/, danh mục/mặt hàng/nhà cung cấp, phiếu nhập/xuất/kiểm kê, báo cáo, /api/classes/, /api/lunch-days/<date>/(counts|open|lock|reopen|demand|issue|cost|close|photos), /api/dishes/, /api/menu/*, /api/holidays/, /api/students/, /api/notifications/*, /api/purchase-orders/* (66 route, xem urls.py).
 
 Khi mở task API, owner ghi route/method, JSON request/response, ví dụ lỗi và version trong thẻ task/architecture trước FE. GET danh sách dùng results; input sai 400, chưa đăng nhập 401, quyền/CSRF 403, không thấy 404, method sai 405, trạng thái/version xung đột 409. Không đổi API cũ chỉ để đồng bộ tên nếu ngoài task. created_by lấy từ session, không từ client; lỗi không chứa traceback hoặc bí mật.
 
@@ -95,7 +94,7 @@ Giữ app inventory; có thể thêm meal_services.py, recipe_services.py, deman
 
 G2.1/2 không cần chờ toàn bộ kho, nhưng G2.3 tích hợp tồn cần G2.0 đạt. G2.3 có thể chốt contract nguồn đơn và test bằng fixture; phải nghiệm thu lại bằng đơn thật ở SF66. FE dựng với JSON mẫu chỉ là đang làm, không phải hoàn tất API thật.
 
-Các ràng buộc liên bảng/concurrency kiểm tra bằng PostgreSQL; không SQLite. Trạng thái test hiện tại xem plan_final.md §2 và evidence, không lấy số test từ tài liệu lịch sử. M6/SF37–SF42 triển khai sau khi G2 được nghiệm thu và chi phí/tài khoản được chủ dự án duyệt. SF38 đã deploy lên EC2 + Cloudflare Tunnel (PR #33).
+Các ràng buộc liên bảng/concurrency kiểm tra bằng PostgreSQL; không SQLite. Trạng thái test xem kết quả CI/PR và evidence, không lấy số test từ tài liệu lịch sử. M6/SF37–SF42 triển khai sau khi G2 được nghiệm thu và chi phí/tài khoản được chủ dự án duyệt. SF38 đã deploy lên EC2 + Cloudflare Tunnel (PR #33).
 
 ## 8. Contract SF19 được giữ để bàn giao nền kho
 

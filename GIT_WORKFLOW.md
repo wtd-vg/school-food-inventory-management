@@ -1,4 +1,4 @@
-> Cập nhật 29/09/2026: trước thay đổi, kiểm tra Git và đọc [README.md](README.md) và [plan_final.md](plan_final.md). Khảo sát → trình kế hoạch → chủ dự án duyệt → thực hiện → kiểm tra → review. Quyền đã duyệt giữ nguyên trong phạm vi; không hỏi lại từng thao tác. Các lệnh commit/push bên dưới là hướng dẫn khi có yêu cầu tương ứng, không phải lệnh tự động thực thi.
+> Trước thay đổi, kiểm tra Git và đọc [README](README.md), [kiến trúc](architecture.md). Khảo sát → trình kế hoạch → chủ dự án duyệt → thực hiện → kiểm tra → review. Quyền đã duyệt giữ nguyên trong phạm vi; không hỏi lại từng thao tác. Các lệnh commit/push bên dưới là hướng dẫn khi có yêu cầu tương ứng, không phải lệnh tự động thực thi.
 
 # Quy chuẩn Git & Quy trình làm việc nhóm (Team Git Workflow)
 
@@ -66,7 +66,7 @@ git switch -c feat/SF14-food-supplier-crud
 ```
 
 ### Bước 3: Code và kiểm tra liên tục
-* Chỉ sửa/tạo các file được phân công trong tài liệu [SchoolFood_HuongDan_Task.md](outputs/team-6/SchoolFood_HuongDan_Task.md).
+* Chỉ sửa/tạo các file thuộc task được giao.
 * Sau khi code xong một phần, kiểm tra:
   ```powershell
   git status
